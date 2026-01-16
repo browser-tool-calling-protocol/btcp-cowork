@@ -23,6 +23,7 @@ import storage from 'redux-persist/lib/storage'
 import storeSyncService from '../services/StoreSyncService'
 import assistants from './assistants'
 import backup from './backup'
+import browserUse from './browserUse'
 import codeTools from './codeTools'
 import copilot from './copilot'
 import inputToolsReducer from './inputTools'
@@ -54,6 +55,7 @@ const logger = loggerService.withContext('Store')
 const rootReducer = combineReducers({
   assistants,
   backup,
+  browserUse,
   codeTools,
   nutstore,
   paintings,

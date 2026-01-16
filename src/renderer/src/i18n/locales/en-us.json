@@ -799,6 +799,27 @@
           "label": "Disable Web Search"
         },
         "settings": "Web Search Settings"
+      },
+      "browser_use": {
+        "label": "Browser Use",
+        "disable": "Disable Browser Use",
+        "enabled_tooltip": "Browser tools enabled ({{toolset}})",
+        "panel_title": "Select Toolset",
+        "menu_description": "Enable browser automation tools",
+        "toolset": {
+          "minimal": {
+            "label": "Minimal",
+            "description": "Read-only: snapshot, text, URL"
+          },
+          "standard": {
+            "label": "Standard",
+            "description": "Navigation and interaction"
+          },
+          "full": {
+            "label": "Full",
+            "description": "All tools including JS execution"
+          }
+        }
       }
     },
     "mcp": {
@@ -4877,6 +4898,60 @@
         "title": "Web Search",
         "url_invalid": "Entered an invalid URL",
         "url_required": "Please enter a URL"
+      },
+      "browser_use": {
+        "title": "Browser Use",
+        "general": {
+          "title": "General"
+        },
+        "tools": {
+          "title": "Tools",
+          "available": "Available Browser Tools",
+          "description": "Tools enabled for the '{{preset}}' preset"
+        },
+        "enabled": {
+          "label": "Enable Browser Use",
+          "description": "Allow AI to control browser for automation tasks"
+        },
+        "toolset": {
+          "label": "Default Toolset",
+          "description": "Choose which browser tools are available to AI models",
+          "minimal": {
+            "label": "Minimal (Read-only)",
+            "description": "Safe read-only operations: snapshot, URL, title, text extraction"
+          },
+          "standard": {
+            "label": "Standard",
+            "description": "Common automation: navigation, clicks, typing, forms, scrolling"
+          },
+          "full": {
+            "label": "Full (Advanced)",
+            "description": "All tools including JavaScript execution and iframe handling"
+          }
+        },
+        "max_snapshot_size": {
+          "label": "Max Snapshot Size",
+          "description": "Maximum characters for page snapshots (prevents token overflow)"
+        },
+        "screencast": {
+          "label": "Enable Screencast",
+          "description": "Stream visual updates for vision models (increases token usage)"
+        },
+        "tracking": {
+          "label": "Enable Request Tracking",
+          "description": "Track network requests and console logs for debugging"
+        },
+        "system_prompt": {
+          "label": "Inject System Prompt",
+          "description": "Add browser workflow hints to AI system prompt"
+        },
+        "demo": {
+          "title": "Try Browser Automation",
+          "description": "Test the browser tools by starring our GitHub repository",
+          "star_button": "Star us on GitHub",
+          "view_github": "View on GitHub",
+          "star_message": "Opening GitHub - please star if you like the project!"
+        }
       }
     },
     "topic": {

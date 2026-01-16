@@ -8,6 +8,7 @@ import {
   Cloud,
   Command,
   FileCode,
+  Globe,
   HardDrive,
   Info,
   MonitorCog,
@@ -25,6 +26,7 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 
 import AboutSettings from './AboutSettings'
+import BrowserUseSettings from './BrowserUseSettings'
 import DataSettings from './DataSettings/DataSettings'
 import DisplaySettings from './DisplaySettings/DisplaySettings'
 import DocProcessSettings from './DocProcessSettings'
@@ -96,6 +98,12 @@ const SettingsPage: FC = () => {
               {t('settings.tool.websearch.title')}
             </MenuItem>
           </MenuItemLink>
+          <MenuItemLink to="/settings/browser-use">
+            <MenuItem className={isRoute('/settings/browser-use')}>
+              <Globe size={18} />
+              {t('settings.browser_use.title')}
+            </MenuItem>
+          </MenuItemLink>
           <MenuItemLink to="/settings/memory">
             <MenuItem className={isRoute('/settings/memory')}>
               <Brain size={18} />
@@ -152,6 +160,7 @@ const SettingsPage: FC = () => {
             <Route path="provider" element={<ProviderList />} />
             <Route path="model" element={<ModelSettings />} />
             <Route path="websearch/*" element={<WebSearchSettings />} />
+            <Route path="browser-use/*" element={<BrowserUseSettings />} />
             <Route path="api-server" element={<ApiServerSettings />} />
             <Route path="docprocess" element={<DocProcessSettings />} />
             <Route path="quickphrase" element={<QuickPhraseSettings />} />
