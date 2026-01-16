@@ -3,11 +3,16 @@
  *
  * Handles:
  * - MCP server connections (HTTP/SSE only)
- * - BTCP browser tool command routing (relays to content script)
+ * - BTCP browser tool command routing (via setupMessageListener)
  * - Context menu actions
  * - Keyboard shortcuts
  * - Storage sync
  */
+
+import { setupMessageListener } from 'btcp-browser-agent/extension'
+
+// Set up BTCP message routing (handles aspect:command messages)
+setupMessageListener()
 
 // MCP client connections (HTTP/SSE only - no stdio in extensions)
 const mcpClients = new Map<string, { url: string; transport: 'sse' | 'http' }>()
@@ -144,23 +149,7 @@ interface Message {
 async function handleMessage(message: Message, _sender: chrome.runtime.MessageSender): Promise<unknown> {
   const { type, payload } = message
 
-  // BTCP: Relay all btcp:* messages directly to content script
-  if (type.startsWith('btcp:')) {
-    const { tabId } = (payload as { tabId?: number }) || {}
-    let targetTabId = tabId
-    if (!targetTabId) {
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      targetTabId = activeTab?.id
-    }
-    if (!targetTabId) {
-      return { success: false, error: 'No active tab found' }
-    }
-    try {
-      return await chrome.tabs.sendMessage(targetTabId, message)
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Content script not available' }
-    }
-  }
+  // Note: BTCP commands (aspect:command) are handled by setupMessageListener() from btcp-browser-agent
 
   switch (type) {
     // Storage operations

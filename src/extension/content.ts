@@ -8,24 +8,19 @@
  * - Communicate with the extension
  */
 
-import { BrowserAgent, type Command, type Response } from 'btcp-browser-agent'
+import { type ContentAgent,createContentAgent } from 'btcp-browser-agent/core'
 
 // =============================================================================
-// BTCP BROWSER AGENT
+// BTCP CONTENT AGENT
 // =============================================================================
 
-let browserAgent: BrowserAgent | null = null
+let agent: ContentAgent | null = null
 
-async function executeBTCPCommand(command: Command): Promise<Response> {
-  try {
-    if (!browserAgent) {
-      browserAgent = new BrowserAgent({ targetWindow: window, targetDocument: document, autoLaunch: true })
-      await browserAgent.launch()
-    }
-    return await browserAgent.execute(command)
-  } catch (error) {
-    return { id: command.id, success: false, error: String(error) }
+function getAgent(): ContentAgent {
+  if (!agent) {
+    agent = createContentAgent(document, window)
   }
+  return agent
 }
 
 // =============================================================================
@@ -34,16 +29,17 @@ async function executeBTCPCommand(command: Command): Promise<Response> {
 
 // Listen for messages from popup/background
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  // BTCP: Handle all btcp:* messages
-  if (message.type?.startsWith('btcp:')) {
-    const command = message.payload?.command || message.command
-    if (command) {
-      executeBTCPCommand(command as Command)
-        .then(sendResponse)
-        .catch((error) => sendResponse({ success: false, error: String(error) }))
-    } else {
-      sendResponse({ success: false, error: 'No command provided' })
-    }
+  // BTCP: Handle aspect:command messages (from background via setupMessageListener)
+  if (message.type === 'aspect:command') {
+    getAgent()
+      .execute(message.command)
+      .then((response) => sendResponse({ type: 'aspect:response', response }))
+      .catch((error) =>
+        sendResponse({
+          type: 'aspect:response',
+          response: { id: message.command?.id || 'unknown', success: false, error: String(error) }
+        })
+      )
     return true
   }
 
