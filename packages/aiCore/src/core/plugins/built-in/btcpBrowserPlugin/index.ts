@@ -8,8 +8,7 @@
 import { BrowserAgent, describe as btcpDescribe, generateCommandId } from 'btcp-browser-agent'
 import * as z from 'zod'
 
-import { definePlugin } from '../../'
-import type { AiRequestContext } from '../../types'
+import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ScreenshotResult, SnapshotResult } from './types'
 
@@ -51,15 +50,14 @@ function createTool<TParams extends z.ZodType, TResult>(config: {
  * })
  * ```
  */
-export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}) => {
+export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
   const {
     enabled = DEFAULT_CONFIG.enabled,
     agent: providedAgent,
     agentOptions = {},
     toolset = DEFAULT_CONFIG.toolset,
     maxSnapshotSize = DEFAULT_CONFIG.maxSnapshotSize,
-     
-    _enableScreencast = DEFAULT_CONFIG.enableScreencast,
+    enableScreencast: _enableScreencast = DEFAULT_CONFIG.enableScreencast,
     enableTracking = DEFAULT_CONFIG.enableTracking,
     onToolCall,
     onToolResult,
@@ -692,7 +690,7 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}) => {
     return Object.fromEntries(Object.entries(allTools).filter(([name]) => preset.includes(name as BTCPToolName)))
   }
 
-  return definePlugin({
+  const plugin: AiPlugin = {
     name: 'btcp-browser',
     enforce: 'pre',
 
@@ -701,28 +699,29 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}) => {
       context.btcpAgent = agent
     },
 
-    transformParams: (params: Record<string, unknown>, _context: AiRequestContext) => {
+    transformParams: <T>(params: T, _context: AiRequestContext): T => {
       if (!enabled) return params
 
       const browserTools = createBrowserTools()
       const selectedTools = filterTools(browserTools)
 
       // Merge browser tools with existing tools
-      const existingTools = (params.tools as Record<string, unknown>) || {}
-      params.tools = { ...existingTools, ...selectedTools }
+      const p = params as Record<string, unknown>
+      const existingTools = (p.tools as Record<string, unknown>) || {}
+      p.tools = { ...existingTools, ...selectedTools }
 
       // Add browser-aware system prompt if enabled and not already present
       if (injectSystemPrompt) {
-        const currentSystem = params.system as string | undefined
+        const currentSystem = p.system as string | undefined
         if (!currentSystem?.includes('browser_snapshot')) {
-          params.system = currentSystem ? `${currentSystem}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
+          p.system = currentSystem ? `${currentSystem}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
         }
       }
 
       return params
     },
 
-    onRequestEnd: async (_context: AiRequestContext) => {
+    onRequestEnd: async (_context: AiRequestContext, _result: unknown) => {
       // Cleanup tracking if enabled
       if (enableTracking && agent) {
         const manager = agent.getBrowserManager()
@@ -732,7 +731,9 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}) => {
         }
       }
     }
-  })
+  }
+
+  return plugin
 }
 
 // Default export

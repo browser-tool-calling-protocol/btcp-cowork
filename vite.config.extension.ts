@@ -70,23 +70,19 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
-      // BTCP Browser Agent (alias to TS source since package build fails without @types/chrome)
-      'btcp-browser-agent/extension/content': resolve(
+      // AI SDK openai-compatible (resolve pnpm hoisted path)
+      '@ai-sdk/openai-compatible': resolve(
         __dirname,
-        'node_modules/btcp-browser-agent/packages/extension/src/content.ts'
+        'node_modules/.pnpm/@ai-sdk+openai-compatible@1.0.28_patch_hash=5ea49b4f07636a8e4630097e67e2787779ba7e933bd0459f81b1803cb125edda_zod@4.3.4/node_modules/@ai-sdk/openai-compatible'
       ),
+      // btcp-browser-agent (resolve to TypeScript source)
+      '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
       'btcp-browser-agent/extension': resolve(
         __dirname,
         'node_modules/btcp-browser-agent/packages/extension/src/index.ts'
       ),
       'btcp-browser-agent/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
       'btcp-browser-agent': resolve(__dirname, 'node_modules/btcp-browser-agent/src/index.ts'),
-      '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
-      // AI SDK openai-compatible (resolve pnpm hoisted path)
-      '@ai-sdk/openai-compatible': resolve(
-        __dirname,
-        'node_modules/.pnpm/@ai-sdk+openai-compatible@1.0.28_patch_hash=5ea49b4f07636a8e4630097e67e2787779ba7e933bd0459f81b1803cb125edda_zod@4.3.4/node_modules/@ai-sdk/openai-compatible'
-      ),
       // Shim the preload imports
       '../preload': resolve(__dirname, 'src/extension/shim.ts')
     }

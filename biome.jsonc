@@ -37,6 +37,7 @@
       "**",
       "!out/**",
       "!**/dist/**",
+      "!dist-extension/**",
       "!build/**",
       "!.yarn/**",
       "!.github/**",
