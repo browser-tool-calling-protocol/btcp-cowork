@@ -73,7 +73,7 @@ export default defineConfig({
       // AI SDK openai-compatible (resolve pnpm hoisted path)
       '@ai-sdk/openai-compatible': resolve(
         __dirname,
-        'node_modules/.pnpm/@ai-sdk+openai-compatible@1.0.28_patch_hash=5ea49b4f07636a8e4630097e67e2787779ba7e933bd0459f81b1803cb125edda_zod@4.3.4/node_modules/@ai-sdk/openai-compatible'
+        'node_modules/.pnpm/@ai-sdk+openai-compatible@1_0a9002562741f5bcbca5a20f29786ad1/node_modules/@ai-sdk/openai-compatible'
       ),
       // btcp-browser-agent (resolve to TypeScript source)
       '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),

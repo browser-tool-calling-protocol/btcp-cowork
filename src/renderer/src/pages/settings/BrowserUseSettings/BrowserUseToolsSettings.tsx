@@ -111,8 +111,8 @@ const BrowserUseToolsSettings: FC = () => {
   return (
     <SettingContainer theme={theme}>
       <SettingGroup theme={theme}>
-        <SettingRowTitle>{t('settings.browser_use.tools.available')}</SettingRowTitle>
-        <ToolDescription>{t('settings.browser_use.tools.description', { preset: toolset })}</ToolDescription>
+        <SettingRowTitle>{t('settings.tool.browser_use.tools.available')}</SettingRowTitle>
+        <ToolDescription>{t('settings.tool.browser_use.tools.description', { preset: toolset })}</ToolDescription>
         <ToolsList>
           {TOOL_PRESETS.full.map((tool) => {
             const presets = getToolPresets(tool)

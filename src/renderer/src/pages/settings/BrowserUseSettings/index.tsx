@@ -28,14 +28,14 @@ const BrowserUseSettings: FC = () => {
       <MainContainer>
         <MenuList>
           <ListItem
-            title={t('settings.browser_use.general.title')}
+            title={t('settings.tool.browser_use.general.title')}
             active={activeView === 'general'}
             onClick={() => navigate('/settings/browser-use/general')}
             icon={<Settings size={18} />}
             titleStyle={{ fontWeight: 500 }}
           />
           <ListItem
-            title={t('settings.browser_use.tools.title')}
+            title={t('settings.tool.browser_use.tools.title')}
             active={activeView === 'tools'}
             onClick={() => navigate('/settings/browser-use/tools')}
             icon={<Wrench size={18} />}

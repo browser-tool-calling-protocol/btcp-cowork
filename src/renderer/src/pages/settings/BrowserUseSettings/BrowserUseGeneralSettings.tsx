@@ -49,31 +49,31 @@ const BrowserUseGeneralSettings: FC = () => {
     <SettingContainer theme={theme}>
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.enabled.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.enabled.label')}</SettingRowTitle>
           <Switch checked={enabled} onChange={setEnabled} />
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.enabled.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.enabled.description')}</SettingDescription>
       </SettingGroup>
 
       <SettingDivider />
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.toolset.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.toolset.label')}</SettingRowTitle>
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.toolset.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.toolset.description')}</SettingDescription>
         <RadioGroup value={toolset} onChange={(e) => setToolset(e.target.value as BrowserUseToolset)}>
           <RadioOption value="minimal">
-            <RadioLabel>{t('settings.browser_use.toolset.minimal.label')}</RadioLabel>
-            <RadioDescription>{t('settings.browser_use.toolset.minimal.description')}</RadioDescription>
+            <RadioLabel>{t('settings.tool.browser_use.toolset.minimal.label')}</RadioLabel>
+            <RadioDescription>{t('settings.tool.browser_use.toolset.minimal.description')}</RadioDescription>
           </RadioOption>
           <RadioOption value="standard">
-            <RadioLabel>{t('settings.browser_use.toolset.standard.label')}</RadioLabel>
-            <RadioDescription>{t('settings.browser_use.toolset.standard.description')}</RadioDescription>
+            <RadioLabel>{t('settings.tool.browser_use.toolset.standard.label')}</RadioLabel>
+            <RadioDescription>{t('settings.tool.browser_use.toolset.standard.description')}</RadioDescription>
           </RadioOption>
           <RadioOption value="full">
-            <RadioLabel>{t('settings.browser_use.toolset.full.label')}</RadioLabel>
-            <RadioDescription>{t('settings.browser_use.toolset.full.description')}</RadioDescription>
+            <RadioLabel>{t('settings.tool.browser_use.toolset.full.label')}</RadioLabel>
+            <RadioDescription>{t('settings.tool.browser_use.toolset.full.description')}</RadioDescription>
           </RadioOption>
         </RadioGroup>
       </SettingGroup>
@@ -82,7 +82,7 @@ const BrowserUseGeneralSettings: FC = () => {
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.max_snapshot_size.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.max_snapshot_size.label')}</SettingRowTitle>
           <InputNumber
             min={10000}
             max={200000}
@@ -92,62 +92,62 @@ const BrowserUseGeneralSettings: FC = () => {
             style={{ width: 120 }}
           />
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.max_snapshot_size.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.max_snapshot_size.description')}</SettingDescription>
       </SettingGroup>
 
       <SettingDivider />
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.screencast.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.screencast.label')}</SettingRowTitle>
           <Switch checked={enableScreencast} onChange={setEnableScreencast} />
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.screencast.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.screencast.description')}</SettingDescription>
       </SettingGroup>
 
       <SettingDivider />
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.tracking.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.tracking.label')}</SettingRowTitle>
           <Switch checked={enableTracking} onChange={setEnableTracking} />
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.tracking.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.tracking.description')}</SettingDescription>
       </SettingGroup>
 
       <SettingDivider />
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.system_prompt.label')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.system_prompt.label')}</SettingRowTitle>
           <Switch checked={injectSystemPrompt} onChange={setInjectSystemPrompt} />
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.system_prompt.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.system_prompt.description')}</SettingDescription>
       </SettingGroup>
 
       <SettingDivider />
 
       <SettingGroup theme={theme}>
         <SettingRow>
-          <SettingRowTitle>{t('settings.browser_use.demo.title')}</SettingRowTitle>
+          <SettingRowTitle>{t('settings.tool.browser_use.demo.title')}</SettingRowTitle>
         </SettingRow>
-        <SettingDescription>{t('settings.browser_use.demo.description')}</SettingDescription>
+        <SettingDescription>{t('settings.tool.browser_use.demo.description')}</SettingDescription>
         <DemoButtonContainer>
           <Button type="primary" icon={<Play size={16} />} onClick={() => setDemoModalOpen(true)}>
-            {t('settings.browser_use.demo.run_demo')}
+            {t('settings.tool.browser_use.demo.run_demo')}
           </Button>
           <Button
             icon={<Github size={16} />}
             onClick={() => {
               window.open('https://github.com/browser-tool-calling-protocol/btcp-cowork', '_blank')
             }}>
-            {t('settings.browser_use.demo.view_github')}
+            {t('settings.tool.browser_use.demo.view_github')}
           </Button>
         </DemoButtonContainer>
       </SettingGroup>
 
       <DemoModal
-        title={t('settings.browser_use.demo.modal_title')}
+        title={t('settings.tool.browser_use.demo.modal_title')}
         open={demoModalOpen}
         onCancel={() => {
           if (isRunning) {
@@ -159,21 +159,21 @@ const BrowserUseGeneralSettings: FC = () => {
           <DemoModalFooter>
             {!isRunning ? (
               <>
-                <Button onClick={resetDemo}>{t('settings.browser_use.demo.reset')}</Button>
+                <Button onClick={resetDemo}>{t('settings.tool.browser_use.demo.reset')}</Button>
                 <Button type="primary" icon={<Play size={14} />} onClick={runDemo}>
-                  {t('settings.browser_use.demo.start')}
+                  {t('settings.tool.browser_use.demo.start')}
                 </Button>
               </>
             ) : (
               <Button danger icon={<Square size={14} />} onClick={stopDemo}>
-                {t('settings.browser_use.demo.stop')}
+                {t('settings.tool.browser_use.demo.stop')}
               </Button>
             )}
           </DemoModalFooter>
         }
         width={600}>
         <DemoContent>
-          <DemoDescription>{t('settings.browser_use.demo.modal_description')}</DemoDescription>
+          <DemoDescription>{t('settings.tool.browser_use.demo.modal_description')}</DemoDescription>
 
           {error && <DemoError>{error}</DemoError>}
 
