@@ -70,7 +70,7 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
-      // BTCP Browser Agent subpackages
+      // BTCP Browser Agent (alias to TS source since package build fails without @types/chrome)
       'btcp-browser-agent/extension/content': resolve(
         __dirname,
         'node_modules/btcp-browser-agent/packages/extension/src/content.ts'
