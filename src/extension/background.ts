@@ -3,10 +3,16 @@
  *
  * Handles:
  * - MCP server connections (HTTP/SSE only)
+ * - BTCP browser tool command routing (via setupMessageListener)
  * - Context menu actions
  * - Keyboard shortcuts
  * - Storage sync
  */
+
+import { setupMessageListener } from 'btcp-browser-agent/extension'
+
+// Set up BTCP message routing (handles aspect:command messages)
+setupMessageListener()
 
 // MCP client connections (HTTP/SSE only - no stdio in extensions)
 const mcpClients = new Map<string, { url: string; transport: 'sse' | 'http' }>()
@@ -142,6 +148,8 @@ interface Message {
 
 async function handleMessage(message: Message, _sender: chrome.runtime.MessageSender): Promise<unknown> {
   const { type, payload } = message
+
+  // Note: BTCP commands (aspect:command) are handled by setupMessageListener() from btcp-browser-agent
 
   switch (type) {
     // Storage operations
@@ -338,4 +346,4 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
-console.log('Cherry Studio extension background loaded')
+console.log('Cherry Studio extension background loaded with BTCP support')

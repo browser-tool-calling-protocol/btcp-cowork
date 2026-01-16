@@ -1,65 +1,19 @@
 /**
- * Content Script
+ * Content Script - BTCP Browser Agent
  *
- * Runs on all web pages to:
- * - Handle text selection
- * - Extract page context
- * - Communicate with the extension
+ * Sets up ContentAgent for DOM operations and message handling.
+ * Following USAGE.md architecture.
  */
 
-// Listen for messages from popup/background
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  switch (message.type) {
-    case 'getSelection':
-      sendResponse(window.getSelection()?.toString() || '')
-      break
+import { createContentAgent } from 'btcp-browser-agent/extension'
 
-    case 'getPageContent':
-      sendResponse(extractPageContent())
-      break
+// Create agent and register message handler per USAGE.md
+const agent = createContentAgent()
+chrome.runtime.onMessage.addListener(agent.handleMessage)
 
-    case 'getPageContext':
-      sendResponse({
-        url: window.location.href,
-        title: document.title,
-        selection: window.getSelection()?.toString() || ''
-      })
-      break
-
-    default:
-      sendResponse(null)
-  }
-  return false
-})
-
-/**
- * Extract main content from page (simple implementation)
- */
-function extractPageContent(): string {
-  // Try to find main content areas
-  const selectors = ['article', 'main', '[role="main"]', '.content', '.post-content', '.article-content']
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector)
-    if (element) {
-      return cleanText(element.textContent || '')
-    }
-  }
-
-  // Fallback to body text
-  return cleanText(document.body.textContent || '')
-}
-
-/**
- * Clean extracted text
- */
-function cleanText(text: string): string {
-  return text
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
-    .trim()
-    .slice(0, 50000) // Limit length
-}
+// =============================================================================
+// TEXT SELECTION TRACKING
+// =============================================================================
 
 /**
  * Notify extension of text selection (optional feature)
@@ -78,17 +32,34 @@ document.addEventListener('mouseup', () => {
 
     if (text && text.length > 10 && text.length < 5000) {
       // Only notify for meaningful selections
-      chrome.runtime.sendMessage({
-        type: 'textSelected',
-        text,
-        url: window.location.href,
-        title: document.title
-      }).catch(() => {
-        // Extension context may be invalidated, ignore
-      })
+      chrome.runtime
+        .sendMessage({
+          type: 'textSelected',
+          text,
+          url: window.location.href,
+          title: document.title
+        })
+        .catch(() => {
+          // Extension context may be invalidated, ignore
+        })
     }
   }, 300)
 })
 
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
 // Log that content script loaded (for debugging)
-console.debug('[Cherry Studio] Content script loaded')
+console.debug('[Cherry Studio] Content script loaded with BTCP support')
+
+// Notify background that content script is ready
+chrome.runtime
+  .sendMessage({
+    type: 'contentScriptReady',
+    url: window.location.href,
+    title: document.title
+  })
+  .catch(() => {
+    // Extension context may be invalidated, ignore
+  })

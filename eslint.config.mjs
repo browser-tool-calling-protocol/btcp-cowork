@@ -56,6 +56,7 @@ export default defineConfig([
       'node_modules/**',
       'build/**',
       'dist/**',
+      'dist-extension/**',
       'out/**',
       'local/**',
       'tests/**',
