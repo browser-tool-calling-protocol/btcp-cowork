@@ -1,61 +1,9 @@
 /**
- * Content Script - BTCP Browser Agent + Cherry Studio helpers
+ * Content Script - BTCP Browser Agent
  */
 
 // Import btcp content script - auto-registers aspect:command listener
 import 'btcp-browser-agent/extension/content'
-
-// Cherry Studio specific message handlers
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  switch (message.type) {
-    case 'getSelection':
-      sendResponse(window.getSelection()?.toString() || '')
-      return false
-    case 'getPageContent':
-      sendResponse(extractPageContent())
-      return false
-    case 'getPageContext':
-      sendResponse({
-        url: window.location.href,
-        title: document.title,
-        selection: window.getSelection()?.toString() || ''
-      })
-      return false
-  }
-})
-
-// =============================================================================
-// PAGE CONTENT EXTRACTION
-// =============================================================================
-
-/**
- * Extract main content from page (simple implementation)
- */
-function extractPageContent(): string {
-  // Try to find main content areas
-  const selectors = ['article', 'main', '[role="main"]', '.content', '.post-content', '.article-content']
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector)
-    if (element) {
-      return cleanText(element.textContent || '')
-    }
-  }
-
-  // Fallback to body text
-  return cleanText(document.body.textContent || '')
-}
-
-/**
- * Clean extracted text
- */
-function cleanText(text: string): string {
-  return text
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
-    .trim()
-    .slice(0, 50000) // Limit length
-}
 
 // =============================================================================
 // TEXT SELECTION TRACKING

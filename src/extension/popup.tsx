@@ -5,7 +5,7 @@
  * Provides fast access to common features.
  */
 
-import React, { useEffect,useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 // Simple styles (avoiding full Ant Design for popup performance)
@@ -123,15 +123,23 @@ function Popup() {
   const askWithSelection = async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { type: 'getSelection' }, async (selection) => {
-        if (selection) {
-          await chrome.storage.session.set({
-            pendingAction: { type: 'ask', text: selection }
-          })
-          chrome.sidePanel.open({ tabId: tab.id! })
-          window.close()
+      // Use BTCP evaluate to get selection
+      chrome.runtime.sendMessage(
+        {
+          type: 'aspect:command',
+          command: { id: 'sel', action: 'evaluate', script: 'window.getSelection()?.toString() || ""' }
+        },
+        async (response) => {
+          const selection = response?.response?.data?.result
+          if (selection) {
+            await chrome.storage.session.set({
+              pendingAction: { type: 'ask', text: selection }
+            })
+            chrome.sidePanel.open({ tabId: tab.id! })
+            window.close()
+          }
         }
-      })
+      )
     }
   }
 
