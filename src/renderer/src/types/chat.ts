@@ -5,6 +5,7 @@ export type InputBarToolType =
   | 'attachment'
   | 'thinking'
   | 'web_search'
+  | 'browser_use'
   | 'url_context'
   | 'knowledge_base'
   | 'mcp_tools'
