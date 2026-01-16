@@ -3,9 +3,11 @@ import type { Tool, ToolEnvironment } from '@types'
 /**
  * Environment constants for tool compatibility.
  * - ELECTRON_ONLY: Tools that require Node.js/filesystem/shell access
+ * - BROWSER_ONLY: Tools that use browser-specific APIs (File System Access API)
  * - ALL_ENVIRONMENTS: Tools that work in both Electron and browser
  */
 const ELECTRON_ONLY: ToolEnvironment[] = ['electron']
+const BROWSER_ONLY: ToolEnvironment[] = ['browser']
 const ALL_ENVIRONMENTS: ToolEnvironment[] = ['electron', 'browser']
 
 // https://docs.anthropic.com/en/docs/claude-code/settings#tools-available-to-claude
@@ -116,5 +118,95 @@ export const builtinTools: Tool[] = [
     requirePermissions: true,
     type: 'builtin',
     supportedEnvironments: ALL_ENVIRONMENTS // API-based
+  },
+
+  // === Browser-only tools (use File System Access API) ===
+  {
+    id: 'BrowserRead',
+    name: 'BrowserRead',
+    description: 'Reads file contents from a user-granted folder',
+    requirePermissions: false,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserWrite',
+    name: 'BrowserWrite',
+    description: 'Creates or overwrites files in a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserEdit',
+    name: 'BrowserEdit',
+    description: 'Makes targeted edits to files in a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserGlob',
+    name: 'BrowserGlob',
+    description: 'Finds files by pattern in a user-granted folder',
+    requirePermissions: false,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserGrep',
+    name: 'BrowserGrep',
+    description: 'Searches for patterns in file contents within a user-granted folder',
+    requirePermissions: false,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserListDirectory',
+    name: 'BrowserListDirectory',
+    description: 'Lists directory contents in a user-granted folder',
+    requirePermissions: false,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserCreateDirectory',
+    name: 'BrowserCreateDirectory',
+    description: 'Creates new directories in a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserCopyFile',
+    name: 'BrowserCopyFile',
+    description: 'Copies files within a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserMoveFile',
+    name: 'BrowserMoveFile',
+    description: 'Moves/renames files within a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserDeleteFile',
+    name: 'BrowserDeleteFile',
+    description: 'Deletes files in a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
+  },
+  {
+    id: 'BrowserDeleteDirectory',
+    name: 'BrowserDeleteDirectory',
+    description: 'Deletes directories in a user-granted folder',
+    requirePermissions: true,
+    type: 'builtin',
+    supportedEnvironments: BROWSER_ONLY // Uses File System Access API
   }
 ]
