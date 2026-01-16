@@ -70,6 +70,8 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
+      // BTCP Browser Agent for browser automation
+      'btcp-browser-agent': resolve(__dirname, 'node_modules/btcp-browser-agent/src/index.ts'),
       // Shim the preload imports
       '../preload': resolve(__dirname, 'src/extension/shim.ts')
     }

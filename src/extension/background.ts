@@ -3,10 +3,25 @@
  *
  * Handles:
  * - MCP server connections (HTTP/SSE only)
+ * - BTCP browser tool command routing (relays to content script)
  * - Context menu actions
  * - Keyboard shortcuts
  * - Storage sync
  */
+
+// BTCP command types (simplified for message relay)
+interface BTCPCommand {
+  id: string
+  action: string
+  [key: string]: unknown
+}
+
+interface BTCPResponse {
+  id: string
+  success: boolean
+  data?: unknown
+  error?: string
+}
 
 // MCP client connections (HTTP/SSE only - no stdio in extensions)
 const mcpClients = new Map<string, { url: string; transport: 'sse' | 'http' }>()
@@ -324,6 +339,86 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
       return { success: true }
     }
 
+    // BTCP Browser Tool operations - relay to content script
+    case 'btcp:execute': {
+      // Execute a BTCP command in the specified tab (or active tab)
+      const { tabId, command } = payload as { tabId?: number; command: BTCPCommand }
+
+      let targetTabId = tabId
+      if (!targetTabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        targetTabId = activeTab?.id
+      }
+
+      if (!targetTabId) {
+        return { id: command?.id || 'unknown', success: false, error: 'No active tab found' } as BTCPResponse
+      }
+
+      try {
+        const response = await chrome.tabs.sendMessage(targetTabId, {
+          type: 'btcp:execute',
+          command
+        })
+        return response
+      } catch (error) {
+        return {
+          id: command?.id || 'unknown',
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to execute BTCP command'
+        } as BTCPResponse
+      }
+    }
+
+    case 'btcp:snapshot': {
+      // Get a snapshot from the specified tab (or active tab)
+      const { tabId, options } = payload as { tabId?: number; options?: Record<string, unknown> }
+
+      let targetTabId = tabId
+      if (!targetTabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        targetTabId = activeTab?.id
+      }
+
+      if (!targetTabId) {
+        return { success: false, error: 'No active tab found' }
+      }
+
+      try {
+        const response = await chrome.tabs.sendMessage(targetTabId, {
+          type: 'btcp:snapshot',
+          options
+        })
+        return response
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get snapshot'
+        }
+      }
+    }
+
+    case 'btcp:status': {
+      // Check if content script is ready in the specified tab (or active tab)
+      const { tabId } = payload as { tabId?: number }
+
+      let targetTabId = tabId
+      if (!targetTabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        targetTabId = activeTab?.id
+      }
+
+      if (!targetTabId) {
+        return { ready: false, error: 'No active tab found' }
+      }
+
+      try {
+        const response = await chrome.tabs.sendMessage(targetTabId, { type: 'btcp:status' })
+        return response
+      } catch {
+        return { ready: false, error: 'Content script not loaded' }
+      }
+    }
+
     default:
       console.warn('Unknown message type:', type)
       return { error: `Unknown message type: ${type}` }
@@ -338,4 +433,4 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
-console.log('Cherry Studio extension background loaded')
+console.log('Cherry Studio extension background loaded with BTCP support')
