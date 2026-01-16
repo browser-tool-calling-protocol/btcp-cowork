@@ -31,6 +31,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
+import { MemoryRouter } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 
 // Create React Query client
@@ -65,21 +66,23 @@ function SidepanelApp() {
     <StrictMode>
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
-          <StyleSheetManager>
-            <ThemeProvider>
-              <AntdProvider>
-                <NotificationProvider>
-                  <CodeStyleProvider>
-                    <QuickPanelProvider>
-                      <PersistGate loading={<LoadingScreen />} persistor={persistor}>
-                        <MinimalChat />
-                      </PersistGate>
-                    </QuickPanelProvider>
-                  </CodeStyleProvider>
-                </NotificationProvider>
-              </AntdProvider>
-            </ThemeProvider>
-          </StyleSheetManager>
+          <MemoryRouter>
+            <StyleSheetManager>
+              <ThemeProvider>
+                <AntdProvider>
+                  <NotificationProvider>
+                    <CodeStyleProvider>
+                      <QuickPanelProvider>
+                        <PersistGate loading={<LoadingScreen />} persistor={persistor}>
+                          <MinimalChat />
+                        </PersistGate>
+                      </QuickPanelProvider>
+                    </CodeStyleProvider>
+                  </NotificationProvider>
+                </AntdProvider>
+              </ThemeProvider>
+            </StyleSheetManager>
+          </MemoryRouter>
         </QueryClientProvider>
       </Provider>
     </StrictMode>
