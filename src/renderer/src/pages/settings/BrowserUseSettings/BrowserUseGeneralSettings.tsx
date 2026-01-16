@@ -1,17 +1,35 @@
 import { useTheme } from '@renderer/context/ThemeProvider'
+import { type DemoStep, useBrowserDemo } from '@renderer/hooks/useBrowserDemo'
 import { useBrowserUseSettings } from '@renderer/hooks/useBrowserUseSettings'
 import type { BrowserUseToolset } from '@renderer/store/browserUse'
-import { Button, InputNumber, message,Radio, Switch } from 'antd'
-import { Github, Star } from 'lucide-react'
-import type { FC } from 'react'
+import { Button, InputNumber, Modal, Progress, Radio, Switch, Tag } from 'antd'
+import { CheckCircle, Circle, Github, Loader2, Play, Square, XCircle } from 'lucide-react'
+import { type FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle } from '..'
 
+const getStepIcon = (status: DemoStep['status']) => {
+  switch (status) {
+    case 'success':
+      return <CheckCircle size={18} color="var(--color-success)" />
+    case 'error':
+      return <XCircle size={18} color="var(--color-error)" />
+    case 'running':
+      return <Loader2 size={18} className="spinning" color="var(--color-primary)" />
+    case 'skipped':
+      return <Circle size={18} color="var(--color-text-4)" />
+    default:
+      return <Circle size={18} color="var(--color-text-3)" />
+  }
+}
+
 const BrowserUseGeneralSettings: FC = () => {
   const { t } = useTranslation()
   const { theme } = useTheme()
+  const [demoModalOpen, setDemoModalOpen] = useState(false)
+  const { steps, isRunning, currentStepIndex, runDemo, stopDemo, resetDemo, error } = useBrowserDemo()
   const {
     enabled,
     setEnabled,
@@ -115,19 +133,8 @@ const BrowserUseGeneralSettings: FC = () => {
         </SettingRow>
         <SettingDescription>{t('settings.browser_use.demo.description')}</SettingDescription>
         <DemoButtonContainer>
-          <Button
-            type="primary"
-            icon={<Star size={16} />}
-            onClick={() => {
-              message.info(t('settings.browser_use.demo.star_message'))
-              // This would trigger browser automation to:
-              // 1. Navigate to Google
-              // 2. Search for "btcp browser cowork"
-              // 3. Click on the GitHub link
-              // 4. Star the repository
-              window.open('https://github.com/browser-tool-calling-protocol/btcp-cowork', '_blank')
-            }}>
-            {t('settings.browser_use.demo.star_button')}
+          <Button type="primary" icon={<Play size={16} />} onClick={() => setDemoModalOpen(true)}>
+            {t('settings.browser_use.demo.run_demo')}
           </Button>
           <Button
             icon={<Github size={16} />}
@@ -138,6 +145,61 @@ const BrowserUseGeneralSettings: FC = () => {
           </Button>
         </DemoButtonContainer>
       </SettingGroup>
+
+      <DemoModal
+        title={t('settings.browser_use.demo.modal_title')}
+        open={demoModalOpen}
+        onCancel={() => {
+          if (isRunning) {
+            stopDemo()
+          }
+          setDemoModalOpen(false)
+        }}
+        footer={
+          <DemoModalFooter>
+            {!isRunning ? (
+              <>
+                <Button onClick={resetDemo}>{t('settings.browser_use.demo.reset')}</Button>
+                <Button type="primary" icon={<Play size={14} />} onClick={runDemo}>
+                  {t('settings.browser_use.demo.start')}
+                </Button>
+              </>
+            ) : (
+              <Button danger icon={<Square size={14} />} onClick={stopDemo}>
+                {t('settings.browser_use.demo.stop')}
+              </Button>
+            )}
+          </DemoModalFooter>
+        }
+        width={600}>
+        <DemoContent>
+          <DemoDescription>{t('settings.browser_use.demo.modal_description')}</DemoDescription>
+
+          {error && <DemoError>{error}</DemoError>}
+
+          <DemoProgress>
+            <Progress
+              percent={Math.round((steps.filter((s) => s.status === 'success').length / steps.length) * 100)}
+              status={error ? 'exception' : isRunning ? 'active' : 'normal'}
+            />
+          </DemoProgress>
+
+          <DemoStepsList>
+            {steps.map((step, index) => (
+              <DemoStepItem key={step.id} $status={step.status} $isCurrent={index === currentStepIndex}>
+                <DemoStepIcon>{getStepIcon(step.status)}</DemoStepIcon>
+                <DemoStepInfo>
+                  <DemoStepName>{step.name}</DemoStepName>
+                  <DemoStepDescription>
+                    {step.description}
+                    <Tag style={{ marginLeft: 8 }}>{step.tool}</Tag>
+                  </DemoStepDescription>
+                </DemoStepInfo>
+              </DemoStepItem>
+            ))}
+          </DemoStepsList>
+        </DemoContent>
+      </DemoModal>
     </SettingContainer>
   )
 }
@@ -181,6 +243,101 @@ const DemoButtonContainer = styled.div`
   display: flex;
   gap: 12px;
   margin-top: 16px;
+`
+
+const DemoModal = styled(Modal)`
+  .ant-modal-body {
+    padding: 16px 24px;
+  }
+`
+
+const DemoModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`
+
+const DemoContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const DemoDescription = styled.p`
+  color: var(--color-text-2);
+  margin: 0;
+`
+
+const DemoError = styled.div`
+  padding: 12px;
+  background: var(--color-error-bg, rgba(255, 77, 79, 0.1));
+  border: 1px solid var(--color-error);
+  border-radius: 6px;
+  color: var(--color-error);
+  font-size: 13px;
+`
+
+const DemoProgress = styled.div`
+  margin: 8px 0;
+`
+
+const DemoStepsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+`
+
+const DemoStepItem = styled.div<{ $status: DemoStep['status']; $isCurrent: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: ${({ $isCurrent }) => ($isCurrent ? 'var(--color-primary-bg, rgba(22, 119, 255, 0.1))' : 'transparent')};
+  border: 1px solid ${({ $isCurrent }) => ($isCurrent ? 'var(--color-primary)' : 'var(--color-border)')};
+  transition: all 0.2s;
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`
+
+const DemoStepIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`
+
+const DemoStepInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`
+
+const DemoStepName = styled.span`
+  font-weight: 500;
+  font-size: 14px;
+`
+
+const DemoStepDescription = styled.span`
+  font-size: 12px;
+  color: var(--color-text-3);
+  display: flex;
+  align-items: center;
 `
 
 export default BrowserUseGeneralSettings

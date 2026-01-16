@@ -4947,10 +4947,23 @@
         },
         "demo": {
           "title": "Try Browser Automation",
-          "description": "Test the browser tools by starring our GitHub repository",
-          "star_button": "Star us on GitHub",
+          "description": "Test the browser tools with a live demo that navigates and interacts with web pages",
+          "run_demo": "Run Browser Demo",
           "view_github": "View on GitHub",
-          "star_message": "Opening GitHub - please star if you like the project!"
+          "modal_title": "Browser Tools Demo",
+          "modal_description": "This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
+          "start": "Start Demo",
+          "stop": "Stop",
+          "reset": "Reset",
+          "steps": {
+            "connecting": "Connecting to browser",
+            "navigate": "Navigate to URL",
+            "get_title": "Get page title",
+            "snapshot": "Take page snapshot",
+            "fill": "Fill input field",
+            "click": "Click element",
+            "wait": "Wait for page"
+          }
         }
       }
     },
