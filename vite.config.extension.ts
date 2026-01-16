@@ -71,13 +71,16 @@ export default defineConfig({
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
       // BTCP Browser Agent subpackages
-      'btcp-browser-agent/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
+      'btcp-browser-agent/extension/content': resolve(
+        __dirname,
+        'node_modules/btcp-browser-agent/packages/extension/src/content.ts'
+      ),
       'btcp-browser-agent/extension': resolve(
         __dirname,
         'node_modules/btcp-browser-agent/packages/extension/src/index.ts'
       ),
+      'btcp-browser-agent/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
       'btcp-browser-agent': resolve(__dirname, 'node_modules/btcp-browser-agent/src/index.ts'),
-      // Internal package aliases for btcp-browser-agent
       '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
       // AI SDK openai-compatible (resolve pnpm hoisted path)
       '@ai-sdk/openai-compatible': resolve(

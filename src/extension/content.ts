@@ -1,67 +1,27 @@
 /**
- * Content Script
- *
- * Runs on all web pages to:
- * - Handle text selection
- * - Extract page context
- * - Execute BTCP browser actions
- * - Communicate with the extension
+ * Content Script - BTCP Browser Agent + Cherry Studio helpers
  */
 
-import { type ContentAgent,createContentAgent } from 'btcp-browser-agent/core'
+// Import btcp content script - auto-registers aspect:command listener
+import 'btcp-browser-agent/extension/content'
 
-// =============================================================================
-// BTCP CONTENT AGENT
-// =============================================================================
-
-let agent: ContentAgent | null = null
-
-function getAgent(): ContentAgent {
-  if (!agent) {
-    agent = createContentAgent(document, window)
-  }
-  return agent
-}
-
-// =============================================================================
-// EXTENSION MESSAGE HANDLING
-// =============================================================================
-
-// Listen for messages from popup/background
+// Cherry Studio specific message handlers
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  // BTCP: Handle aspect:command messages (from background via setupMessageListener)
-  if (message.type === 'aspect:command') {
-    getAgent()
-      .execute(message.command)
-      .then((response) => sendResponse({ type: 'aspect:response', response }))
-      .catch((error) =>
-        sendResponse({
-          type: 'aspect:response',
-          response: { id: message.command?.id || 'unknown', success: false, error: String(error) }
-        })
-      )
-    return true
-  }
-
-  // Non-BTCP messages
   switch (message.type) {
     case 'getSelection':
       sendResponse(window.getSelection()?.toString() || '')
-      break
+      return false
     case 'getPageContent':
       sendResponse(extractPageContent())
-      break
+      return false
     case 'getPageContext':
       sendResponse({
         url: window.location.href,
         title: document.title,
         selection: window.getSelection()?.toString() || ''
       })
-      break
-    default:
-      sendResponse(null)
+      return false
   }
-  return false
 })
 
 // =============================================================================
