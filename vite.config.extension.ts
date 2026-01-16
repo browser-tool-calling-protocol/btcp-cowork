@@ -72,6 +72,11 @@ export default defineConfig({
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
       // BTCP Browser Agent for browser automation
       'btcp-browser-agent': resolve(__dirname, 'node_modules/btcp-browser-agent/src/index.ts'),
+      // AI SDK openai-compatible (resolve pnpm hoisted path)
+      '@ai-sdk/openai-compatible': resolve(
+        __dirname,
+        'node_modules/.pnpm/@ai-sdk+openai-compatible@1.0.28_patch_hash=5ea49b4f07636a8e4630097e67e2787779ba7e933bd0459f81b1803cb125edda_zod@4.3.4/node_modules/@ai-sdk/openai-compatible'
+      ),
       // Shim the preload imports
       '../preload': resolve(__dirname, 'src/extension/shim.ts')
     }
