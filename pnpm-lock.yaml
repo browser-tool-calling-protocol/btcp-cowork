@@ -646,7 +646,7 @@ importers:
         version: 2.0.2
       btcp-browser-agent:
         specifier: github:browser-tool-calling-protocol/btcp-browser-agent
-        version: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/bc9288646fdac50228bfde8498ecb0c47575116a
+        version: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/75ad301cdec06c12747a9a8e175c51b4f569412b
       builder-util-runtime:
         specifier: 9.5.0
         version: 9.5.0
@@ -1260,7 +1260,7 @@ importers:
         version: 5.0.117(zod@4.3.4)
       btcp-browser-agent:
         specifier: github:browser-tool-calling-protocol/btcp-browser-agent
-        version: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/bc9288646fdac50228bfde8498ecb0c47575116a
+        version: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/75ad301cdec06c12747a9a8e175c51b4f569412b
       zod:
         specifier: ^4.1.5
         version: 4.3.4
@@ -6062,8 +6062,8 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
-  btcp-browser-agent@https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/bc9288646fdac50228bfde8498ecb0c47575116a:
-    resolution: {tarball: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/bc9288646fdac50228bfde8498ecb0c47575116a}
+  btcp-browser-agent@https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/75ad301cdec06c12747a9a8e175c51b4f569412b:
+    resolution: {tarball: https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/75ad301cdec06c12747a9a8e175c51b4f569412b}
     version: 0.1.0
 
   buffer-alloc-unsafe@1.1.0:
@@ -18300,9 +18300,7 @@ snapshots:
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
 
-  btcp-browser-agent@https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/bc9288646fdac50228bfde8498ecb0c47575116a:
-    dependencies:
-      zod: 3.25.76
+  btcp-browser-agent@https://codeload.github.com/browser-tool-calling-protocol/btcp-browser-agent/tar.gz/75ad301cdec06c12747a9a8e175c51b4f569412b: {}
 
   buffer-alloc-unsafe@1.1.0: {}
 

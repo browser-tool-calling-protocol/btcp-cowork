@@ -466,6 +466,7 @@
       "@paymoapp/electron-shutdown-handler",
       "@scarf/scarf",
       "@swc/core",
+      "btcp-browser-agent",
       "electron",
       "electron-winstaller",
       "esbuild",

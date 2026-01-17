@@ -16,11 +16,26 @@ const isProd = process.env.NODE_ENV === 'production'
 function copyExtensionFiles() {
   return {
     name: 'copy-extension-files',
+    buildStart() {
+      // Ensure output directory exists before build starts
+      const outDir = resolve(__dirname, 'dist-extension')
+      if (!existsSync(outDir)) {
+        mkdirSync(outDir, { recursive: true })
+      }
+    },
     closeBundle() {
       const outDir = resolve(__dirname, 'dist-extension')
 
+      // Ensure output directory exists
+      if (!existsSync(outDir)) {
+        mkdirSync(outDir, { recursive: true })
+      }
+
       // Copy manifest
-      copyFileSync(resolve(__dirname, 'src/extension/manifest.json'), resolve(outDir, 'manifest.json'))
+      const manifestSrc = resolve(__dirname, 'src/extension/manifest.json')
+      if (existsSync(manifestSrc)) {
+        copyFileSync(manifestSrc, resolve(outDir, 'manifest.json'))
+      }
 
       // Create icons directory and copy icons
       const iconsDir = resolve(outDir, 'icons')
@@ -70,11 +85,6 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
-      // AI SDK openai-compatible (resolve pnpm hoisted path)
-      '@ai-sdk/openai-compatible': resolve(
-        __dirname,
-        'node_modules/.pnpm/@ai-sdk+openai-compatible@1_0a9002562741f5bcbca5a20f29786ad1/node_modules/@ai-sdk/openai-compatible'
-      ),
       // btcp-browser-agent (resolve to TypeScript source)
       '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
       'btcp-browser-agent/extension': resolve(
