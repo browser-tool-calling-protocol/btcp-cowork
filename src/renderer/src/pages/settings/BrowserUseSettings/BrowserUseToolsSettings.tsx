@@ -8,7 +8,7 @@ import styled from 'styled-components'
 
 import { SettingContainer, SettingGroup, SettingRowTitle } from '..'
 
-// Tool presets matching the btcpBrowserPlugin constants
+// Tool presets matching the browserUsePlugin constants
 // Uses the two-layer architecture from btcp-browser-agent:
 // - BackgroundAgent: Session management, navigation, screenshots
 // - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)

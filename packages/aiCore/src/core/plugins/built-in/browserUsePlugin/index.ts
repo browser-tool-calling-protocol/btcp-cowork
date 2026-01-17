@@ -1,5 +1,5 @@
 /**
- * BTCP Browser Plugin
+ * Browser Use Plugin
  *
  * Integrates btcp-browser-agent as a reusable plugin for @cherrystudio/ai-core,
  * enabling AI models to control browsers through the Browser Tool Calling Protocol (BTCP).
@@ -40,17 +40,17 @@ function createTool<TParams extends z.ZodType, TResult>(config: {
 }
 
 /**
- * BTCP Browser Plugin Factory
+ * Browser Use Plugin Factory
  *
  * @param config - Plugin configuration options
  * @returns An aiCore plugin that provides browser automation tools
  *
  * @example
  * ```typescript
- * import { createExecutor, btcpBrowserPlugin } from '@cherrystudio/ai-core'
+ * import { createExecutor, browserUsePlugin } from '@cherrystudio/ai-core'
  *
  * const executor = createExecutor('anthropic', { apiKey: '...' }, [
- *   btcpBrowserPlugin()
+ *   browserUsePlugin()
  * ])
  *
  * const result = await executor.streamText({
@@ -62,7 +62,7 @@ function createTool<TParams extends z.ZodType, TResult>(config: {
  * })
  * ```
  */
-export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
+export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
   const {
     enabled = DEFAULT_CONFIG.enabled,
     agent: providedAgent,
@@ -360,7 +360,10 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
 }
 
 // Default export
-export default btcpBrowserPlugin
+export default browserUsePlugin
+
+// Legacy export for backwards compatibility
+export const btcpBrowserPlugin = browserUsePlugin
 
 // Re-export types
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'

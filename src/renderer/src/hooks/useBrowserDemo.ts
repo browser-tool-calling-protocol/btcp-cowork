@@ -1,18 +1,15 @@
 /**
  * Browser Demo Hook
  *
- * Demonstrates the BTCP browser tools by showing a simulated flow
- * of browser automation commands. This runs as a visualization to
- * help users understand what the tools do.
+ * Demonstrates the BTCP browser tools by actually controlling the browser
+ * extension through the btcp-browser-agent client API.
  *
- * Uses the new btcp-browser-agent API with BackgroundAgent and ContentAgent:
+ * Uses the createClient() API which sends commands via chrome.runtime.sendMessage:
  * - BackgroundAgent: Session management, navigation, screenshots
  * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
- *
- * Note: Actual browser control happens through the btcpBrowserPlugin
- * during AI chat interactions in the main process.
  */
 
+import { createClient } from 'btcp-browser-agent/extension'
 import { useCallback, useRef, useState } from 'react'
 
 export interface DemoStep {
@@ -31,7 +28,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'launch',
     name: 'Launch Browser',
-    description: 'Starting browser session',
+    description: 'Starting browser session and waiting for page load',
     action: 'browser_launch',
     agent: 'background',
     args: { url: 'https://www.google.com' }
@@ -47,7 +44,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'fill-search',
     name: 'Fill Search Box',
-    description: 'Filling search input using ref selector',
+    description: 'Waiting for search box to appear, then filling it',
     action: 'browser_fill',
     agent: 'content',
     args: { selector: '@ref:5', value: 'btcp browser tools' }
@@ -55,7 +52,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'press-enter',
     name: 'Submit Search',
-    description: 'Pressing Enter key',
+    description: 'Pressing Enter key and waiting for navigation',
     action: 'browser_press',
     agent: 'content',
     args: { key: 'Enter' }
@@ -63,7 +60,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'navigate-github',
     name: 'Navigate to GitHub',
-    description: 'Going to the repository page',
+    description: 'Going to the repository page and waiting for load',
     action: 'browser_navigate',
     agent: 'background',
     args: { url: 'https://github.com/browser-tool-calling-protocol/btcp-browser-agent' }
@@ -79,7 +76,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'get-text',
     name: 'Get Repo Title',
-    description: 'Reading repository name',
+    description: 'Waiting for element, then reading repository name',
     action: 'browser_get_text',
     agent: 'content',
     args: { selector: '@ref:10' }
@@ -87,7 +84,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'click-star',
     name: 'Click Star Button',
-    description: 'Starring the repository',
+    description: 'Waiting for button, then starring the repository',
     action: 'browser_click',
     agent: 'content',
     args: { selector: '@ref:12' }
@@ -95,7 +92,7 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
     id: 'screenshot',
     name: 'Take Screenshot',
-    description: 'Capturing final page state',
+    description: 'Waiting for animations, then capturing page state',
     action: 'browser_screenshot',
     agent: 'background',
     args: {}
@@ -109,29 +106,6 @@ const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
     args: {}
   }
 ]
-
-// Simulated results for each action type
-const SIMULATED_RESULTS: Record<string, unknown> = {
-  // BackgroundAgent actions
-  browser_launch: { success: true, tabId: 123 },
-  browser_navigate: { success: true, url: 'https://example.com' },
-  browser_back: { success: true },
-  browser_forward: { success: true },
-  browser_reload: { success: true },
-  browser_close: { success: true },
-  browser_screenshot: { image: 'data:image/png;base64,...', format: 'png' },
-  // ContentAgent actions
-  browser_snapshot: {
-    tree: 'document [ref=0]\n  button "Submit" [ref=5]\n  input "Search" [ref=6]',
-    refs: { 5: { role: 'button', name: 'Submit' }, 6: { role: 'textbox', name: 'Search' } }
-  },
-  browser_get_text: { text: 'btcp-browser-agent' },
-  browser_click: { success: true },
-  browser_type: { success: true },
-  browser_fill: { success: true },
-  browser_press: { success: true },
-  browser_scroll: { success: true }
-}
 
 export interface UseBrowserDemoReturn {
   steps: DemoStep[]
@@ -157,15 +131,113 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
     setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, ...updates } : step)))
   }, [])
 
-  const simulateStep = useCallback(async (step: DemoStep): Promise<unknown> => {
-    // Simulate network/processing delay (300-800ms)
-    // BackgroundAgent actions may take slightly longer due to browser-level operations
-    const baseDelay = step.agent === 'background' ? 400 : 300
-    const delay = baseDelay + Math.random() * 500
-    await new Promise((resolve) => setTimeout(resolve, delay))
+  const executeStep = useCallback(async (step: DemoStep): Promise<unknown> => {
+    const client = createClient()
 
-    // Return simulated result based on action type
-    return SIMULATED_RESULTS[step.action] ?? { success: true }
+    // Execute actual browser commands through the extension
+    switch (step.action) {
+      case 'browser_launch':
+        // Wait for page to fully load before proceeding
+        return await client.navigate(step.args.url as string, { waitUntil: 'load' })
+
+      case 'browser_navigate':
+        // Wait for page to fully load before proceeding
+        return await client.navigate(step.args.url as string, { waitUntil: 'load' })
+
+      case 'browser_snapshot':
+        return await client.snapshot()
+
+      case 'browser_fill':
+        // Wait for element to be visible before filling
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'wait',
+          selector: step.args.selector as string,
+          state: 'visible',
+          timeout: 5000
+        })
+        return await client.fill(step.args.selector as string, step.args.value as string)
+
+      case 'browser_press':
+        // Use execute for press key action
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'press',
+          key: step.args.key as string
+        })
+        // Wait for page transition after Enter key (e.g., form submission)
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'wait',
+          timeout: 2000
+        })
+        return { success: true }
+
+      case 'browser_click':
+        // Wait for element to be visible before clicking
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'wait',
+          selector: step.args.selector as string,
+          state: 'visible',
+          timeout: 5000
+        })
+        return await client.click(step.args.selector as string)
+
+      case 'browser_get_text':
+        // Wait for element to be visible before reading text
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'wait',
+          selector: step.args.selector as string,
+          state: 'visible',
+          timeout: 5000
+        })
+        const text = await client.getText(step.args.selector as string)
+        return { text }
+
+      case 'browser_screenshot':
+        // Wait for animations to complete before taking screenshot
+        await client.execute({
+          id: crypto.randomUUID(),
+          action: 'wait',
+          timeout: 500
+        })
+        const screenshot = await client.screenshot()
+        return { screenshot }
+
+      case 'browser_close':
+        return await client.tabClose()
+
+      case 'browser_back':
+        return await client.back()
+
+      case 'browser_forward':
+        return await client.forward()
+
+      case 'browser_reload':
+        return await client.reload()
+
+      case 'browser_type':
+        // Use execute for type action
+        return await client.execute({
+          id: crypto.randomUUID(),
+          action: 'type',
+          text: step.args.text as string
+        })
+
+      case 'browser_scroll':
+        // Use execute for scroll action
+        return await client.execute({
+          id: crypto.randomUUID(),
+          action: 'scroll',
+          x: step.args.x as number | undefined,
+          y: step.args.y as number | undefined
+        })
+
+      default:
+        throw new Error(`Unknown action: ${step.action}`)
+    }
   }, [])
 
   const runDemo = useCallback(async () => {
@@ -191,7 +263,7 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
         updateStep(i, { status: 'running' })
 
         try {
-          const result = await simulateStep({ ...DEMO_STEPS[i], status: 'running' })
+          const result = await executeStep({ ...DEMO_STEPS[i], status: 'running' })
           updateStep(i, { status: 'success', result })
 
           // Small delay between steps for visual feedback
@@ -208,7 +280,7 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
       setIsRunning(false)
       setCurrentStepIndex(-1)
     }
-  }, [simulateStep, updateStep])
+  }, [executeStep, updateStep])
 
   const stopDemo = useCallback(() => {
     abortRef.current = true
