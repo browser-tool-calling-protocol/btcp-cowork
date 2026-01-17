@@ -715,6 +715,27 @@
         "title": "Activity Directory"
       },
       "auto_resize": "Auto resize height",
+      "browser_use": {
+        "disable": "Disable Browser Use",
+        "enabled_tooltip": "Browser tools enabled ({{toolset}})",
+        "label": "Browser Use",
+        "menu_description": "Enable browser automation tools",
+        "panel_title": "Select Toolset",
+        "toolset": {
+          "full": {
+            "description": "All tools including JS execution",
+            "label": "Full"
+          },
+          "minimal": {
+            "description": "Read-only: snapshot, text, URL",
+            "label": "Minimal"
+          },
+          "standard": {
+            "description": "Navigation and interaction",
+            "label": "Standard"
+          }
+        }
+      },
       "clear": {
         "content": "Do you want to clear all messages of the current topic?",
         "label": "Clear {{Command}}",
@@ -799,27 +820,6 @@
           "label": "Disable Web Search"
         },
         "settings": "Web Search Settings"
-      },
-      "browser_use": {
-        "label": "Browser Use",
-        "disable": "Disable Browser Use",
-        "enabled_tooltip": "Browser tools enabled ({{toolset}})",
-        "panel_title": "Select Toolset",
-        "menu_description": "Enable browser automation tools",
-        "toolset": {
-          "minimal": {
-            "label": "Minimal",
-            "description": "Read-only: snapshot, text, URL"
-          },
-          "standard": {
-            "label": "Standard",
-            "description": "Navigation and interaction"
-          },
-          "full": {
-            "label": "Full",
-            "description": "All tools including JS execution"
-          }
-        }
       }
     },
     "mcp": {
@@ -4765,6 +4765,73 @@
     },
     "title": "Settings",
     "tool": {
+      "browser_use": {
+        "demo": {
+          "description": "Test the browser tools with a live demo that navigates and interacts with web pages",
+          "modal_description": "This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
+          "modal_title": "Browser Tools Demo",
+          "reset": "Reset",
+          "run_demo": "Run Browser Demo",
+          "start": "Start Demo",
+          "steps": {
+            "click": "Click element",
+            "connecting": "Connecting to browser",
+            "fill": "Fill input field",
+            "get_title": "Get page title",
+            "navigate": "Navigate to URL",
+            "snapshot": "Take page snapshot",
+            "wait": "Wait for page"
+          },
+          "stop": "Stop",
+          "title": "Try Browser Automation",
+          "view_github": "View on GitHub"
+        },
+        "enabled": {
+          "description": "Allow AI to control browser for automation tasks",
+          "label": "Enable Browser Use"
+        },
+        "general": {
+          "title": "General"
+        },
+        "max_snapshot_size": {
+          "description": "Maximum characters for page snapshots (prevents token overflow)",
+          "label": "Max Snapshot Size"
+        },
+        "screencast": {
+          "description": "Stream visual updates for vision models (increases token usage)",
+          "label": "Enable Screencast"
+        },
+        "system_prompt": {
+          "description": "Add browser workflow hints to AI system prompt",
+          "label": "Inject System Prompt"
+        },
+        "title": "Browser Use",
+        "tools": {
+          "available": "Available Browser Tools",
+          "description": "Tools enabled for the '{{preset}}' preset",
+          "title": "Tools"
+        },
+        "toolset": {
+          "description": "Choose which browser tools are available to AI models",
+          "full": {
+            "description": "All tools including JavaScript execution and iframe handling",
+            "label": "Full (Advanced)"
+          },
+          "label": "Default Toolset",
+          "minimal": {
+            "description": "Safe read-only operations: snapshot, URL, title, text extraction",
+            "label": "Minimal (Read-only)"
+          },
+          "standard": {
+            "description": "Common automation: navigation, clicks, typing, forms, scrolling",
+            "label": "Standard"
+          }
+        },
+        "tracking": {
+          "description": "Track network requests and console logs for debugging",
+          "label": "Enable Request Tracking"
+        }
+      },
       "ocr": {
         "common": {
           "langs": "Supported languages"
@@ -4898,73 +4965,6 @@
         "title": "Web Search",
         "url_invalid": "Entered an invalid URL",
         "url_required": "Please enter a URL"
-      },
-      "browser_use": {
-        "title": "Browser Use",
-        "general": {
-          "title": "General"
-        },
-        "tools": {
-          "title": "Tools",
-          "available": "Available Browser Tools",
-          "description": "Tools enabled for the '{{preset}}' preset"
-        },
-        "enabled": {
-          "label": "Enable Browser Use",
-          "description": "Allow AI to control browser for automation tasks"
-        },
-        "toolset": {
-          "label": "Default Toolset",
-          "description": "Choose which browser tools are available to AI models",
-          "minimal": {
-            "label": "Minimal (Read-only)",
-            "description": "Safe read-only operations: snapshot, URL, title, text extraction"
-          },
-          "standard": {
-            "label": "Standard",
-            "description": "Common automation: navigation, clicks, typing, forms, scrolling"
-          },
-          "full": {
-            "label": "Full (Advanced)",
-            "description": "All tools including JavaScript execution and iframe handling"
-          }
-        },
-        "max_snapshot_size": {
-          "label": "Max Snapshot Size",
-          "description": "Maximum characters for page snapshots (prevents token overflow)"
-        },
-        "screencast": {
-          "label": "Enable Screencast",
-          "description": "Stream visual updates for vision models (increases token usage)"
-        },
-        "tracking": {
-          "label": "Enable Request Tracking",
-          "description": "Track network requests and console logs for debugging"
-        },
-        "system_prompt": {
-          "label": "Inject System Prompt",
-          "description": "Add browser workflow hints to AI system prompt"
-        },
-        "demo": {
-          "title": "Try Browser Automation",
-          "description": "Test the browser tools with a live demo that navigates and interacts with web pages",
-          "run_demo": "Run Browser Demo",
-          "view_github": "View on GitHub",
-          "modal_title": "Browser Tools Demo",
-          "modal_description": "This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
-          "start": "Start Demo",
-          "stop": "Stop",
-          "reset": "Reset",
-          "steps": {
-            "connecting": "Connecting to browser",
-            "navigate": "Navigate to URL",
-            "get_title": "Get page title",
-            "snapshot": "Take page snapshot",
-            "fill": "Fill input field",
-            "click": "Click element",
-            "wait": "Wait for page"
-          }
-        }
       }
     },
     "topic": {

@@ -715,6 +715,27 @@
         "title": "活動目錄"
       },
       "auto_resize": "自動調整高度",
+      "browser_use": {
+        "disable": "停用瀏覽器控制",
+        "enabled_tooltip": "瀏覽器工具已啟用 ({{toolset}})",
+        "label": "瀏覽器控制",
+        "menu_description": "啟用瀏覽器自動化工具",
+        "panel_title": "選擇工具集",
+        "toolset": {
+          "full": {
+            "description": "所有工具，包括 JS 執行",
+            "label": "完整"
+          },
+          "minimal": {
+            "description": "唯讀：快照、文字、URL",
+            "label": "精簡"
+          },
+          "standard": {
+            "description": "導航和互動",
+            "label": "標準"
+          }
+        }
+      },
       "clear": {
         "content": "您想要清除目前話題的所有訊息嗎？",
         "label": "清除 {{Command}}",
@@ -4744,6 +4765,73 @@
     },
     "title": "設定",
     "tool": {
+      "browser_use": {
+        "demo": {
+          "description": "透過即時示範測試瀏覽器工具，瀏覽和操作網頁",
+          "modal_description": "此示範將開啟瀏覽器視窗並展示 BTCP 瀏覽器工具：導航、頁面檢查、表單填寫等。",
+          "modal_title": "瀏覽器工具示範",
+          "reset": "重設",
+          "run_demo": "執行瀏覽器示範",
+          "start": "開始示範",
+          "steps": {
+            "click": "點擊元素",
+            "connecting": "連線到瀏覽器",
+            "fill": "填寫輸入欄位",
+            "get_title": "取得頁面標題",
+            "navigate": "導航到 URL",
+            "snapshot": "取得頁面快照",
+            "wait": "等待頁面"
+          },
+          "stop": "停止",
+          "title": "體驗瀏覽器自動化",
+          "view_github": "在 GitHub 檢視"
+        },
+        "enabled": {
+          "description": "允許 AI 控制瀏覽器執行自動化任務",
+          "label": "啟用瀏覽器控制"
+        },
+        "general": {
+          "title": "一般"
+        },
+        "max_snapshot_size": {
+          "description": "頁面快照的最大字元數（防止 token 溢位）",
+          "label": "最大快照大小"
+        },
+        "screencast": {
+          "description": "為視覺模型串流視覺更新（會增加 token 使用量）",
+          "label": "啟用螢幕投射"
+        },
+        "system_prompt": {
+          "description": "將瀏覽器工作流程提示加入 AI 系統提示詞",
+          "label": "注入系統提示詞"
+        },
+        "title": "瀏覽器控制",
+        "tools": {
+          "available": "可用的瀏覽器工具",
+          "description": "已啟用 '{{preset}}' 預設的工具",
+          "title": "工具"
+        },
+        "toolset": {
+          "description": "選擇 AI 模型可用的瀏覽器工具",
+          "full": {
+            "description": "所有工具，包括 JavaScript 執行和 iframe 處理",
+            "label": "完整（進階）"
+          },
+          "label": "預設工具集",
+          "minimal": {
+            "description": "安全的唯讀操作：快照、URL、標題、文字擷取",
+            "label": "精簡（唯讀）"
+          },
+          "standard": {
+            "description": "常用自動化：導航、點擊、輸入、表單、捲動",
+            "label": "標準"
+          }
+        },
+        "tracking": {
+          "description": "追蹤網路請求和控制台日誌，用於除錯",
+          "label": "啟用請求追蹤"
+        }
+      },
       "ocr": {
         "common": {
           "langs": "支援的語言"
