@@ -715,6 +715,27 @@
         "title": "活动目录"
       },
       "auto_resize": "自动调整高度",
+      "browser_use": {
+        "disable": "禁用浏览器控制",
+        "enabled_tooltip": "浏览器工具已启用 ({{toolset}})",
+        "label": "浏览器控制",
+        "menu_description": "启用浏览器自动化工具",
+        "panel_title": "选择工具集",
+        "toolset": {
+          "full": {
+            "description": "所有工具，包括 JS 执行",
+            "label": "完整"
+          },
+          "minimal": {
+            "description": "只读：快照、文本、URL",
+            "label": "精简"
+          },
+          "standard": {
+            "description": "导航和交互",
+            "label": "标准"
+          }
+        }
+      },
       "clear": {
         "content": "确定要清除当前会话所有消息吗？",
         "label": "清空消息 {{Command}}",
@@ -4744,6 +4765,73 @@
     },
     "title": "设置",
     "tool": {
+      "browser_use": {
+        "demo": {
+          "description": "通过实时演示测试浏览器工具，浏览和操作网页",
+          "modal_description": "此演示将打开浏览器窗口并展示 BTCP 浏览器工具：导航、页面检查、表单填写等。",
+          "modal_title": "浏览器工具演示",
+          "reset": "重置",
+          "run_demo": "运行浏览器演示",
+          "start": "开始演示",
+          "steps": {
+            "click": "点击元素",
+            "connecting": "连接到浏览器",
+            "fill": "填写输入框",
+            "get_title": "获取页面标题",
+            "navigate": "导航到 URL",
+            "snapshot": "获取页面快照",
+            "wait": "等待页面"
+          },
+          "stop": "停止",
+          "title": "体验浏览器自动化",
+          "view_github": "在 GitHub 查看"
+        },
+        "enabled": {
+          "description": "允许 AI 控制浏览器执行自动化任务",
+          "label": "启用浏览器控制"
+        },
+        "general": {
+          "title": "常规"
+        },
+        "max_snapshot_size": {
+          "description": "页面快照的最大字符数（防止 token 溢出）",
+          "label": "最大快照大小"
+        },
+        "screencast": {
+          "description": "为视觉模型流式传输视觉更新（会增加 token 使用量）",
+          "label": "启用屏幕投射"
+        },
+        "system_prompt": {
+          "description": "将浏览器工作流提示添加到 AI 系统提示词",
+          "label": "注入系统提示词"
+        },
+        "title": "浏览器控制",
+        "tools": {
+          "available": "可用的浏览器工具",
+          "description": "已启用 '{{preset}}' 预设的工具",
+          "title": "工具"
+        },
+        "toolset": {
+          "description": "选择 AI 模型可用的浏览器工具",
+          "full": {
+            "description": "所有工具，包括 JavaScript 执行和 iframe 处理",
+            "label": "完整（高级）"
+          },
+          "label": "默认工具集",
+          "minimal": {
+            "description": "安全的只读操作：快照、URL、标题、文本提取",
+            "label": "精简（只读）"
+          },
+          "standard": {
+            "description": "常用自动化：导航、点击、输入、表单、滚动",
+            "label": "标准"
+          }
+        },
+        "tracking": {
+          "description": "追踪网络请求和控制台日志，用于调试",
+          "label": "启用请求追踪"
+        }
+      },
       "ocr": {
         "common": {
           "langs": "支持的语言"

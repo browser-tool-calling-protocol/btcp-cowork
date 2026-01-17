@@ -715,6 +715,27 @@
         "title": "Diretório de Atividades"
       },
       "auto_resize": "Ajuste automático de altura",
+      "browser_use": {
+        "disable": "[to be translated]:Disable Browser Use",
+        "enabled_tooltip": "[to be translated]:Browser tools enabled ({{toolset}})",
+        "label": "[to be translated]:Browser Use",
+        "menu_description": "[to be translated]:Enable browser automation tools",
+        "panel_title": "[to be translated]:Select Toolset",
+        "toolset": {
+          "full": {
+            "description": "[to be translated]:All tools including JS execution",
+            "label": "[to be translated]:Full"
+          },
+          "minimal": {
+            "description": "[to be translated]:Read-only: snapshot, text, URL",
+            "label": "[to be translated]:Minimal"
+          },
+          "standard": {
+            "description": "[to be translated]:Navigation and interaction",
+            "label": "[to be translated]:Standard"
+          }
+        }
+      },
       "clear": {
         "content": "Tem certeza de que deseja limpar todas as mensagens da sessão atual?",
         "label": "Limpar mensagens {{Command}}",
@@ -4744,6 +4765,73 @@
     },
     "title": "Configurações",
     "tool": {
+      "browser_use": {
+        "demo": {
+          "description": "[to be translated]:Test the browser tools with a live demo that navigates and interacts with web pages",
+          "modal_description": "[to be translated]:This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
+          "modal_title": "[to be translated]:Browser Tools Demo",
+          "reset": "[to be translated]:Reset",
+          "run_demo": "[to be translated]:Run Browser Demo",
+          "start": "[to be translated]:Start Demo",
+          "steps": {
+            "click": "[to be translated]:Click element",
+            "connecting": "[to be translated]:Connecting to browser",
+            "fill": "[to be translated]:Fill input field",
+            "get_title": "[to be translated]:Get page title",
+            "navigate": "[to be translated]:Navigate to URL",
+            "snapshot": "[to be translated]:Take page snapshot",
+            "wait": "[to be translated]:Wait for page"
+          },
+          "stop": "[to be translated]:Stop",
+          "title": "[to be translated]:Try Browser Automation",
+          "view_github": "[to be translated]:View on GitHub"
+        },
+        "enabled": {
+          "description": "[to be translated]:Allow AI to control browser for automation tasks",
+          "label": "[to be translated]:Enable Browser Use"
+        },
+        "general": {
+          "title": "[to be translated]:General"
+        },
+        "max_snapshot_size": {
+          "description": "[to be translated]:Maximum characters for page snapshots (prevents token overflow)",
+          "label": "[to be translated]:Max Snapshot Size"
+        },
+        "screencast": {
+          "description": "[to be translated]:Stream visual updates for vision models (increases token usage)",
+          "label": "[to be translated]:Enable Screencast"
+        },
+        "system_prompt": {
+          "description": "[to be translated]:Add browser workflow hints to AI system prompt",
+          "label": "[to be translated]:Inject System Prompt"
+        },
+        "title": "[to be translated]:Browser Use",
+        "tools": {
+          "available": "[to be translated]:Available Browser Tools",
+          "description": "[to be translated]:Tools enabled for the '{{preset}}' preset",
+          "title": "[to be translated]:Tools"
+        },
+        "toolset": {
+          "description": "[to be translated]:Choose which browser tools are available to AI models",
+          "full": {
+            "description": "[to be translated]:All tools including JavaScript execution and iframe handling",
+            "label": "[to be translated]:Full (Advanced)"
+          },
+          "label": "[to be translated]:Default Toolset",
+          "minimal": {
+            "description": "[to be translated]:Safe read-only operations: snapshot, URL, title, text extraction",
+            "label": "[to be translated]:Minimal (Read-only)"
+          },
+          "standard": {
+            "description": "[to be translated]:Common automation: navigation, clicks, typing, forms, scrolling",
+            "label": "[to be translated]:Standard"
+          }
+        },
+        "tracking": {
+          "description": "[to be translated]:Track network requests and console logs for debugging",
+          "label": "[to be translated]:Enable Request Tracking"
+        }
+      },
       "ocr": {
         "common": {
           "langs": "Idiomas suportados"
