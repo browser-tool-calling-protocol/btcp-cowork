@@ -10,6 +10,8 @@
 
 // Load full shim to replace stubs with real implementations
 import './shim'
+// Initialize database (must be imported before any hooks that use db)
+import '@renderer/databases'
 // Import styles
 import '@renderer/assets/styles/index.css'
 import '@renderer/assets/styles/tailwind.css'
