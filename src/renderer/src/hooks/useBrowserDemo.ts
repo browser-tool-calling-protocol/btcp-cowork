@@ -5,6 +5,10 @@
  * of browser automation commands. This runs as a visualization to
  * help users understand what the tools do.
  *
+ * Uses the new btcp-browser-agent API with BackgroundAgent and ContentAgent:
+ * - BackgroundAgent: Session management, navigation, screenshots
+ * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
+ *
  * Note: Actual browser control happens through the btcpBrowserPlugin
  * during AI chat interactions in the main process.
  */
@@ -15,7 +19,8 @@ export interface DemoStep {
   id: string
   name: string
   description: string
-  tool: string
+  action: string
+  agent: 'background' | 'content'
   args: Record<string, unknown>
   status: 'pending' | 'running' | 'success' | 'error' | 'skipped'
   result?: unknown
@@ -24,79 +29,108 @@ export interface DemoStep {
 
 const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
-    id: 'navigate-google',
-    name: 'Navigate to Google',
-    description: 'Opening Google.com',
-    tool: 'browser_navigate',
+    id: 'launch',
+    name: 'Launch Browser',
+    description: 'Starting browser session',
+    action: 'browser_launch',
+    agent: 'background',
     args: { url: 'https://www.google.com' }
   },
   {
-    id: 'get-title',
-    name: 'Get Page Title',
-    description: 'Verifying page loaded',
-    tool: 'browser_title',
-    args: {}
-  },
-  {
-    id: 'search-input',
+    id: 'snapshot-page',
     name: 'Take Page Snapshot',
-    description: 'Getting page structure',
-    tool: 'browser_snapshot',
+    description: 'Getting accessibility tree with element refs',
+    action: 'browser_snapshot',
+    agent: 'content',
     args: {}
   },
   {
-    id: 'type-search',
-    name: 'Type Search Query',
-    description: 'Filling search box',
-    tool: 'browser_fill',
-    args: { selector: 'textarea[name="q"]', value: 'btcp browser tools' }
+    id: 'fill-search',
+    name: 'Fill Search Box',
+    description: 'Filling search input using ref selector',
+    action: 'browser_fill',
+    agent: 'content',
+    args: { selector: '@ref:5', value: 'btcp browser tools' }
   },
   {
     id: 'press-enter',
     name: 'Submit Search',
     description: 'Pressing Enter key',
-    tool: 'browser_press',
+    action: 'browser_press',
+    agent: 'content',
     args: { key: 'Enter' }
   },
   {
-    id: 'wait-results',
-    name: 'Wait for Results',
-    description: 'Waiting for page load',
-    tool: 'browser_wait',
-    args: { timeout: 2000 }
-  },
-  {
     id: 'navigate-github',
-    name: 'Go to GitHub',
-    description: 'Navigating to repository',
-    tool: 'browser_navigate',
-    args: { url: 'https://github.com/browser-tool-calling-protocol/btcp-cowork' }
+    name: 'Navigate to GitHub',
+    description: 'Going to the repository page',
+    action: 'browser_navigate',
+    agent: 'background',
+    args: { url: 'https://github.com/browser-tool-calling-protocol/btcp-browser-agent' }
   },
   {
-    id: 'get-github-title',
-    name: 'Verify GitHub Page',
-    description: 'Confirming navigation',
-    tool: 'browser_title',
+    id: 'snapshot-github',
+    name: 'Snapshot GitHub Page',
+    description: 'Getting page structure with refs',
+    action: 'browser_snapshot',
+    agent: 'content',
     args: {}
+  },
+  {
+    id: 'get-text',
+    name: 'Get Repo Title',
+    description: 'Reading repository name',
+    action: 'browser_get_text',
+    agent: 'content',
+    args: { selector: '@ref:10' }
   },
   {
     id: 'click-star',
     name: 'Click Star Button',
     description: 'Starring the repository',
-    tool: 'browser_click',
-    args: { selector: 'button[data-ga-click*="star"]' }
+    action: 'browser_click',
+    agent: 'content',
+    args: { selector: '@ref:12' }
+  },
+  {
+    id: 'screenshot',
+    name: 'Take Screenshot',
+    description: 'Capturing final page state',
+    action: 'browser_screenshot',
+    agent: 'background',
+    args: {}
+  },
+  {
+    id: 'close',
+    name: 'Close Browser',
+    description: 'Ending browser session',
+    action: 'browser_close',
+    agent: 'background',
+    args: {}
   }
 ]
 
-// Simulated results for each tool type
+// Simulated results for each action type
 const SIMULATED_RESULTS: Record<string, unknown> = {
-  browser_navigate: { success: true },
-  browser_title: { title: 'Page Title' },
-  browser_snapshot: { elements: 42, refs: ['@ref:1', '@ref:2', '@ref:3'] },
+  // BackgroundAgent actions
+  browser_launch: { success: true, tabId: 123 },
+  browser_navigate: { success: true, url: 'https://example.com' },
+  browser_back: { success: true },
+  browser_forward: { success: true },
+  browser_reload: { success: true },
+  browser_close: { success: true },
+  browser_screenshot: { image: 'data:image/png;base64,...', format: 'png' },
+  // ContentAgent actions
+  browser_snapshot: {
+    tree: 'document [ref=0]\n  button "Submit" [ref=5]\n  input "Search" [ref=6]',
+    refs: { 5: { role: 'button', name: 'Submit' }, 6: { role: 'textbox', name: 'Search' } }
+  },
+  browser_get_text: { text: 'btcp-browser-agent' },
+  browser_click: { success: true },
+  browser_type: { success: true },
   browser_fill: { success: true },
   browser_press: { success: true },
-  browser_wait: { success: true },
-  browser_click: { success: true }
+  browser_scroll: { success: true }
 }
 
 export interface UseBrowserDemoReturn {
@@ -125,11 +159,13 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
   const simulateStep = useCallback(async (step: DemoStep): Promise<unknown> => {
     // Simulate network/processing delay (300-800ms)
-    const delay = 300 + Math.random() * 500
+    // BackgroundAgent actions may take slightly longer due to browser-level operations
+    const baseDelay = step.agent === 'background' ? 400 : 300
+    const delay = baseDelay + Math.random() * 500
     await new Promise((resolve) => setTimeout(resolve, delay))
 
-    // Return simulated result
-    return SIMULATED_RESULTS[step.tool] ?? { success: true }
+    // Return simulated result based on action type
+    return SIMULATED_RESULTS[step.action] ?? { success: true }
   }, [])
 
   const runDemo = useCallback(async () => {

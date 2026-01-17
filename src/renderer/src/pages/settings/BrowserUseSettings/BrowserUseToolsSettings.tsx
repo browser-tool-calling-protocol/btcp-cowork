@@ -9,84 +9,52 @@ import styled from 'styled-components'
 import { SettingContainer, SettingGroup, SettingRowTitle } from '..'
 
 // Tool presets matching the btcpBrowserPlugin constants
+// Uses the two-layer architecture from btcp-browser-agent:
+// - BackgroundAgent: Session management, navigation, screenshots
+// - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
 const TOOL_PRESETS = {
-  minimal: [
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe'
-  ],
+  minimal: ['browser_snapshot', 'browser_get_text'],
   standard: [
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe',
+    // Session management
+    'browser_launch',
+    'browser_close',
+    // Navigation
     'browser_navigate',
     'browser_back',
     'browser_forward',
     'browser_reload',
+    // Inspection
+    'browser_snapshot',
+    'browser_get_text',
+    // Interaction
     'browser_click',
     'browser_type',
     'browser_fill',
     'browser_press',
-    'browser_hover',
     'browser_scroll',
-    'browser_clear',
-    'browser_check',
-    'browser_select',
-    'browser_get_by_role',
-    'browser_get_by_text',
-    'browser_get_by_label',
-    'browser_wait',
-    'browser_scroll_into_view',
-    'browser_screenshot',
-    'browser_highlight'
+    // Visual
+    'browser_screenshot'
   ],
   full: [
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe',
+    // Session management
+    'browser_launch',
+    'browser_close',
+    // Navigation
     'browser_navigate',
     'browser_back',
     'browser_forward',
     'browser_reload',
+    // Inspection
+    'browser_snapshot',
+    'browser_get_text',
+    // Interaction
     'browser_click',
     'browser_type',
     'browser_fill',
     'browser_press',
-    'browser_hover',
     'browser_scroll',
-    'browser_clear',
-    'browser_check',
-    'browser_select',
-    'browser_get_by_role',
-    'browser_get_by_text',
-    'browser_get_by_label',
-    'browser_wait',
-    'browser_scroll_into_view',
-    'browser_screenshot',
-    'browser_highlight',
-    'browser_evaluate',
-    'browser_frame',
-    'browser_mainframe',
-    'browser_uncheck',
-    'browser_get_by_placeholder',
-    'browser_is_enabled',
-    'browser_wait_for_url',
-    'browser_console'
+    // Visual
+    'browser_screenshot'
   ]
 }
 

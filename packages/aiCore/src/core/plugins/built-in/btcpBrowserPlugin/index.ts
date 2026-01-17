@@ -3,9 +3,21 @@
  *
  * Integrates btcp-browser-agent as a reusable plugin for @cherrystudio/ai-core,
  * enabling AI models to control browsers through the Browser Tool Calling Protocol (BTCP).
+ *
+ * The BrowserAgent provides DOM automation tools including:
+ * - snapshot, click, type, fill, press, scroll for interaction
+ * - getText, isVisible, getUrl, getTitle for inspection
+ * - screenshot for visual capture
  */
 
-import { BrowserAgent, describe as btcpDescribe, generateCommandId } from 'btcp-browser-agent'
+import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
+
+// Dynamic import for btcp-browser-agent to avoid type-checking the source files
+
+const btcpBrowserAgent = require('btcp-browser-agent') as {
+  BrowserAgent: typeof BrowserAgent
+  generateCommandId: () => string
+}
 import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
@@ -57,7 +69,6 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
     agentOptions = {},
     toolset = DEFAULT_CONFIG.toolset,
     maxSnapshotSize = DEFAULT_CONFIG.maxSnapshotSize,
-    enableScreencast: _enableScreencast = DEFAULT_CONFIG.enableScreencast,
     enableTracking = DEFAULT_CONFIG.enableTracking,
     onToolCall,
     onToolResult,
@@ -65,13 +76,13 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
     injectSystemPrompt = DEFAULT_CONFIG.injectSystemPrompt
   } = config
 
-  // Lazy initialization of agent
+  // Lazy initialization of BrowserAgent
   let agent: BrowserAgent | null = providedAgent ?? null
   let agentLaunched = false
 
   const getAgent = async (): Promise<BrowserAgent> => {
     if (!agent) {
-      agent = new BrowserAgent(agentOptions)
+      agent = new btcpBrowserAgent.BrowserAgent(agentOptions as BrowserAgentConfig)
     }
     if (!agentLaunched) {
       await agent.launch()
@@ -93,24 +104,46 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
     }
   }
 
-  // Create all browser tools
+  // Create minimal browser tools using the btcp-browser-agent API
   const createBrowserTools = () => {
     return {
-      // === Navigation ===
+      // === Session Management ===
+      browser_launch: createTool({
+        description: 'Launch the browser agent to start automation',
+        parameters: z.object({}),
+        execute: async () =>
+          executeWithCallbacks('browser_launch', {}, async () => {
+            await getAgent()
+            return { success: true }
+          })
+      }),
+
+      browser_close: createTool({
+        description: 'Close the browser session',
+        parameters: z.object({}),
+        execute: async () =>
+          executeWithCallbacks('browser_close', {}, async () => {
+            if (agent) {
+              await agent.close()
+              agentLaunched = false
+            }
+            return { success: true }
+          })
+      }),
+
+      // === Navigation (via execute command) ===
       browser_navigate: createTool({
-        description: 'Navigate to a URL. Waits for page load by default.',
+        description: 'Navigate to a URL',
         parameters: z.object({
-          url: z.string().describe('URL to navigate to'),
-          waitUntil: z.enum(['load', 'domcontentloaded', 'networkidle']).optional()
+          url: z.string().describe('URL to navigate to')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_navigate', args, async () => {
             const browserAgent = await getAgent()
             await browserAgent.execute({
-              id: generateCommandId(),
+              id: btcpBrowserAgent.generateCommandId(),
               action: 'navigate',
-              url: args.url,
-              waitUntil: args.waitUntil
+              url: args.url
             })
             return { success: true, url: args.url }
           })
@@ -122,7 +155,10 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
         execute: async () =>
           executeWithCallbacks('browser_back', {}, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.execute({ id: generateCommandId(), action: 'back' })
+            await browserAgent.execute({
+              id: btcpBrowserAgent.generateCommandId(),
+              action: 'back'
+            })
             return { success: true }
           })
       }),
@@ -133,7 +169,10 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
         execute: async () =>
           executeWithCallbacks('browser_forward', {}, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.execute({ id: generateCommandId(), action: 'forward' })
+            await browserAgent.execute({
+              id: btcpBrowserAgent.generateCommandId(),
+              action: 'forward'
+            })
             return { success: true }
           })
       }),
@@ -144,45 +183,23 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
         execute: async () =>
           executeWithCallbacks('browser_reload', {}, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.execute({ id: generateCommandId(), action: 'reload' })
+            await browserAgent.execute({
+              id: btcpBrowserAgent.generateCommandId(),
+              action: 'reload'
+            })
             return { success: true }
           })
       }),
 
-      browser_url: createTool({
-        description: 'Get the current page URL',
-        parameters: z.object({}),
-        execute: async () =>
-          executeWithCallbacks('browser_url', {}, async () => {
-            const browserAgent = await getAgent()
-            const url = await browserAgent.getUrl()
-            return { url }
-          })
-      }),
-
-      browser_title: createTool({
-        description: 'Get the current page title',
-        parameters: z.object({}),
-        execute: async () =>
-          executeWithCallbacks('browser_title', {}, async () => {
-            const browserAgent = await getAgent()
-            const title = await browserAgent.getTitle()
-            return { title }
-          })
-      }),
-
-      // === Snapshot & Inspection ===
+      // === Core Inspection ===
       browser_snapshot: createTool({
         description:
-          'Get an accessibility snapshot of the page with element references (@ref:N). Always call this first to understand page structure and get stable element refs for targeting.',
-        parameters: z.object({
-          selector: z.string().optional().describe('CSS selector to scope snapshot'),
-          maxDepth: z.number().optional().describe('Max DOM tree depth')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_snapshot', args, async () => {
+          'Get an accessibility snapshot of the page with element references (@ref:N). Call this first to understand page structure.',
+        parameters: z.object({}),
+        execute: async () =>
+          executeWithCallbacks('browser_snapshot', {}, async () => {
             const browserAgent = await getAgent()
-            const snapshot = await browserAgent.snapshot(args)
+            const snapshot = await browserAgent.snapshot()
 
             const snapshotStr = JSON.stringify(snapshot)
             if (snapshotStr.length > maxSnapshotSize) {
@@ -209,182 +226,36 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
           })
       }),
 
-      browser_get_attribute: createTool({
-        description: 'Get an attribute value from an element',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference'),
-          attribute: z.string().describe('Attribute name')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_get_attribute', args, async () => {
-            const browserAgent = await getAgent()
-            const value = await browserAgent.getAttribute(args.selector, args.attribute)
-            return { value }
-          })
-      }),
-
-      browser_is_visible: createTool({
-        description: 'Check if an element is visible',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_is_visible', args, async () => {
-            const browserAgent = await getAgent()
-            const visible = await browserAgent.isVisible(args.selector)
-            return { visible }
-          })
-      }),
-
-      browser_is_enabled: createTool({
-        description: 'Check if an element is enabled (not disabled)',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_is_enabled', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'isenabled',
-              selector: args.selector
-            })
-            return { enabled: response.success ? response.data : false }
-          })
-      }),
-
-      browser_count: createTool({
-        description: 'Count elements matching a selector',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_count', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'count',
-              selector: args.selector
-            })
-            return { count: response.success ? response.data : 0 }
-          })
-      }),
-
-      // === Semantic Locators ===
-      browser_get_by_role: createTool({
-        description: 'Find element by ARIA role (button, link, textbox, etc.). More reliable than CSS selectors.',
-        parameters: z.object({
-          role: z.string().describe('ARIA role (button, link, textbox, checkbox, etc.)'),
-          name: z.string().optional().describe('Accessible name to filter by'),
-          action: z.enum(['click', 'fill', 'check', 'hover']).optional().describe('Action to perform')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_get_by_role', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'getbyrole',
-              role: args.role,
-              name: args.name,
-              subaction: args.action as 'click' | 'fill' | 'check' | 'hover'
-            })
-            return response.success ? response.data : { error: response.error }
-          })
-      }),
-
-      browser_get_by_text: createTool({
-        description: 'Find element by its text content',
-        parameters: z.object({
-          text: z.string().describe('Text to search for'),
-          exact: z.boolean().optional().describe('Exact match (default: false)'),
-          action: z.enum(['click', 'hover']).optional()
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_get_by_text', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'getbytext',
-              text: args.text,
-              exact: args.exact,
-              subaction: args.action as 'click' | 'hover'
-            })
-            return response.success ? response.data : { error: response.error }
-          })
-      }),
-
-      browser_get_by_label: createTool({
-        description: 'Find input element by its associated label text',
-        parameters: z.object({
-          label: z.string().describe('Label text'),
-          action: z.enum(['click', 'fill', 'check']).optional()
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_get_by_label', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'getbylabel',
-              label: args.label,
-              subaction: args.action as 'click' | 'fill' | 'check'
-            })
-            return response.success ? response.data : { error: response.error }
-          })
-      }),
-
-      browser_get_by_placeholder: createTool({
-        description: 'Find input by placeholder text',
-        parameters: z.object({
-          placeholder: z.string().describe('Placeholder text'),
-          action: z.enum(['click', 'fill']).optional()
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_get_by_placeholder', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'getbyplaceholder',
-              placeholder: args.placeholder,
-              subaction: args.action as 'click' | 'fill'
-            })
-            return response.success ? response.data : { error: response.error }
-          })
-      }),
-
-      // === Interaction ===
+      // === Core Interaction ===
       browser_click: createTool({
         description: 'Click an element',
         parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference (@ref:N)'),
-          button: z.enum(['left', 'right', 'middle']).optional(),
-          clickCount: z.number().optional().describe('Number of clicks (2 for double-click)')
+          selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_click', args, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.click(args.selector, args)
+            await browserAgent.click(args.selector)
             return { success: true, selector: args.selector }
           })
       }),
 
       browser_type: createTool({
-        description: 'Type text character by character (simulates real typing with events)',
+        description: 'Type text character by character',
         parameters: z.object({
           selector: z.string().describe('CSS selector or element reference'),
-          text: z.string().describe('Text to type'),
-          delay: z.number().optional().describe('Delay between keystrokes in ms'),
-          clear: z.boolean().optional().describe('Clear existing text first')
+          text: z.string().describe('Text to type')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_type', args, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.type(args.selector, args.text, args)
+            await browserAgent.type(args.selector, args.text)
             return { success: true }
           })
       }),
 
       browser_fill: createTool({
-        description: 'Fill an input field instantly (faster than type, sets value directly)',
+        description: 'Fill an input field instantly',
         parameters: z.object({
           selector: z.string().describe('CSS selector or element reference'),
           value: z.string().describe('Value to fill')
@@ -397,285 +268,41 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
           })
       }),
 
-      browser_clear: createTool({
-        description: 'Clear an input field',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_clear', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'clear',
-              selector: args.selector
-            })
-            return { success: true }
-          })
-      }),
-
       browser_press: createTool({
-        description: 'Press a keyboard key (Enter, Tab, Escape, ArrowDown, etc.)',
+        description: 'Press a keyboard key (Enter, Tab, Escape, etc.)',
         parameters: z.object({
-          key: z.string().describe('Key to press'),
-          selector: z.string().optional().describe('Element to focus before pressing')
+          key: z.string().describe('Key to press')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_press', args, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.press(args.key, args.selector)
-            return { success: true }
-          })
-      }),
-
-      browser_hover: createTool({
-        description: 'Hover over an element (triggers mouseenter/mouseover)',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_hover', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.hover(args.selector)
-            return { success: true }
-          })
-      }),
-
-      browser_check: createTool({
-        description: 'Check a checkbox or radio button',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_check', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'check',
-              selector: args.selector
-            })
-            return { success: true }
-          })
-      }),
-
-      browser_uncheck: createTool({
-        description: 'Uncheck a checkbox',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_uncheck', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'uncheck',
-              selector: args.selector
-            })
-            return { success: true }
-          })
-      }),
-
-      browser_select: createTool({
-        description: 'Select an option in a dropdown',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector of the <select> element'),
-          value: z.string().describe('Option value to select')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_select', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'select',
-              selector: args.selector,
-              values: args.value
-            })
+            await browserAgent.press(args.key)
             return { success: true }
           })
       }),
 
       browser_scroll: createTool({
-        description: 'Scroll the page or a specific element',
+        description: 'Scroll the page',
         parameters: z.object({
-          direction: z.enum(['up', 'down', 'left', 'right']).optional(),
-          selector: z.string().optional().describe('Element to scroll within'),
-          x: z.number().optional().describe('Horizontal scroll amount'),
-          y: z.number().optional().describe('Vertical scroll amount')
+          direction: z.enum(['up', 'down']).describe('Scroll direction')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_scroll', args, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.scroll(args)
-            return { success: true }
-          })
-      }),
-
-      browser_scroll_into_view: createTool({
-        description: 'Scroll element into view (centered)',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_scroll_into_view', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'scrollintoview',
-              selector: args.selector
-            })
-            return { success: true }
-          })
-      }),
-
-      // === Waiting ===
-      browser_wait: createTool({
-        description: 'Wait for time or element state',
-        parameters: z.object({
-          timeout: z.number().optional().describe('Time to wait in ms'),
-          selector: z.string().optional().describe('Element to wait for'),
-          state: z.enum(['attached', 'visible', 'hidden']).optional()
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_wait', args, async () => {
-            const browserAgent = await getAgent()
-            if (args.selector) {
-              await browserAgent.waitFor(args.selector, { timeout: args.timeout })
-            } else if (args.timeout) {
-              await new Promise((resolve) => setTimeout(resolve, args.timeout))
-            }
-            return { success: true }
-          })
-      }),
-
-      browser_wait_for_url: createTool({
-        description: 'Wait for URL to contain a string',
-        parameters: z.object({
-          url: z.string().describe('URL substring to wait for'),
-          timeout: z.number().optional()
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_wait_for_url', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'waitforurl',
-              url: args.url,
-              timeout: args.timeout
-            })
+            await browserAgent.scroll({ direction: args.direction })
             return { success: true }
           })
       }),
 
       // === Visual ===
       browser_screenshot: createTool({
-        description: 'Take a screenshot of the page or element',
-        parameters: z.object({
-          selector: z.string().optional().describe('Element to capture'),
-          fullPage: z.boolean().optional().describe('Capture full page'),
-          format: z.enum(['png', 'jpeg']).optional(),
-          quality: z.number().optional().describe('JPEG quality 0-100')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_screenshot', args, async () => {
-            const browserAgent = await getAgent()
-            const screenshot = await browserAgent.screenshot(args)
-            return { image: screenshot.screenshot, format: args.format || 'png' } as ScreenshotResult
-          })
-      }),
-
-      browser_highlight: createTool({
-        description: 'Highlight an element for visual debugging (adds colored border)',
-        parameters: z.object({
-          selector: z.string().describe('CSS selector or element reference')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_highlight', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'highlight',
-              selector: args.selector
-            })
-            return { success: true }
-          })
-      }),
-
-      // === Frame Management ===
-      browser_frame: createTool({
-        description: 'Switch to an iframe by selector, name, or URL',
-        parameters: z.object({
-          selector: z.string().optional().describe('CSS selector of iframe'),
-          name: z.string().optional().describe('Frame name attribute'),
-          url: z.string().optional().describe('Frame URL (partial match)')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_frame', args, async () => {
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'frame',
-              ...args
-            })
-            return { success: true }
-          })
-      }),
-
-      browser_mainframe: createTool({
-        description: 'Return to the main frame from an iframe',
+        description: 'Take a screenshot of the page',
         parameters: z.object({}),
         execute: async () =>
-          executeWithCallbacks('browser_mainframe', {}, async () => {
+          executeWithCallbacks('browser_screenshot', {}, async () => {
             const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'mainframe'
-            })
-            return { success: true }
-          })
-      }),
-
-      // === JavaScript ===
-      browser_evaluate: createTool({
-        description: 'Execute JavaScript code in the browser context and return result',
-        parameters: z.object({
-          script: z.string().describe('JavaScript code to execute')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_evaluate', args, async () => {
-            const browserAgent = await getAgent()
-            const result = await browserAgent.evaluate(args.script)
-            return { result }
-          })
-      }),
-
-      // === Debugging ===
-      browser_console: createTool({
-        description: 'Get console messages from the page',
-        parameters: z.object({
-          clear: z.boolean().optional().describe('Clear messages after retrieving')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_console', args, async () => {
-            const browserAgent = await getAgent()
-            const response = await browserAgent.execute({
-              id: generateCommandId(),
-              action: 'console',
-              clear: args.clear
-            })
-            return response.success ? { messages: response.data } : { messages: [], error: response.error }
-          })
-      }),
-
-      browser_describe: createTool({
-        description:
-          'Get help/documentation for browser actions. Call with no action to list all, or specify an action name.',
-        parameters: z.object({
-          action: z.string().optional().describe('Action name to get help for')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_describe', args, async () => {
-            const description = btcpDescribe(args.action)
-            return description
+            const result = await browserAgent.screenshot({ format: 'png' })
+            return { image: result.screenshot, format: 'png' } as ScreenshotResult
           })
       })
     }
@@ -724,11 +351,7 @@ export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugi
     onRequestEnd: async (_context: AiRequestContext, _result: unknown) => {
       // Cleanup tracking if enabled
       if (enableTracking && agent) {
-        const manager = agent.getBrowserManager()
-        // Clear tracked requests if the manager supports it
-        if ('clearRequests' in manager) {
-          ;(manager as { clearRequests: () => void }).clearRequests()
-        }
+        // The BrowserAgent API handles cleanup internally
       }
     }
   }

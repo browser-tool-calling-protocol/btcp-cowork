@@ -1,58 +1,38 @@
 /**
  * BTCP Browser Plugin Types
  *
- * Type definitions for the Browser Tool Calling Protocol plugin configuration
+ * Type definitions for the Browser Tool Calling Protocol plugin configuration.
+ * Uses the two-layer architecture:
+ * - BrowserAgent: Browser-level operations (tabs, navigation, screenshots)
+ * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
  */
 
-import type { BrowserAgent, BrowserAgentConfig, Response } from 'btcp-browser-agent'
+import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
 
 /**
  * Tool names available in the BTCP Browser Plugin
+ * Minimal set of tools matching the btcp-browser-agent core API
  */
 export type BTCPToolName =
-  // Navigation
+  // Session/Tab Management (BrowserAgent)
+  | 'browser_launch'
+  | 'browser_close'
+  // Navigation (BrowserAgent)
   | 'browser_navigate'
   | 'browser_back'
   | 'browser_forward'
   | 'browser_reload'
-  | 'browser_url'
-  | 'browser_title'
-  // Core Interaction
+  // Core Inspection (ContentAgent)
+  | 'browser_snapshot'
+  | 'browser_get_text'
+  // Core Interaction (ContentAgent)
   | 'browser_click'
   | 'browser_type'
   | 'browser_fill'
   | 'browser_press'
-  | 'browser_hover'
   | 'browser_scroll'
-  | 'browser_clear'
-  | 'browser_check'
-  | 'browser_uncheck'
-  | 'browser_select'
-  // Semantic Locators
-  | 'browser_get_by_role'
-  | 'browser_get_by_text'
-  | 'browser_get_by_label'
-  | 'browser_get_by_placeholder'
-  // Inspection
-  | 'browser_snapshot'
-  | 'browser_get_text'
-  | 'browser_get_attribute'
-  | 'browser_is_visible'
-  | 'browser_is_enabled'
-  | 'browser_count'
-  // Waiting
-  | 'browser_wait'
-  | 'browser_wait_for_url'
-  | 'browser_scroll_into_view'
-  // Advanced
+  // Visual
   | 'browser_screenshot'
-  | 'browser_evaluate'
-  | 'browser_frame'
-  | 'browser_mainframe'
-  // Debugging
-  | 'browser_highlight'
-  | 'browser_console'
-  | 'browser_describe'
 
 /**
  * Tool preset levels for the BTCP Browser Plugin
@@ -71,8 +51,7 @@ export interface BTCPBrowserPluginConfig {
 
   /**
    * Pre-initialized BrowserAgent instance
-   * If not provided, tools will be created but agent initialization
-   * will be deferred until first use
+   * If not provided, agent initialization will be deferred until first use
    */
   agent?: BrowserAgent
 
@@ -162,4 +141,4 @@ export interface ScreenshotResult {
 }
 
 // Re-export BrowserAgent types for convenience
-export type { BrowserAgent, BrowserAgentConfig, Response }
+export type { BrowserAgent, BrowserAgentConfig }
