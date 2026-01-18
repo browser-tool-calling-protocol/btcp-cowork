@@ -71,7 +71,7 @@ import { Globe } from 'lucide-react'
 <MenuItemLink to="/settings/browser-use">
   <MenuItem className={isRoute('/settings/browser-use')}>
     <Globe size={18} />
-    {t('settings.browser_use.title')}
+    {t('settings.tool.browser_use.title')}
   </MenuItem>
 </MenuItemLink>
 

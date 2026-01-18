@@ -101,7 +101,7 @@ const SettingsPage: FC = () => {
           <MenuItemLink to="/settings/browser-use">
             <MenuItem className={isRoute('/settings/browser-use')}>
               <Globe size={18} />
-              {t('settings.browser_use.title')}
+              {t('settings.tool.browser_use.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/memory">
