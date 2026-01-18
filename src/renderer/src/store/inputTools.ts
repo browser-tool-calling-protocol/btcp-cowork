@@ -30,12 +30,13 @@ export const DEFAULT_TOOL_ORDER: ToolOrder = {
     'new_topic',
     'attachment',
     'thinking',
-    'web_search',
+    'browser_use',
     'url_context',
     'knowledge_base',
-    'mcp_tools',
     'generate_image',
-    'mention_models'
+    'mention_models',
+    'web_search',
+    'mcp_tools'
   ],
   hidden: ['quick_phrases', 'clear_topic', 'toggle_expand', 'new_context']
 }

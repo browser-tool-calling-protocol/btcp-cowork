@@ -717,24 +717,9 @@
       "auto_resize": "Auto resize height",
       "browser_use": {
         "disable": "Disable Browser Use",
-        "enabled_tooltip": "Browser tools enabled ({{toolset}})",
+        "enabled_tooltip": "Browser tools enabled",
         "label": "Browser Use",
-        "menu_description": "Enable browser automation tools",
-        "panel_title": "Select Toolset",
-        "toolset": {
-          "full": {
-            "description": "All tools including JS execution",
-            "label": "Full"
-          },
-          "minimal": {
-            "description": "Read-only: snapshot, text, URL",
-            "label": "Minimal"
-          },
-          "standard": {
-            "description": "Navigation and interaction",
-            "label": "Standard"
-          }
-        }
+        "menu_description": "Enable browser automation tools"
       },
       "clear": {
         "content": "Do you want to clear all messages of the current topic?",

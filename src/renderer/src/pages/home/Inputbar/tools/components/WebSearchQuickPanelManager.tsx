@@ -21,7 +21,7 @@ import { hasObjectKey } from '@renderer/utils'
 import { isToolUseModeFunction } from '@renderer/utils/assistant'
 import { isPromptToolUse } from '@renderer/utils/mcp-tools'
 import { isGeminiWebSearchProvider } from '@renderer/utils/provider'
-import { Globe } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -54,7 +54,7 @@ export const WebSearchProviderIcon = ({
     case 'local-google':
       return <GoogleOutlined size={size} style={{ color, fontSize: size }} />
     default:
-      return <Globe className="icon" size={size} style={{ color, fontSize: size }} />
+      return <Search className="icon" size={size} style={{ color, fontSize: size }} />
   }
 }
 
@@ -153,7 +153,7 @@ export const useWebSearchPanelController = (assistantId: string, quickPanelContr
         description: isWebSearchModelEnabled
           ? t('chat.input.web_search.builtin.enabled_content')
           : t('chat.input.web_search.builtin.disabled_content'),
-        icon: <Globe />,
+        icon: <Search />,
         isSelected: assistant.enableWebSearch,
         disabled: !isWebSearchModelEnabled,
         action: () => updateToModelBuiltinWebSearch()
@@ -212,7 +212,7 @@ const WebSearchQuickPanelManager = ({ context }: ManagerProps) => {
       {
         label: t('chat.input.web_search.label'),
         description: '',
-        icon: <Globe size={18} />,
+        icon: <Search size={18} />,
         isMenu: true,
         action: () => openQuickPanel()
       }

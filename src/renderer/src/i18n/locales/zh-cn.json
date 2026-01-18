@@ -717,24 +717,9 @@
       "auto_resize": "自动调整高度",
       "browser_use": {
         "disable": "[to be translated]:Disable Browser Use",
-        "enabled_tooltip": "[to be translated]:Browser tools enabled ({{toolset}})",
+        "enabled_tooltip": "[to be translated]:Browser tools enabled",
         "label": "[to be translated]:Browser Use",
-        "menu_description": "[to be translated]:Enable browser automation tools",
-        "panel_title": "[to be translated]:Select Toolset",
-        "toolset": {
-          "full": {
-            "description": "[to be translated]:All tools including JS execution",
-            "label": "[to be translated]:Full"
-          },
-          "minimal": {
-            "description": "[to be translated]:Read-only: snapshot, text, URL",
-            "label": "[to be translated]:Minimal"
-          },
-          "standard": {
-            "description": "[to be translated]:Navigation and interaction",
-            "label": "[to be translated]:Standard"
-          }
-        }
+        "menu_description": "[to be translated]:Enable browser automation tools"
       },
       "clear": {
         "content": "确定要清除当前会话所有消息吗？",
