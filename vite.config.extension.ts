@@ -70,19 +70,15 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
-      // AI SDK openai-compatible (resolve pnpm hoisted path)
-      '@ai-sdk/openai-compatible': resolve(
-        __dirname,
-        'node_modules/.pnpm/@ai-sdk+openai-compatible@1_0a9002562741f5bcbca5a20f29786ad1/node_modules/@ai-sdk/openai-compatible'
-      ),
-      // btcp-browser-agent (resolve to TypeScript source)
-      '@aspect/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
+      // btcp-browser-agent - point to actual dist files in pnpm store
       'btcp-browser-agent/extension': resolve(
         __dirname,
-        'node_modules/btcp-browser-agent/packages/extension/src/index.ts'
+        'node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/packages/extension/dist/index.js'
       ),
-      'btcp-browser-agent/core': resolve(__dirname, 'node_modules/btcp-browser-agent/packages/core/src/index.ts'),
-      'btcp-browser-agent': resolve(__dirname, 'node_modules/btcp-browser-agent/src/index.ts'),
+      'btcp-browser-agent': resolve(
+        __dirname,
+        'node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/dist/index.js'
+      ),
       // Shim the preload imports
       '../preload': resolve(__dirname, 'src/extension/shim.ts')
     }
@@ -102,7 +98,7 @@ export default defineConfig({
   build: {
     outDir: 'dist-extension',
     target: 'esnext',
-    emptyOutDir: true,
+    emptyOutDir: false, // Don't empty - content.js is built separately with esbuild
     sourcemap: !isProd,
 
     rollupOptions: {
@@ -117,21 +113,22 @@ export default defineConfig({
         sidepanel: resolve(__dirname, 'src/extension/sidepanel.html'),
         window: resolve(__dirname, 'src/extension/window.html'),
         popup: resolve(__dirname, 'src/extension/popup.html'),
-        // Background service worker
-        background: resolve(__dirname, 'src/extension/background.ts'),
-        // Content script
-        content: resolve(__dirname, 'src/extension/content.ts')
+        // Background service worker (module)
+        background: resolve(__dirname, 'src/extension/background.ts')
+        // Content script is built separately with esbuild (see scripts/build-content.js)
+        // to create a single bundled file without code splitting
       },
+      preserveEntrySignatures: 'strict',
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          // Put HTML files at root
           if (assetInfo.name?.endsWith('.html')) {
             return '[name][extname]'
           }
           return 'assets/[name]-[hash][extname]'
-        }
+        },
+        format: 'es'
       },
       onwarn(warning, warn) {
         // Ignore certain warnings

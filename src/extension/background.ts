@@ -11,7 +11,7 @@
 
 import { setupMessageListener } from 'btcp-browser-agent/extension'
 
-// Set up BTCP message routing (handles aspect:command messages)
+// Set up BTCP message routing (handles btcp:command messages)
 setupMessageListener()
 
 // MCP client connections (HTTP/SSE only - no stdio in extensions)
@@ -132,6 +132,20 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // Message handler for renderer communication
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Log content script messages for debugging
+  if (message.type === 'contentScriptReady') {
+    console.log('[Background] Content script ready:', {
+      url: message.url,
+      tabId: sender.tab?.id,
+      frameId: sender.frameId
+    })
+  }
+
+  // Skip btcp:command messages - they're handled by setupMessageListener()
+  if (message.type === 'btcp:command') {
+    return false // Let other listeners handle it
+  }
+
   handleMessage(message, sender)
     .then(sendResponse)
     .catch((error) => {
@@ -148,8 +162,6 @@ interface Message {
 
 async function handleMessage(message: Message, _sender: chrome.runtime.MessageSender): Promise<unknown> {
   const { type, payload } = message
-
-  // Note: BTCP commands (aspect:command) are handled by setupMessageListener() from btcp-browser-agent
 
   switch (type) {
     // Storage operations

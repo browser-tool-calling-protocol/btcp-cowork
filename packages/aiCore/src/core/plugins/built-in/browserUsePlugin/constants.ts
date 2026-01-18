@@ -1,7 +1,10 @@
 /**
  * BTCP Browser Plugin Constants
  *
- * Tool presets and default configuration values
+ * Tool presets and default configuration values.
+ * Uses the two-layer architecture from btcp-browser-agent:
+ * - BackgroundAgent: Browser-level operations (tabs, navigation, screenshots)
+ * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
  */
 
 import type { BTCPToolName, BTCPToolPreset } from './types'
@@ -14,101 +17,58 @@ export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
    * Minimal: Safe read-only operations
    * Best for information extraction and page analysis
    */
-  minimal: [
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe'
-  ],
+  minimal: ['browser_snapshot', 'browser_get_text'],
 
   /**
    * Standard: Common automation tasks
    * Suitable for most browser automation use cases
    */
   standard: [
-    // All minimal tools
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe',
+    // Session management
+    'browser_launch',
+    'browser_close',
     // Navigation
     'browser_navigate',
     'browser_back',
     'browser_forward',
     'browser_reload',
+    // Inspection
+    'browser_snapshot',
+    'browser_get_text',
     // Interaction
     'browser_click',
     'browser_type',
     'browser_fill',
     'browser_press',
-    'browser_hover',
     'browser_scroll',
-    'browser_clear',
-    'browser_check',
-    'browser_select',
-    // Semantic locators
-    'browser_get_by_role',
-    'browser_get_by_text',
-    'browser_get_by_label',
-    // Waiting
-    'browser_wait',
-    'browser_scroll_into_view',
     // Visual
-    'browser_screenshot',
-    'browser_highlight'
+    'browser_screenshot'
   ],
 
   /**
-   * Full: All capabilities including JS execution
-   * Use with caution - includes powerful operations
+   * Full: All capabilities
+   * Same as standard in minimal API
    */
   full: [
-    // All standard tools
-    'browser_snapshot',
-    'browser_url',
-    'browser_title',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_count',
-    'browser_describe',
+    // Session management
+    'browser_launch',
+    'browser_close',
+    // Navigation
     'browser_navigate',
     'browser_back',
     'browser_forward',
     'browser_reload',
+    // Inspection
+    'browser_snapshot',
+    'browser_get_text',
+    // Interaction
     'browser_click',
     'browser_type',
     'browser_fill',
     'browser_press',
-    'browser_hover',
     'browser_scroll',
-    'browser_clear',
-    'browser_check',
-    'browser_select',
-    'browser_get_by_role',
-    'browser_get_by_text',
-    'browser_get_by_label',
-    'browser_wait',
-    'browser_scroll_into_view',
-    'browser_screenshot',
-    'browser_highlight',
-    // Additional full-level tools
-    'browser_evaluate',
-    'browser_frame',
-    'browser_mainframe',
-    'browser_uncheck',
-    'browser_get_by_placeholder',
-    'browser_is_enabled',
-    'browser_wait_for_url',
-    'browser_console'
+    // Visual
+    'browser_screenshot'
   ]
 }
 

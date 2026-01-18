@@ -1,4 +1,4 @@
-# Proposal: BTCP Browser Tools Plugin for aiCore
+# Proposal: Browser Use Plugin for aiCore (formerly BTCP Browser Tools Plugin)
 
 ## Summary
 
@@ -45,7 +45,7 @@ Integrate [btcp-browser-agent](https://github.com/browser-tool-calling-protocol/
 ┌─────────────────────────────────────────────────────────────────┐
 │                        aiCore Runtime                            │
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐ │
-│  │ RuntimeExecutor │───▶│ btcpBrowserPlugin │───▶│ Other       │ │
+│  │ RuntimeExecutor │───▶│ browserUsePlugin │───▶│ Other       │ │
 │  │                 │    │                  │    │ Plugins     │ │
 │  └─────────────────┘    └────────┬─────────┘    └─────────────┘ │
 └──────────────────────────────────┼──────────────────────────────┘
@@ -344,7 +344,7 @@ const TOOL_PRESETS = {
 ### Plugin Factory
 
 ```typescript
-// packages/aiCore/src/core/plugins/built-in/btcpBrowserPlugin/index.ts
+// packages/aiCore/src/core/plugins/built-in/browserUsePlugin/index.ts
 
 import { BrowserAgent } from 'btcp-browser-agent'
 import { tool } from 'ai'
@@ -354,7 +354,7 @@ import type { AiRequestContext } from '../../types'
 import type { BTCPBrowserPluginConfig } from './types'
 import { TOOL_PRESETS } from './constants'
 
-export const btcpBrowserPlugin = (config: BTCPBrowserPluginConfig = {}) => {
+export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}) => {
   const {
     enabled = true,
     agent: providedAgent,
@@ -963,7 +963,7 @@ Use these refs instead of CSS selectors when possible.
   })
 }
 
-export default btcpBrowserPlugin
+export default browserUsePlugin
 export * from './types'
 ```
 
@@ -972,10 +972,10 @@ export * from './types'
 ### Basic Usage
 
 ```typescript
-import { createExecutor, btcpBrowserPlugin } from '@cherrystudio/ai-core'
+import { createExecutor, browserUsePlugin } from '@cherrystudio/ai-core'
 
 const executor = createExecutor('anthropic', { apiKey: '...' }, [
-  btcpBrowserPlugin()
+  browserUsePlugin()
 ])
 
 const result = await executor.streamText({
@@ -991,7 +991,7 @@ const result = await executor.streamText({
 
 ```typescript
 const executor = createExecutor('openai', { apiKey: '...' }, [
-  btcpBrowserPlugin({
+  browserUsePlugin({
     toolset: 'minimal'  // Only snapshot, getText, isVisible, etc.
   })
 ])
@@ -1001,7 +1001,7 @@ const executor = createExecutor('openai', { apiKey: '...' }, [
 
 ```typescript
 const executor = createExecutor('anthropic', { apiKey: '...' }, [
-  btcpBrowserPlugin({
+  browserUsePlugin({
     toolset: 'full',
     enableTracking: true,
     onToolCall: (name, args) => console.log(`[BTCP] ${name}`, args),
@@ -1014,7 +1014,7 @@ const executor = createExecutor('anthropic', { apiKey: '...' }, [
 
 ```typescript
 const executor = createExecutor('openai', { apiKey: '...' }, [
-  btcpBrowserPlugin({
+  browserUsePlugin({
     toolset: [
       'browser_snapshot',
       'browser_navigate',
@@ -1032,13 +1032,13 @@ const executor = createExecutor('openai', { apiKey: '...' }, [
 ```typescript
 // content-script.ts
 import { BrowserAgent } from 'btcp-browser-agent'
-import { createExecutor, btcpBrowserPlugin } from '@cherrystudio/ai-core'
+import { createExecutor, browserUsePlugin } from '@cherrystudio/ai-core'
 
 const agent = new BrowserAgent(window, document)
 await agent.launch({})
 
 const executor = createExecutor('anthropic', { apiKey: '...' }, [
-  btcpBrowserPlugin({ agent })
+  browserUsePlugin({ agent })
 ])
 
 // Handle messages from popup/background
@@ -1057,11 +1057,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 ### Combined with Web Search
 
 ```typescript
-import { createExecutor, btcpBrowserPlugin, webSearchPlugin } from '@cherrystudio/ai-core'
+import { createExecutor, browserUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core'
 
 const executor = createExecutor('anthropic', { apiKey: '...' }, [
   webSearchPlugin({ anthropic: { maxUses: 3 } }),
-  btcpBrowserPlugin()
+  browserUsePlugin()
 ])
 
 await executor.streamText({
@@ -1128,7 +1128,7 @@ await browser_describe({ action: 'clck' })
 ## File Structure
 
 ```
-packages/aiCore/src/core/plugins/built-in/btcpBrowserPlugin/
+packages/aiCore/src/core/plugins/built-in/browserUsePlugin/
 ├── index.ts          # Plugin factory and main exports
 ├── types.ts          # TypeScript interfaces
 ├── tools/
