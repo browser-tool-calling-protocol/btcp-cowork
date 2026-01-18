@@ -12,11 +12,21 @@
 
 import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
 
-// Dynamic import for btcp-browser-agent to avoid type-checking the source files
-
-const btcpBrowserAgent = require('btcp-browser-agent') as {
+// Lazy-load btcp-browser-agent to avoid build-time dependency
+// This will be loaded at runtime when the plugin is actually used
+let btcpBrowserAgent: {
   BrowserAgent: typeof BrowserAgent
   generateCommandId: () => string
+} | null = null
+
+function getBtcpBrowserAgent() {
+  if (!btcpBrowserAgent) {
+    btcpBrowserAgent = require('btcp-browser-agent') as {
+      BrowserAgent: typeof BrowserAgent
+      generateCommandId: () => string
+    }
+  }
+  return btcpBrowserAgent
 }
 import * as z from 'zod'
 
@@ -82,7 +92,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
   const getAgent = async (): Promise<BrowserAgent> => {
     if (!agent) {
-      agent = new btcpBrowserAgent.BrowserAgent(agentOptions as BrowserAgentConfig)
+      agent = new (getBtcpBrowserAgent().BrowserAgent)(agentOptions as BrowserAgentConfig)
     }
     if (!agentLaunched) {
       await agent.launch()
@@ -141,7 +151,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           executeWithCallbacks('browser_navigate', args, async () => {
             const browserAgent = await getAgent()
             await browserAgent.execute({
-              id: btcpBrowserAgent.generateCommandId(),
+              id: getBtcpBrowserAgent().generateCommandId(),
               action: 'navigate',
               url: args.url
             })
@@ -156,7 +166,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           executeWithCallbacks('browser_back', {}, async () => {
             const browserAgent = await getAgent()
             await browserAgent.execute({
-              id: btcpBrowserAgent.generateCommandId(),
+              id: getBtcpBrowserAgent().generateCommandId(),
               action: 'back'
             })
             return { success: true }
@@ -170,7 +180,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           executeWithCallbacks('browser_forward', {}, async () => {
             const browserAgent = await getAgent()
             await browserAgent.execute({
-              id: btcpBrowserAgent.generateCommandId(),
+              id: getBtcpBrowserAgent().generateCommandId(),
               action: 'forward'
             })
             return { success: true }
@@ -184,7 +194,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           executeWithCallbacks('browser_reload', {}, async () => {
             const browserAgent = await getAgent()
             await browserAgent.execute({
-              id: btcpBrowserAgent.generateCommandId(),
+              id: getBtcpBrowserAgent().generateCommandId(),
               action: 'reload'
             })
             return { success: true }

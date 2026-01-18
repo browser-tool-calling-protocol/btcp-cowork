@@ -10,5 +10,6 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   clean: true,
   dts: true,
-  tsconfig: 'tsconfig.json'
+  tsconfig: 'tsconfig.json',
+  external: ['btcp-browser-agent']
 })
