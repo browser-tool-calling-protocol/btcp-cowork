@@ -36,7 +36,13 @@
     "@ai-sdk/google": "^2.0.36",
     "@ai-sdk/openai": "^2.0.64",
     "@cherrystudio/ai-sdk-provider": "^0.1.3",
-    "ai": "^5.0.26"
+    "ai": "^5.0.26",
+    "btcp-browser-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "btcp-browser-agent": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.49",
@@ -46,7 +52,6 @@
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.17",
     "@ai-sdk/xai": "^2.0.36",
-    "btcp-browser-agent": "github:browser-tool-calling-protocol/btcp-browser-agent",
     "zod": "^4.1.5"
   },
   "devDependencies": {

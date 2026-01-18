@@ -1,21 +1,30 @@
 /**
  * Browser Demo Hook
  *
- * Demonstrates the BTCP browser tools by showing a simulated flow
- * of browser automation commands. This runs as a visualization to
- * help users understand what the tools do.
+ * Demonstrates the BTCP browser tools by controlling the browser through
+ * the btcp-browser-agent extension API with session management.
  *
- * Note: Actual browser control happens through the btcpBrowserPlugin
- * during AI chat interactions in the main process.
+ * Uses the createClient() API (following official popup.ts pattern):
+ * - BackgroundAgent: Session/tab group management, navigation, screenshots
+ * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
+ *
+ * Session Lifecycle (official pattern):
+ * 1. popupInitialize() on mount - reconnect to existing sessions
+ * 2. groupCreate() before demo - create new tab group session
+ * 3. tabNew() for initial tab - creates tab in session
+ * 4. Execute browser operations within session context
+ * 5. groupDelete() on cleanup - close session and all tabs
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { createClient } from 'btcp-browser-agent/extension'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface DemoStep {
   id: string
   name: string
   description: string
-  tool: string
+  action: string
+  agent: 'background' | 'content'
   args: Record<string, unknown>
   status: 'pending' | 'running' | 'success' | 'error' | 'skipped'
   result?: unknown
@@ -24,80 +33,14 @@ export interface DemoStep {
 
 const DEMO_STEPS: Omit<DemoStep, 'status'>[] = [
   {
-    id: 'navigate-google',
-    name: 'Navigate to Google',
-    description: 'Opening Google.com',
-    tool: 'browser_navigate',
-    args: { url: 'https://www.google.com' }
-  },
-  {
-    id: 'get-title',
-    name: 'Get Page Title',
-    description: 'Verifying page loaded',
-    tool: 'browser_title',
+    id: 'programmatic-demo',
+    name: 'Browser Automation Demo',
+    description: 'Running programmatic browser automation with BTCP',
+    action: 'browser_programmatic_demo',
+    agent: 'background',
     args: {}
-  },
-  {
-    id: 'search-input',
-    name: 'Take Page Snapshot',
-    description: 'Getting page structure',
-    tool: 'browser_snapshot',
-    args: {}
-  },
-  {
-    id: 'type-search',
-    name: 'Type Search Query',
-    description: 'Filling search box',
-    tool: 'browser_fill',
-    args: { selector: 'textarea[name="q"]', value: 'btcp browser tools' }
-  },
-  {
-    id: 'press-enter',
-    name: 'Submit Search',
-    description: 'Pressing Enter key',
-    tool: 'browser_press',
-    args: { key: 'Enter' }
-  },
-  {
-    id: 'wait-results',
-    name: 'Wait for Results',
-    description: 'Waiting for page load',
-    tool: 'browser_wait',
-    args: { timeout: 2000 }
-  },
-  {
-    id: 'navigate-github',
-    name: 'Go to GitHub',
-    description: 'Navigating to repository',
-    tool: 'browser_navigate',
-    args: { url: 'https://github.com/browser-tool-calling-protocol/btcp-cowork' }
-  },
-  {
-    id: 'get-github-title',
-    name: 'Verify GitHub Page',
-    description: 'Confirming navigation',
-    tool: 'browser_title',
-    args: {}
-  },
-  {
-    id: 'click-star',
-    name: 'Click Star Button',
-    description: 'Starring the repository',
-    tool: 'browser_click',
-    args: { selector: 'button[data-ga-click*="star"]' }
   }
 ]
-
-// Simulated results for each tool type
-const SIMULATED_RESULTS: Record<string, unknown> = {
-  browser_navigate: { success: true },
-  browser_title: { title: 'Page Title' },
-  browser_snapshot: { elements: 42, refs: ['@ref:1', '@ref:2', '@ref:3'] },
-  browser_fill: { success: true },
-  browser_press: { success: true },
-  browser_wait: { success: true },
-  browser_click: { success: true }
-}
 
 export interface UseBrowserDemoReturn {
   steps: DemoStep[]
@@ -119,18 +62,238 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
   const abortRef = useRef(false)
 
+  // Persistent client instance (following official popup.ts pattern)
+  const clientRef = useRef(createClient())
+
+  // Track active session (tab group)
+  const sessionRef = useRef<{ groupId: number } | null>(null)
+
+  // Initialize on mount (official popup pattern)
+  useEffect(() => {
+    const initializePopup = async () => {
+      try {
+        await clientRef.current.popupInitialize()
+        console.log('[Demo] Popup initialized')
+      } catch (err) {
+        console.error('Failed to initialize popup:', err)
+      }
+    }
+
+    initializePopup()
+  }, [])
+
   const updateStep = useCallback((index: number, updates: Partial<DemoStep>) => {
     setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, ...updates } : step)))
   }, [])
 
-  const simulateStep = useCallback(async (step: DemoStep): Promise<unknown> => {
-    // Simulate network/processing delay (300-800ms)
-    const delay = 300 + Math.random() * 500
-    await new Promise((resolve) => setTimeout(resolve, delay))
+  const runProgrammaticDemo = useCallback(async (): Promise<unknown> => {
+    const client = clientRef.current
 
-    // Return simulated result
-    return SIMULATED_RESULTS[step.tool] ?? { success: true }
+    // Utility for delays (from example)
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+    // Helper to find element in snapshot tree (EXACT COPY from example)
+    function findElement(
+      tree: string,
+      criteria: {
+        role?: string
+        name?: string
+        nameContains?: string
+        type?: string
+      }
+    ): string | null {
+      const lines = tree.split('\n')
+
+      for (const line of lines) {
+        // Parse line format: "@ref:N role='...' name='...' ..."
+        const refMatch = line.match(/@ref:(\d+)/)
+        if (!refMatch) continue
+
+        const ref = `@ref:${refMatch[1]}`
+
+        // Check all criteria
+        let matches = true
+
+        if (criteria.role) {
+          const roleMatch = line.match(/role='([^']+)'/)
+          if (!roleMatch || roleMatch[1] !== criteria.role) matches = false
+        }
+
+        if (criteria.name) {
+          const nameMatch = line.match(/name='([^']+)'/)
+          if (!nameMatch || nameMatch[1] !== criteria.name) matches = false
+        }
+
+        if (criteria.nameContains) {
+          const nameMatch = line.match(/name='([^']+)'/)
+          if (!nameMatch || !nameMatch[1].toLowerCase().includes(criteria.nameContains.toLowerCase())) {
+            matches = false
+          }
+        }
+
+        if (criteria.type) {
+          const typeMatch = line.match(/type='([^']+)'/)
+          if (!typeMatch || typeMatch[1] !== criteria.type) matches = false
+        }
+
+        if (matches) {
+          console.log('[Demo] Found:', `${ref} - ${line.trim()}`)
+          return ref
+        }
+      }
+
+      return null
+    }
+
+    // Prerequisites: Create session and navigate in one step (FIXED)
+    console.log('[Demo] Checking session (prerequisite)...')
+    const { session: existingSession } = await client.sessionGetCurrent()
+    if (!existingSession) {
+      console.log('[Demo] No session found, creating session and navigating to Google...')
+      const { group } = await client.groupCreate()
+      sessionRef.current = { groupId: group.id }
+      console.log('[Demo] Session created:', group.id)
+
+      // Get tabs in the session to find the created tab
+      console.log('[Demo] Getting tabs in session...')
+      const tabs = await client.tabList()
+      console.log('[Demo] Tabs in session:', tabs)
+
+      if (tabs.length === 0) {
+        throw new Error('No tabs found in created session')
+      }
+
+      // Use the first (and only) tab in the newly created group
+      const sessionTab = tabs[0]
+      console.log('[Demo] Using session tab:', sessionTab.id)
+
+      // Switch to the tab to set it as active
+      console.log('[Demo] Switching to tab:', sessionTab.id)
+      await client.tabSwitch(sessionTab.id)
+      console.log('[Demo] Tab switched successfully')
+
+      // Navigate to Google (reuses the blank tab created by groupCreate)
+      console.log('[Demo] Navigating to Google...')
+      try {
+        const navResult = await client.navigate('https://www.google.com')
+        console.log('[Demo] Navigate result:', navResult)
+      } catch (navError) {
+        console.error('[Demo] Navigate failed:', navError)
+        throw new Error(`Navigation failed: ${navError instanceof Error ? navError.message : String(navError)}`)
+      }
+      console.log('[Demo] Navigated to Google - waiting for page and content script to load...')
+
+      // Wait for page to fully load and content script to be ready
+      // Retry snapshot until successful (content script is responding)
+      let snapshotReady = false
+      let retries = 0
+      while (!snapshotReady && retries < 10) {
+        await sleep(1000)
+        try {
+          const testSnapshot = await client.snapshot({ format: 'tree' })
+          if (testSnapshot && testSnapshot.tree) {
+            snapshotReady = true
+            console.log('[Demo] Content script ready and responding')
+          }
+        } catch (err) {
+          retries++
+          console.log(`[Demo] Waiting for content script... (attempt ${retries}/10)`)
+        }
+      }
+
+      if (!snapshotReady) {
+        throw new Error('Content script failed to respond after 10 seconds')
+      }
+    } else {
+      console.log('[Demo] Session exists:', existingSession.groupId)
+      sessionRef.current = { groupId: existingSession.groupId }
+
+      console.log('[Demo] Navigate to Google')
+      try {
+        const navResult = await client.navigate('https://www.google.com')
+        console.log('[Demo] Navigate result:', navResult)
+      } catch (navError) {
+        console.error('[Demo] Navigate failed:', navError)
+        throw new Error(`Navigation failed: ${navError instanceof Error ? navError.message : String(navError)}`)
+      }
+      await sleep(2000) // Wait for page to settle
+    }
+
+    // Step 2: Take FRESH snapshot to understand page structure (EXACT COPY from example - line 161)
+    console.log('[Demo] Take snapshot to analyze page structure')
+    let snapshot1: string
+    try {
+      const snapshotResult = await client.snapshot({ format: 'tree' })
+      snapshot1 = snapshotResult.tree
+      console.log('[Demo] Snapshot captured:', snapshot1.split('\n').length, 'elements found')
+      await sleep(500)
+    } catch (snapshotError) {
+      console.error('[Demo] Snapshot failed:', snapshotError)
+      throw new Error(
+        `Failed to capture page snapshot: ${snapshotError instanceof Error ? snapshotError.message : String(snapshotError)}`
+      )
+    }
+
+    // Step 3: Find search input (EXACT COPY from example - line 170)
+    console.log('[Demo] Locate search input field')
+    let searchInput = findElement(snapshot1, { role: 'combobox' })
+    if (!searchInput) {
+      searchInput = findElement(snapshot1, { role: 'searchbox' })
+    }
+    if (!searchInput) {
+      console.log('[Demo] Trying alternative: looking for textbox with search-related name')
+      searchInput = findElement(snapshot1, { role: 'textbox', nameContains: 'search' })
+    }
+    if (!searchInput) {
+      throw new Error('Unable to locate search input field')
+    }
+    await sleep(500)
+
+    // Step 4: Type search query (EXACT COPY from example - line 190)
+    console.log('[Demo] Type search query into input')
+    await client.type(searchInput, 'btcp-cowork')
+    console.log('[Demo] Query typed successfully')
+    await sleep(500)
+
+    // Step 5: Submit search (EXACT COPY from example - line 201)
+    console.log('[Demo] Locate and click search button')
+    const searchButton = findElement(snapshot1, { role: 'button', nameContains: 'search' })
+
+    if (!searchButton) {
+      console.log('[Demo] Search button not found, trying Enter key instead')
+      await client.execute({
+        id: crypto.randomUUID(),
+        action: 'press',
+        key: 'Enter'
+      })
+    } else {
+      console.log('[Demo] Clicking search button', searchButton)
+      await client.click(searchButton)
+    }
+    console.log('[Demo] Search submitted')
+    await sleep(2000) // Wait for search results to load
+
+    // Step 6: Take final screenshot (from example pattern)
+    console.log('[Demo] Taking screenshot...')
+    await sleep(500)
+    const screenshot = await client.screenshot()
+    console.log('[Demo] Screenshot captured')
+
+    return {
+      screenshot,
+      status: 'completed'
+    }
   }, [])
+
+  const executeStep = useCallback(
+    async (step: DemoStep): Promise<unknown> => {
+      if (step.action === 'browser_programmatic_demo') {
+        return await runProgrammaticDemo()
+      }
+      throw new Error(`Unknown action: ${step.action}`)
+    },
+    [runProgrammaticDemo]
+  )
 
   const runDemo = useCallback(async () => {
     setIsRunning(true)
@@ -141,7 +304,7 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
     setSteps(DEMO_STEPS.map((step) => ({ ...step, status: 'pending' as const })))
 
     try {
-      // Execute each step with simulation
+      // Execute each step (including session creation as first step)
       for (let i = 0; i < DEMO_STEPS.length; i++) {
         if (abortRef.current) {
           // Mark remaining steps as skipped
@@ -155,7 +318,7 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
         updateStep(i, { status: 'running' })
 
         try {
-          const result = await simulateStep({ ...DEMO_STEPS[i], status: 'running' })
+          const result = await executeStep({ ...DEMO_STEPS[i], status: 'running' })
           updateStep(i, { status: 'success', result })
 
           // Small delay between steps for visual feedback
@@ -172,10 +335,21 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
       setIsRunning(false)
       setCurrentStepIndex(-1)
     }
-  }, [simulateStep, updateStep])
+  }, [executeStep, updateStep])
 
-  const stopDemo = useCallback(() => {
+  const stopDemo = useCallback(async () => {
     abortRef.current = true
+    // Clean up session (following popup.ts pattern)
+    if (sessionRef.current) {
+      try {
+        console.log('[Demo] Closing session:', sessionRef.current.groupId)
+        await clientRef.current.groupDelete(sessionRef.current.groupId)
+        sessionRef.current = null
+        console.log('[Demo] Session closed')
+      } catch (err) {
+        console.error('[Demo] Failed to close session:', err)
+      }
+    }
   }, [])
 
   const resetDemo = useCallback(() => {

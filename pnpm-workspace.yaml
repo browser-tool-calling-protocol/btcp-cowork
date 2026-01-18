@@ -6,3 +6,6 @@ supportedArchitectures:
   - current
   cpu:
   - current
+
+onlyBuiltDependencies:
+  - "btcp-browser-agent"

@@ -716,23 +716,23 @@
       },
       "auto_resize": "自动调整高度",
       "browser_use": {
-        "disable": "禁用浏览器控制",
-        "enabled_tooltip": "浏览器工具已启用 ({{toolset}})",
-        "label": "浏览器控制",
-        "menu_description": "启用浏览器自动化工具",
-        "panel_title": "选择工具集",
+        "disable": "[to be translated]:Disable Browser Use",
+        "enabled_tooltip": "[to be translated]:Browser tools enabled ({{toolset}})",
+        "label": "[to be translated]:Browser Use",
+        "menu_description": "[to be translated]:Enable browser automation tools",
+        "panel_title": "[to be translated]:Select Toolset",
         "toolset": {
           "full": {
-            "description": "所有工具，包括 JS 执行",
-            "label": "完整"
+            "description": "[to be translated]:All tools including JS execution",
+            "label": "[to be translated]:Full"
           },
           "minimal": {
-            "description": "只读：快照、文本、URL",
-            "label": "精简"
+            "description": "[to be translated]:Read-only: snapshot, text, URL",
+            "label": "[to be translated]:Minimal"
           },
           "standard": {
-            "description": "导航和交互",
-            "label": "标准"
+            "description": "[to be translated]:Navigation and interaction",
+            "label": "[to be translated]:Standard"
           }
         }
       },
@@ -4767,69 +4767,69 @@
     "tool": {
       "browser_use": {
         "demo": {
-          "description": "通过实时演示测试浏览器工具，浏览和操作网页",
-          "modal_description": "此演示将打开浏览器窗口并展示 BTCP 浏览器工具：导航、页面检查、表单填写等。",
-          "modal_title": "浏览器工具演示",
-          "reset": "重置",
-          "run_demo": "运行浏览器演示",
-          "start": "开始演示",
+          "description": "[to be translated]:Test the browser tools with a live demo that navigates and interacts with web pages",
+          "modal_description": "[to be translated]:This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
+          "modal_title": "[to be translated]:Browser Tools Demo",
+          "reset": "[to be translated]:Reset",
+          "run_demo": "[to be translated]:Run Browser Demo",
+          "start": "[to be translated]:Start Demo",
           "steps": {
-            "click": "点击元素",
-            "connecting": "连接到浏览器",
-            "fill": "填写输入框",
-            "get_title": "获取页面标题",
-            "navigate": "导航到 URL",
-            "snapshot": "获取页面快照",
-            "wait": "等待页面"
+            "click": "[to be translated]:Click element",
+            "connecting": "[to be translated]:Connecting to browser",
+            "fill": "[to be translated]:Fill input field",
+            "get_title": "[to be translated]:Get page title",
+            "navigate": "[to be translated]:Navigate to URL",
+            "snapshot": "[to be translated]:Take page snapshot",
+            "wait": "[to be translated]:Wait for page"
           },
-          "stop": "停止",
-          "title": "体验浏览器自动化",
-          "view_github": "在 GitHub 查看"
+          "stop": "[to be translated]:Stop",
+          "title": "[to be translated]:Try Browser Automation",
+          "view_github": "[to be translated]:View on GitHub"
         },
         "enabled": {
-          "description": "允许 AI 控制浏览器执行自动化任务",
-          "label": "启用浏览器控制"
+          "description": "[to be translated]:Allow AI to control browser for automation tasks",
+          "label": "[to be translated]:Enable Browser Use"
         },
         "general": {
-          "title": "常规"
+          "title": "[to be translated]:General"
         },
         "max_snapshot_size": {
-          "description": "页面快照的最大字符数（防止 token 溢出）",
-          "label": "最大快照大小"
+          "description": "[to be translated]:Maximum characters for page snapshots (prevents token overflow)",
+          "label": "[to be translated]:Max Snapshot Size"
         },
         "screencast": {
-          "description": "为视觉模型流式传输视觉更新（会增加 token 使用量）",
-          "label": "启用屏幕投射"
+          "description": "[to be translated]:Stream visual updates for vision models (increases token usage)",
+          "label": "[to be translated]:Enable Screencast"
         },
         "system_prompt": {
-          "description": "将浏览器工作流提示添加到 AI 系统提示词",
-          "label": "注入系统提示词"
+          "description": "[to be translated]:Add browser workflow hints to AI system prompt",
+          "label": "[to be translated]:Inject System Prompt"
         },
-        "title": "浏览器控制",
+        "title": "[to be translated]:Browser Use",
         "tools": {
-          "available": "可用的浏览器工具",
-          "description": "已启用 '{{preset}}' 预设的工具",
-          "title": "工具"
+          "available": "[to be translated]:Available Browser Tools",
+          "description": "[to be translated]:Tools enabled for the '{{preset}}' preset",
+          "title": "[to be translated]:Tools"
         },
         "toolset": {
-          "description": "选择 AI 模型可用的浏览器工具",
+          "description": "[to be translated]:Choose which browser tools are available to AI models",
           "full": {
-            "description": "所有工具，包括 JavaScript 执行和 iframe 处理",
-            "label": "完整（高级）"
+            "description": "[to be translated]:All tools including JavaScript execution and iframe handling",
+            "label": "[to be translated]:Full (Advanced)"
           },
-          "label": "默认工具集",
+          "label": "[to be translated]:Default Toolset",
           "minimal": {
-            "description": "安全的只读操作：快照、URL、标题、文本提取",
-            "label": "精简（只读）"
+            "description": "[to be translated]:Safe read-only operations: snapshot, URL, title, text extraction",
+            "label": "[to be translated]:Minimal (Read-only)"
           },
           "standard": {
-            "description": "常用自动化：导航、点击、输入、表单、滚动",
-            "label": "标准"
+            "description": "[to be translated]:Common automation: navigation, clicks, typing, forms, scrolling",
+            "label": "[to be translated]:Standard"
           }
         },
         "tracking": {
-          "description": "追踪网络请求和控制台日志，用于调试",
-          "label": "启用请求追踪"
+          "description": "[to be translated]:Track network requests and console logs for debugging",
+          "label": "[to be translated]:Enable Request Tracking"
         }
       },
       "ocr": {

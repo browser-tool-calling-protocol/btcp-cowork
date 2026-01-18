@@ -192,7 +192,7 @@ const BrowserUseGeneralSettings: FC = () => {
                   <DemoStepName>{step.name}</DemoStepName>
                   <DemoStepDescription>
                     {step.description}
-                    <Tag style={{ marginLeft: 8 }}>{step.tool}</Tag>
+                    <Tag style={{ marginLeft: 8 }}>{step.action}</Tag>
                   </DemoStepDescription>
                 </DemoStepInfo>
               </DemoStepItem>

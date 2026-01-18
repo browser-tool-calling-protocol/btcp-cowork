@@ -716,23 +716,23 @@
       },
       "auto_resize": "自動調整高度",
       "browser_use": {
-        "disable": "停用瀏覽器控制",
-        "enabled_tooltip": "瀏覽器工具已啟用 ({{toolset}})",
-        "label": "瀏覽器控制",
-        "menu_description": "啟用瀏覽器自動化工具",
-        "panel_title": "選擇工具集",
+        "disable": "[to be translated]:Disable Browser Use",
+        "enabled_tooltip": "[to be translated]:Browser tools enabled ({{toolset}})",
+        "label": "[to be translated]:Browser Use",
+        "menu_description": "[to be translated]:Enable browser automation tools",
+        "panel_title": "[to be translated]:Select Toolset",
         "toolset": {
           "full": {
-            "description": "所有工具，包括 JS 執行",
-            "label": "完整"
+            "description": "[to be translated]:All tools including JS execution",
+            "label": "[to be translated]:Full"
           },
           "minimal": {
-            "description": "唯讀：快照、文字、URL",
-            "label": "精簡"
+            "description": "[to be translated]:Read-only: snapshot, text, URL",
+            "label": "[to be translated]:Minimal"
           },
           "standard": {
-            "description": "導航和互動",
-            "label": "標準"
+            "description": "[to be translated]:Navigation and interaction",
+            "label": "[to be translated]:Standard"
           }
         }
       },
@@ -4767,69 +4767,69 @@
     "tool": {
       "browser_use": {
         "demo": {
-          "description": "透過即時示範測試瀏覽器工具，瀏覽和操作網頁",
-          "modal_description": "此示範將開啟瀏覽器視窗並展示 BTCP 瀏覽器工具：導航、頁面檢查、表單填寫等。",
-          "modal_title": "瀏覽器工具示範",
-          "reset": "重設",
-          "run_demo": "執行瀏覽器示範",
-          "start": "開始示範",
+          "description": "[to be translated]:Test the browser tools with a live demo that navigates and interacts with web pages",
+          "modal_description": "[to be translated]:This demo will open a browser window and demonstrate BTCP browser tools: navigation, page inspection, form filling, and more.",
+          "modal_title": "[to be translated]:Browser Tools Demo",
+          "reset": "[to be translated]:Reset",
+          "run_demo": "[to be translated]:Run Browser Demo",
+          "start": "[to be translated]:Start Demo",
           "steps": {
-            "click": "點擊元素",
-            "connecting": "連線到瀏覽器",
-            "fill": "填寫輸入欄位",
-            "get_title": "取得頁面標題",
-            "navigate": "導航到 URL",
-            "snapshot": "取得頁面快照",
-            "wait": "等待頁面"
+            "click": "[to be translated]:Click element",
+            "connecting": "[to be translated]:Connecting to browser",
+            "fill": "[to be translated]:Fill input field",
+            "get_title": "[to be translated]:Get page title",
+            "navigate": "[to be translated]:Navigate to URL",
+            "snapshot": "[to be translated]:Take page snapshot",
+            "wait": "[to be translated]:Wait for page"
           },
-          "stop": "停止",
-          "title": "體驗瀏覽器自動化",
-          "view_github": "在 GitHub 檢視"
+          "stop": "[to be translated]:Stop",
+          "title": "[to be translated]:Try Browser Automation",
+          "view_github": "[to be translated]:View on GitHub"
         },
         "enabled": {
-          "description": "允許 AI 控制瀏覽器執行自動化任務",
-          "label": "啟用瀏覽器控制"
+          "description": "[to be translated]:Allow AI to control browser for automation tasks",
+          "label": "[to be translated]:Enable Browser Use"
         },
         "general": {
-          "title": "一般"
+          "title": "[to be translated]:General"
         },
         "max_snapshot_size": {
-          "description": "頁面快照的最大字元數（防止 token 溢位）",
-          "label": "最大快照大小"
+          "description": "[to be translated]:Maximum characters for page snapshots (prevents token overflow)",
+          "label": "[to be translated]:Max Snapshot Size"
         },
         "screencast": {
-          "description": "為視覺模型串流視覺更新（會增加 token 使用量）",
-          "label": "啟用螢幕投射"
+          "description": "[to be translated]:Stream visual updates for vision models (increases token usage)",
+          "label": "[to be translated]:Enable Screencast"
         },
         "system_prompt": {
-          "description": "將瀏覽器工作流程提示加入 AI 系統提示詞",
-          "label": "注入系統提示詞"
+          "description": "[to be translated]:Add browser workflow hints to AI system prompt",
+          "label": "[to be translated]:Inject System Prompt"
         },
-        "title": "瀏覽器控制",
+        "title": "[to be translated]:Browser Use",
         "tools": {
-          "available": "可用的瀏覽器工具",
-          "description": "已啟用 '{{preset}}' 預設的工具",
-          "title": "工具"
+          "available": "[to be translated]:Available Browser Tools",
+          "description": "[to be translated]:Tools enabled for the '{{preset}}' preset",
+          "title": "[to be translated]:Tools"
         },
         "toolset": {
-          "description": "選擇 AI 模型可用的瀏覽器工具",
+          "description": "[to be translated]:Choose which browser tools are available to AI models",
           "full": {
-            "description": "所有工具，包括 JavaScript 執行和 iframe 處理",
-            "label": "完整（進階）"
+            "description": "[to be translated]:All tools including JavaScript execution and iframe handling",
+            "label": "[to be translated]:Full (Advanced)"
           },
-          "label": "預設工具集",
+          "label": "[to be translated]:Default Toolset",
           "minimal": {
-            "description": "安全的唯讀操作：快照、URL、標題、文字擷取",
-            "label": "精簡（唯讀）"
+            "description": "[to be translated]:Safe read-only operations: snapshot, URL, title, text extraction",
+            "label": "[to be translated]:Minimal (Read-only)"
           },
           "standard": {
-            "description": "常用自動化：導航、點擊、輸入、表單、捲動",
-            "label": "標準"
+            "description": "[to be translated]:Common automation: navigation, clicks, typing, forms, scrolling",
+            "label": "[to be translated]:Standard"
           }
         },
         "tracking": {
-          "description": "追蹤網路請求和控制台日誌，用於除錯",
-          "label": "啟用請求追蹤"
+          "description": "[to be translated]:Track network requests and console logs for debugging",
+          "label": "[to be translated]:Enable Request Tracking"
         }
       },
       "ocr": {

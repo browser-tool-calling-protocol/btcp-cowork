@@ -2,13 +2,15 @@
  * Content Script - BTCP Browser Agent
  *
  * Sets up ContentAgent for DOM operations and message handling.
- * Following USAGE.md architecture.
+ * Following official btcp-browser-agent extension/content.ts pattern.
  */
 
 import { createContentAgent } from 'btcp-browser-agent/extension'
 
-// Create agent and register message handler per USAGE.md
+// Create agent immediately
 const agent = createContentAgent()
+
+// Register message listener - handleMessage is designed for Chrome's listener API
 chrome.runtime.onMessage.addListener(agent.handleMessage)
 
 // =============================================================================
@@ -50,10 +52,7 @@ document.addEventListener('mouseup', () => {
 // INITIALIZATION
 // =============================================================================
 
-// Log that content script loaded (for debugging)
-console.debug('[Cherry Studio] Content script loaded with BTCP support')
-
-// Notify background that content script is ready
+// Notify background that content script is ready (following official pattern)
 chrome.runtime
   .sendMessage({
     type: 'contentScriptReady',
