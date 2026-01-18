@@ -752,7 +752,8 @@
       "send": "傳送",
       "settings": "設定",
       "slash_commands": {
-        "description": "Agent 工作階段斜線指令",
+        "description": "提示詞模板和快捷指令",
+        "empty": "暫無可用的斜線指令",
         "title": "斜線指令"
       },
       "thinking": {

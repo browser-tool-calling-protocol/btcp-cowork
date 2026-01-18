@@ -752,7 +752,8 @@
       "send": "Send",
       "settings": "Settings",
       "slash_commands": {
-        "description": "Agent session slash commands",
+        "description": "Prompt templates and commands",
+        "empty": "No slash commands available",
         "title": "Slash Commands"
       },
       "thinking": {

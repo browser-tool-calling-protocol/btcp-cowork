@@ -26,6 +26,8 @@ export * from './notification'
 export * from './ocr'
 export * from './plugin'
 export * from './provider'
+// Note: slashCommand types are not re-exported to avoid conflict with agent.ts SlashCommand
+// Import directly from '@renderer/types/slashCommand' when needed
 
 export type McpMode = 'disabled' | 'auto' | 'manual'
 
