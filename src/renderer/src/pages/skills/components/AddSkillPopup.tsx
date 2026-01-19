@@ -7,13 +7,13 @@
  * - Prompt (main instructions)
  * - Content script (JavaScript)
  * - Page script (JavaScript)
- * - Tool schema (JSON)
+ * - Tool schema (JSON text)
  */
 import { CodeOutlined, FileTextOutlined, SettingOutlined, ToolOutlined } from '@ant-design/icons'
 import { TopView } from '@renderer/components/TopView'
 import { useSkills } from '@renderer/hooks/useSkill'
-import type { Skill, SkillTool } from '@renderer/types/skill'
-import { isValidDomainPattern, isValidToolSchema } from '@renderer/types/skill'
+import type { Skill } from '@renderer/types/skill'
+import { isValidDomainPattern } from '@renderer/types/skill'
 import { Collapse, Input, Modal, Switch, Tabs, Tooltip } from 'antd'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -43,14 +43,11 @@ const AddSkillPopupContent: React.FC<AddSkillPopupProps> = ({ title, skill, reso
   const [contentScript, setContentScript] = useState(skill?.contentScript || '')
   const [pageScript, setPageScript] = useState(skill?.pageScript || '')
 
-  // Tool schema (stored as JSON string for editing)
-  const [toolSchemaJson, setToolSchemaJson] = useState(
-    skill?.toolSchema ? JSON.stringify(skill.toolSchema, null, 2) : ''
-  )
+  // Tool schema (simple JSON text)
+  const [toolSchema, setToolSchema] = useState(skill?.toolSchema || '')
 
   // Validation states
   const [domainPatternError, setDomainPatternError] = useState<string | null>(null)
-  const [toolSchemaError, setToolSchemaError] = useState<string | null>(null)
 
   const handleClose = () => {
     setOpen(false)
@@ -70,25 +67,6 @@ const AddSkillPopupContent: React.FC<AddSkillPopupProps> = ({ title, skill, reso
     return true
   }
 
-  const validateToolSchema = (json: string): SkillTool[] | null => {
-    if (!json.trim()) {
-      setToolSchemaError(null)
-      return []
-    }
-    try {
-      const parsed = JSON.parse(json)
-      if (!isValidToolSchema(parsed)) {
-        setToolSchemaError(t('skill.tool_schema_invalid_format'))
-        return null
-      }
-      setToolSchemaError(null)
-      return parsed
-    } catch {
-      setToolSchemaError(t('skill.tool_schema_invalid_json'))
-      return null
-    }
-  }
-
   const handleOk = () => {
     // Validate required fields
     if (!name.trim()) {
@@ -106,13 +84,6 @@ const AddSkillPopupContent: React.FC<AddSkillPopupProps> = ({ title, skill, reso
       return
     }
 
-    // Validate tool schema
-    const toolSchema = validateToolSchema(toolSchemaJson)
-    if (toolSchema === null) {
-      window.toast.warning(t('skill.tool_schema_invalid'))
-      return
-    }
-
     const skillData = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -120,7 +91,7 @@ const AddSkillPopupContent: React.FC<AddSkillPopupProps> = ({ title, skill, reso
       prompt: prompt.trim(),
       contentScript: contentScript.trim() || undefined,
       pageScript: pageScript.trim() || undefined,
-      toolSchema: toolSchema.length > 0 ? toolSchema : undefined,
+      toolSchema: toolSchema.trim() || undefined,
       enabled
     }
 
@@ -309,21 +280,12 @@ const AddSkillPopupContent: React.FC<AddSkillPopupProps> = ({ title, skill, reso
             </FieldLabel>
             <FieldHint>{t('skill.tool_schema_hint')}</FieldHint>
             <CodeEditor
-              value={toolSchemaJson}
-              onChange={(e) => {
-                setToolSchemaJson(e.target.value)
-                if (e.target.value.trim()) {
-                  validateToolSchema(e.target.value)
-                } else {
-                  setToolSchemaError(null)
-                }
-              }}
+              value={toolSchema}
+              onChange={(e) => setToolSchema(e.target.value)}
               placeholder={t('skill.tool_schema_placeholder')}
               rows={12}
               $isCode
-              status={toolSchemaError ? 'error' : undefined}
             />
-            {toolSchemaError && <ErrorText>{toolSchemaError}</ErrorText>}
           </FieldGroup>
         </TabContent>
       )
@@ -413,12 +375,11 @@ const CollapseLabel = styled.span`
   font-weight: 500;
 `
 
-const CodeEditor = styled(Input.TextArea)<{ $isCode?: boolean; status?: string }>`
+const CodeEditor = styled(Input.TextArea)<{ $isCode?: boolean }>`
   font-family: ${(props) => (props.$isCode ? "'Fira Code', 'Monaco', 'Consolas', monospace" : 'inherit')};
   font-size: ${(props) => (props.$isCode ? '12px' : '13px')};
   line-height: 1.5;
-  background: ${(props) =>
-    props.status === 'error' ? 'var(--color-error-bg)' : props.$isCode ? 'var(--color-background-soft)' : 'inherit'};
+  background: ${(props) => (props.$isCode ? 'var(--color-background-soft)' : 'inherit')};
 `
 
 const ErrorText = styled.div`

@@ -5,12 +5,12 @@
  * - Basic info (name, description, domain pattern, enabled)
  * - Prompt (main instructions)
  * - Scripts (content script, page script)
- * - Tools (tool schema JSON)
+ * - Tools (tool schema JSON text)
  */
 import { CodeOutlined, FileTextOutlined, SettingOutlined, ToolOutlined } from '@ant-design/icons'
 import Scrollbar from '@renderer/components/Scrollbar'
-import type { Skill, SkillTool } from '@renderer/types/skill'
-import { isValidDomainPattern, isValidToolSchema } from '@renderer/types/skill'
+import type { Skill } from '@renderer/types/skill'
+import { isValidDomainPattern } from '@renderer/types/skill'
 import { Collapse, Input, Switch, Tabs, Tooltip } from 'antd'
 import type { FC } from 'react'
 import { useCallback, useEffect, useState } from 'react'
@@ -26,19 +26,12 @@ const SkillContent: FC<SkillContentProps> = ({ skill, onUpdate }) => {
   const { t } = useTranslation()
   const [localSkill, setLocalSkill] = useState(skill)
 
-  // Tool schema as JSON string for editing
-  const [toolSchemaJson, setToolSchemaJson] = useState(
-    skill.toolSchema ? JSON.stringify(skill.toolSchema, null, 2) : ''
-  )
-
   // Validation states
   const [domainPatternError, setDomainPatternError] = useState<string | null>(null)
-  const [toolSchemaError, setToolSchemaError] = useState<string | null>(null)
 
   // Sync with external skill changes
   useEffect(() => {
     setLocalSkill(skill)
-    setToolSchemaJson(skill.toolSchema ? JSON.stringify(skill.toolSchema, null, 2) : '')
   }, [skill])
 
   const validateDomainPattern = useCallback(
@@ -57,31 +50,9 @@ const SkillContent: FC<SkillContentProps> = ({ skill, onUpdate }) => {
     [t]
   )
 
-  const validateAndParseToolSchema = useCallback(
-    (json: string): SkillTool[] | null => {
-      if (!json.trim()) {
-        setToolSchemaError(null)
-        return []
-      }
-      try {
-        const parsed = JSON.parse(json)
-        if (!isValidToolSchema(parsed)) {
-          setToolSchemaError(t('skill.tool_schema_invalid_format'))
-          return null
-        }
-        setToolSchemaError(null)
-        return parsed
-      } catch {
-        setToolSchemaError(t('skill.tool_schema_invalid_json'))
-        return null
-      }
-    },
-    [t]
-  )
-
   // Handle field changes
   const handleChange = useCallback(
-    (field: keyof Skill, value: string | boolean | SkillTool[] | undefined) => {
+    (field: keyof Skill, value: string | boolean | undefined) => {
       const updated = { ...localSkill, [field]: value }
       setLocalSkill(updated)
       onUpdate(updated)
@@ -96,18 +67,6 @@ const SkillContent: FC<SkillContentProps> = ({ skill, onUpdate }) => {
       handleChange('domainPattern', value || undefined)
     },
     [handleChange, validateDomainPattern]
-  )
-
-  // Handle tool schema JSON change
-  const handleToolSchemaChange = useCallback(
-    (json: string) => {
-      setToolSchemaJson(json)
-      const parsed = validateAndParseToolSchema(json)
-      if (parsed !== null) {
-        handleChange('toolSchema', parsed.length > 0 ? parsed : undefined)
-      }
-    },
-    [handleChange, validateAndParseToolSchema]
   )
 
   const tabItems = [
@@ -271,13 +230,11 @@ const SkillContent: FC<SkillContentProps> = ({ skill, onUpdate }) => {
             </FieldLabel>
             <FieldHint>{t('skill.tool_schema_hint')}</FieldHint>
             <CodeEditor
-              value={toolSchemaJson}
-              onChange={(e) => handleToolSchemaChange(e.target.value)}
+              value={localSkill.toolSchema || ''}
+              onChange={(e) => handleChange('toolSchema', e.target.value || undefined)}
               placeholder={t('skill.tool_schema_placeholder')}
               autoSize={{ minRows: 12 }}
-              status={toolSchemaError ? 'error' : undefined}
             />
-            {toolSchemaError && <ErrorText>{toolSchemaError}</ErrorText>}
           </FieldGroup>
         </TabContent>
       )
@@ -381,11 +338,11 @@ const PromptTextArea = styled(Input.TextArea)`
   line-height: 1.6;
 `
 
-const CodeEditor = styled(Input.TextArea)<{ status?: string }>`
+const CodeEditor = styled(Input.TextArea)`
   font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
   font-size: 12px;
   line-height: 1.5;
-  background: ${(props) => (props.status === 'error' ? 'var(--color-error-bg)' : 'var(--color-background-soft)')};
+  background: var(--color-background-soft);
 `
 
 const ErrorText = styled.div`

@@ -7,31 +7,6 @@
  */
 
 /**
- * Tool parameter definition for JSON schema
- */
-export interface ToolParameter {
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array'
-  description?: string
-  required?: boolean
-  enum?: string[]
-  items?: ToolParameter // For array types
-  properties?: Record<string, ToolParameter> // For object types
-}
-
-/**
- * Tool definition for skills
- */
-export interface SkillTool {
-  name: string
-  description: string
-  parameters: {
-    type: 'object'
-    properties: Record<string, ToolParameter>
-    required?: string[]
-  }
-}
-
-/**
  * Complete Skill definition
  */
 export interface Skill {
@@ -63,10 +38,10 @@ export interface Skill {
   pageScript?: string
 
   /**
-   * Tool schema defining AI capabilities for this skill
-   * Array of tool definitions following JSON schema format
+   * Tool schema JSON string defining AI capabilities for this skill
+   * Should be valid JSON following the tool schema format
    */
-  toolSchema?: SkillTool[]
+  toolSchema?: string
 
   enabled: boolean
   createdAt: number
@@ -99,19 +74,4 @@ export function matchesDomainPattern(url: string, pattern?: string): boolean {
   } catch {
     return false
   }
-}
-
-/**
- * Validates tool schema JSON
- */
-export function isValidToolSchema(schema: unknown): schema is SkillTool[] {
-  if (!Array.isArray(schema)) return false
-  return schema.every(
-    (tool) =>
-      typeof tool === 'object' &&
-      tool !== null &&
-      typeof tool.name === 'string' &&
-      typeof tool.description === 'string' &&
-      typeof tool.parameters === 'object'
-  )
 }
