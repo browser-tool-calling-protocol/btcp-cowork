@@ -4,52 +4,58 @@ This document describes how custom AI agents work in Cherry Studio, covering the
 
 ## Overview
 
-Cherry Studio supports custom AI agents that provide autonomous assistant capabilities. The current agent type schema only supports `claude-code`, but this type **cannot run in the Chrome extension** because it requires backend tools (Bash, file system access) that are not available in browser environments.
+Cherry Studio supports custom AI agents that provide autonomous assistant capabilities. The system supports two agent types:
+
+| Agent Type | Browser Compatible | Description |
+|------------|-------------------|-------------|
+| `skill-creator` | ✅ Yes | Creates skills using built-in tools |
+| `claude-code` | ❌ No | Requires backend (Bash, filesystem) |
 
 ## Chrome Extension Environment
 
 > **Important**: This project is now a Chrome extension only (Electron backend removed in PR #24).
 
-### Current Limitation: Claude Code Agents
+### Agent Types
 
-The existing `claude-code` agent type requires tools that are **NOT available** in Chrome extensions:
+#### skill-creator (Browser Compatible)
 
-| Claude Code Tool | Requires | Available in Extension |
-|------------------|----------|------------------------|
+The `skill-creator` agent type works entirely in the browser using built-in tools:
+
+| Tool | Description | Status |
+|------|-------------|--------|
+| `addSkill` | Create and save skills to Redux store | ✅ Available |
+| `think` | Reasoning/brainstorming tool | ✅ Available |
+
+#### claude-code (NOT Browser Compatible)
+
+The `claude-code` agent type requires backend tools not available in extensions:
+
+| Tool | Requires | Available |
+|------|----------|-----------|
 | Bash | Shell execution | ❌ No |
-| Read/Write/Edit | Filesystem access | ❌ No |
+| Read/Write/Edit | Filesystem | ❌ No |
 | Glob/Grep | Filesystem search | ❌ No |
-| WebSearch/WebFetch | Network access | ✅ Yes (limited) |
 
-**What IS available:** BTCP (Browser Tool Calling Protocol) tools for browser automation:
-- `navigate` - Navigate to URLs
-- `click` - Click elements
-- `type` / `fill` - Enter text
-- `press` - Press keys
-- `screenshot` - Capture screen
-- `snapshot` - Get DOM snapshot
+### BTCP Tools (Future Browser Agent)
 
-### Future: Browser Agent Type
-
-To enable agents in the extension, a new `browser-agent` type needs to be added that uses BTCP tools instead of filesystem tools. See `src/renderer/src/hooks/agents/useAgentPresets.ts` for a proposed structure.
+These tools are available via BTCP for future browser automation agents:
+- `navigate`, `click`, `type`, `fill`, `press`, `screenshot`, `snapshot`
 
 ### Local Storage Implementation
 
-The **storage layer** is ready - agent CRUD operations work locally using Redux + redux-persist:
+Agent CRUD operations work locally using Redux + redux-persist:
 
 | Feature | Status | Storage | Hook |
 |---------|--------|---------|------|
-| Agent Create | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
-| Agent Read | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
-| Agent Update | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
-| Agent Delete | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
-| Agent Sessions | ✅ Storage Ready | Redux → localStorage | `useLocalSessions` |
-| Agent Presets | ⚠️ Empty (no browser-agent type) | Redux → localStorage | `useAgentPresets` |
+| Agent Create | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Read | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Update | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Delete | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Sessions | ✅ Available | Redux → localStorage | `useLocalSessions` |
+| Agent Presets | ✅ Available | Redux → localStorage | `useAgentPresets` |
 | Skills | ✅ Available | Redux → localStorage | `useSkills` |
 | Assistants | ✅ Available | Redux → localStorage | `useAssistants` |
 | Chat Messages | ✅ Available | Dexie → IndexedDB | `useMessages` |
-
-> **Note:** Storage is ready, but agents cannot execute because `claude-code` tools don't work in browsers.
 
 ### Architecture Diagram
 
@@ -90,34 +96,46 @@ setPresets, addPreset, installPreset
 
 ### Built-in Agent Presets
 
-Currently **empty** - no presets available because:
-- The only agent type (`claude-code`) requires backend tools not available in browsers
-- Future: Add `browser-agent` type with BTCP tool presets
+| Preset | Type | Description | Tools |
+|--------|------|-------------|-------|
+| **Skill Creator** | `skill-creator` | Helps create skills for browser automation | `addSkill`, `think` |
 
-See `src/renderer/src/hooks/agents/useAgentPresets.ts` for proposed browser agent structure.
+The Skill Creator agent can:
+- Generate skill configurations based on user requirements
+- Save skills directly to the Redux store using the `addSkill` tool
+- Create domain-specific patterns, prompts, and scripts
+
+Example interaction:
+```
+User: Create a skill that summarizes Twitter threads
+Agent: [Uses addSkill tool to create and save the skill]
+```
 
 ### Using Local Hooks
-
-The hooks are ready for use once a browser-compatible agent type is added:
 
 ```typescript
 import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
 import { useLocalSessions } from '@renderer/hooks/agents/useLocalSessions'
 import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
 
-// Storage operations work - agent type needs browser support
+// Agent CRUD operations
 const { addAgent, agents, updateAgent, deleteAgent } = useLocalAgents()
-const { sessions, createSession, deleteSession } = useLocalSessions(agentId)
-const { presets, installPreset } = useAgentPresets() // Currently empty
 
-// Future usage with browser-agent type:
-// await addAgent({
-//   type: 'browser-agent',  // New type needed
-//   name: 'Browser Assistant',
-//   model: 'anthropic:claude-sonnet-4-20250514',
-//   accessible_paths: [],
-//   allowed_tools: ['navigate', 'click', 'type', 'screenshot']
-// })
+// Session management
+const { sessions, createSession, deleteSession } = useLocalSessions(agentId)
+
+// Install built-in presets
+const { presets, installPreset, isInstalled } = useAgentPresets()
+installPreset('preset-skill-creator')
+
+// Create a custom skill-creator agent
+await addAgent({
+  type: 'skill-creator',
+  name: 'My Skill Creator',
+  model: 'anthropic:claude-sonnet-4-20250514',
+  accessible_paths: [],
+  allowed_tools: ['addSkill', 'think']
+})
 ```
 
 ### Legacy API-Based Hooks
@@ -417,7 +435,7 @@ Plugins are managed through `PluginSettings.tsx` with install/uninstall capabili
 
 ## Key File Locations
 
-### Local Storage (New - No Backend Required)
+### Local Storage (No Backend Required)
 
 | Component | Path |
 |-----------|------|
@@ -426,6 +444,14 @@ Plugins are managed through `PluginSettings.tsx` with install/uninstall capabili
 | **Local Sessions Hook** | `src/renderer/src/hooks/agents/useLocalSessions.ts` |
 | **Agent Presets Hook** | `src/renderer/src/hooks/agents/useAgentPresets.ts` |
 | Minimal Store (Extension) | `src/extension/minimalStore.ts` |
+
+### Built-in Tools
+
+| Tool | Path | Description |
+|------|------|-------------|
+| **addSkill** | `src/renderer/src/tools/addSkill.ts` | Creates and saves skills |
+| **think** | `src/renderer/src/tools/think.ts` | Reasoning/brainstorming |
+| Tools Index | `src/renderer/src/tools/index.ts` | Exports all built-in tools |
 
 ### Core Files
 

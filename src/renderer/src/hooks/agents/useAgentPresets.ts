@@ -2,10 +2,7 @@
  * useAgentPresets Hook
  *
  * Manages built-in agent presets that can be installed locally.
- * Currently empty as Claude Code agents require a backend which is not available
- * in the Chrome extension environment.
- *
- * Future: Add browser-based agent presets when a browser-compatible agent type is implemented.
+ * Includes browser-compatible agent types that work without a backend.
  *
  * Usage:
  *   const { presets, installPreset, isInstalled } = useAgentPresets()
@@ -23,31 +20,68 @@ import { useCallback, useEffect, useMemo } from 'react'
 /**
  * Built-in agent presets
  *
- * NOTE: Currently empty because:
- * - The only agent type is 'claude-code' which requires a backend to execute tools
- *   (Bash, file read/write/edit, etc.)
- * - Chrome extensions cannot run these tools - no filesystem access, no shell execution
+ * Browser-compatible agents that work in the Chrome extension:
+ * - skill-creator: Creates skills using the addSkill built-in tool
  *
- * Future work needed:
- * - Add 'browser-agent' type that uses BTCP tools (navigate, click, type, screenshot, snapshot)
- * - Create presets for browser automation tasks
- *
- * Example future preset:
- * {
- *   id: 'preset-browser-assistant',
- *   name: 'Browser Assistant',
- *   description: 'Automates browser tasks using BTCP tools',
- *   emoji: '🌐',
- *   type: 'browser-agent',  // New type needed in AgentTypeSchema
- *   model: 'anthropic:claude-sonnet-4-20250514',
- *   instructions: 'You are a browser automation assistant...',
- *   accessible_paths: [],
- *   allowed_tools: ['navigate', 'click', 'type', 'fill', 'press', 'screenshot', 'snapshot'],
- *   configuration: { permission_mode: 'default', max_turns: 50 },
- *   isBuiltIn: true
- * }
+ * NOT browser-compatible (require backend):
+ * - claude-code: Requires Bash, filesystem tools
  */
-const BUILT_IN_PRESETS: AgentPreset[] = []
+const BUILT_IN_PRESETS: AgentPreset[] = [
+  {
+    id: 'preset-skill-creator',
+    name: 'Skill Creator',
+    description:
+      'An AI assistant that helps you create skills for browser automation. Describe what you want to automate and it will generate and save the skill configuration.',
+    emoji: '🛠️',
+    type: 'skill-creator',
+    model: 'anthropic:claude-sonnet-4-20250514',
+    instructions: `You are a Skill Creator assistant. Your job is to help users create skills that teach AI agents how to interact with websites and perform tasks.
+
+## What is a Skill?
+
+A skill is a configuration that includes:
+- **name**: A descriptive name for the skill
+- **description**: What the skill does
+- **prompt**: Instructions for the AI on how to perform the skill
+- **domainPattern**: (Optional) A regex pattern to match URLs where this skill applies
+- **contentScript**: (Optional) JavaScript to run in the page context
+- **pageScript**: (Optional) JavaScript for isolated execution
+- **toolSchema**: (Optional) JSON defining custom AI tools for this skill
+
+## Your Workflow
+
+1. **Understand the Request**: Ask clarifying questions to understand what the user wants to automate
+2. **Design the Skill**: Plan the skill configuration based on the requirements
+3. **Create the Skill**: Use the \`addSkill\` tool to save the skill
+
+## Guidelines
+
+- Write clear, detailed prompts that give the AI specific instructions
+- Use regex domain patterns to scope skills to specific websites
+- Keep skills focused on a single task or workflow
+- Test regex patterns mentally before using them
+- For complex interactions, consider using contentScript for DOM manipulation
+
+## Example Skills
+
+**GitHub PR Reviewer**:
+- domainPattern: \`^https?://(www\\.)?github\\.com/.*/pull/\`
+- prompt: "Review this pull request. Analyze the code changes, check for bugs, security issues, and suggest improvements..."
+
+**Twitter Thread Summarizer**:
+- domainPattern: \`^https?://(www\\.)?(twitter|x)\\.com/.*/status/\`
+- prompt: "Summarize this Twitter thread. Extract the main points and present them as bullet points..."
+
+Always use the \`addSkill\` tool to save skills when you've designed them.`,
+    accessible_paths: [],
+    allowed_tools: ['addSkill', 'think'],
+    configuration: {
+      permission_mode: 'default',
+      max_turns: 20
+    },
+    isBuiltIn: true
+  }
+]
 
 /**
  * Hook for managing built-in agent presets
