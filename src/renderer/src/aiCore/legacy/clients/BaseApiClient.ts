@@ -349,7 +349,8 @@ export abstract class BaseApiClient<
         id: index + 1,
         content: `${mem.memory} -- Created at: ${mem.createdAt}`,
         sourceUrl: '',
-        type: 'memory'
+        type: 'memory',
+        score: mem.score || 0
       }))
       return memoryReferences
     }

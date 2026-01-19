@@ -149,15 +149,6 @@ export enum IpcChannel {
   Windows_MaximizedChanged = 'window:maximized-changed',
   Windows_NavigateToAbout = 'window:navigate-to-about',
 
-  KnowledgeBase_Create = 'knowledge-base:create',
-  KnowledgeBase_Reset = 'knowledge-base:reset',
-  KnowledgeBase_Delete = 'knowledge-base:delete',
-  KnowledgeBase_Add = 'knowledge-base:add',
-  KnowledgeBase_Remove = 'knowledge-base:remove',
-  KnowledgeBase_Search = 'knowledge-base:search',
-  KnowledgeBase_Rerank = 'knowledge-base:rerank',
-  KnowledgeBase_Check_Quota = 'knowledge-base:check-quota',
-
   //file
   File_Open = 'file:open',
   File_OpenPath = 'file:openPath',

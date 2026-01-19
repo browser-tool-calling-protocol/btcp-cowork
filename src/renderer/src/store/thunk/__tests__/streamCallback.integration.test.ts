@@ -326,7 +326,7 @@ describe('streamCallback Integration Tests', () => {
     prompt: '',
     enableWebSearch: false,
     enableGenerateImage: false,
-    knowledge_bases: [],
+    skills: [],
     topics: [],
     type: 'test'
   }
@@ -713,7 +713,8 @@ describe('streamCallback Integration Tests', () => {
           id: 1,
           content: 'Knowledge content',
           sourceUrl: 'http://external.com',
-          type: 'url'
+          type: 'url',
+          score: 0
         }
       ]
     }

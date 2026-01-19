@@ -2,7 +2,7 @@ import App from '@renderer/components/MinApp/MinApp'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { Code, FileSearch, Folder, Languages, LayoutGrid, NotepadText, Palette, Sparkle } from 'lucide-react'
+import { Code, Folder, Languages, LayoutGrid, NotepadText, Palette, Sparkle, Sparkles } from 'lucide-react'
 import type { FC } from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -24,10 +24,10 @@ const LaunchpadPage: FC = () => {
       bgColor: 'linear-gradient(135deg, #8B5CF6, #A855F7)' // 小程序：紫色，代表多功能和灵活性
     },
     {
-      icon: <FileSearch size={32} className="icon" />,
-      text: t('title.knowledge'),
-      path: '/knowledge',
-      bgColor: 'linear-gradient(135deg, #10B981, #34D399)' // 知识库：翠绿色，代表生长和知识
+      icon: <Sparkles size={32} className="icon" />,
+      text: t('title.skills'),
+      path: '/skills',
+      bgColor: 'linear-gradient(135deg, #7C3AED, #A855F7)' // 技能：紫色，代表能力和专业
     },
     {
       icon: <Palette size={32} className="icon" />,

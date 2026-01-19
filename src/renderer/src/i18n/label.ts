@@ -141,6 +141,7 @@ const titleKeyMap = {
   files: 'title.files',
   home: 'title.home',
   knowledge: 'title.knowledge',
+  skills: 'title.skills',
   launchpad: 'title.launchpad',
   'mcp-servers': 'title.mcp-servers',
   memories: 'title.memories',
@@ -182,7 +183,7 @@ const sidebarIconKeyMap = {
   paintings: 'paintings.title',
   translate: 'translate.title',
   minapp: 'minapp.title',
-  knowledge: 'knowledge.title',
+  skills: 'skill.title',
   files: 'files.title',
   code_tools: 'code.title',
   notes: 'notes.title'
