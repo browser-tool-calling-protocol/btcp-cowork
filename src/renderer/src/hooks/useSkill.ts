@@ -1,7 +1,7 @@
 /**
  * Skill Hook
  *
- * Simple hook for managing skills - text prompts that teach the agent how to perform tasks.
+ * Simple hook for managing skills - configurations that teach AI agents how to manage websites.
  * Replaces the complex useKnowledge hooks with RAG/vector storage operations.
  */
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -28,7 +28,34 @@ export function useSkills() {
     [dispatch]
   )
 
+  /**
+   * Update a skill by id with partial data
+   * @param id - The skill id to update
+   * @param data - Partial skill data to merge
+   * @returns The updated skill
+   */
   const update = useCallback(
+    (id: string, data: Partial<Omit<Skill, 'id' | 'createdAt' | 'updatedAt'>>): Skill => {
+      const existingSkill = skills.find((s) => s.id === id)
+      if (!existingSkill) {
+        throw new Error(`Skill with id ${id} not found`)
+      }
+      const updatedSkill: Skill = {
+        ...existingSkill,
+        ...data,
+        updatedAt: Date.now()
+      }
+      dispatch(updateSkill(updatedSkill))
+      return updatedSkill
+    },
+    [dispatch, skills]
+  )
+
+  /**
+   * Update a skill with a full skill object
+   * @param skill - The full skill object to update
+   */
+  const updateFull = useCallback(
     (skill: Skill) => {
       dispatch(updateSkill({ ...skill, updatedAt: Date.now() }))
     },
@@ -64,6 +91,7 @@ export function useSkills() {
     skills,
     create,
     update,
+    updateFull,
     remove,
     reorder,
     getById,
@@ -72,13 +100,14 @@ export function useSkills() {
 }
 
 export function useSkill(skillId: string | undefined) {
-  const { skills, update, remove } = useSkills()
+  const { skills, update, updateFull, remove } = useSkills()
 
   const skill = skillId ? skills.find((s) => s.id === skillId) : undefined
 
   return {
     skill,
     update,
+    updateFull,
     remove
   }
 }

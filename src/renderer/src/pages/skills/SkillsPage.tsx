@@ -25,7 +25,7 @@ import SkillContent from './SkillContent'
 
 const SkillsPage: FC = () => {
   const { t } = useTranslation()
-  const { skills, update, remove, reorder } = useSkills()
+  const { skills, updateFull, remove, reorder } = useSkills()
   const [selectedSkill, setSelectedSkill] = useState<Skill | undefined>(skills[0])
   const [isDragging, setIsDragging] = useState(false)
 
@@ -57,7 +57,7 @@ const SkillsPage: FC = () => {
               defaultValue: skill.name || ''
             })
             if (name && skill.name !== name) {
-              update({ ...skill, name })
+              updateFull({ ...skill, name })
             }
           }
         },
@@ -82,7 +82,7 @@ const SkillsPage: FC = () => {
 
       return menus
     },
-    [remove, update, t]
+    [remove, updateFull, t]
   )
 
   return (
@@ -126,7 +126,7 @@ const SkillsPage: FC = () => {
             <Empty description={t('skill.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </MainContent>
         ) : selectedSkill ? (
-          <SkillContent skill={selectedSkill} onUpdate={update} />
+          <SkillContent skill={selectedSkill} onUpdate={updateFull} />
         ) : null}
       </ContentContainer>
     </Container>
