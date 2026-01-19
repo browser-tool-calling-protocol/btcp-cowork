@@ -1,5 +1,9 @@
 import type { AiPlugin } from '@cherrystudio/ai-core'
-import { browserUsePlugin, createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
+import {
+  browserUsePlugin,
+  createPromptToolUsePlugin,
+  webSearchPlugin
+} from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { getEnableDeveloperMode } from '@renderer/hooks/useSettings'
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
