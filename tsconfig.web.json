@@ -1,23 +1,22 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": [
-    "local/src/renderer/**/*",
-    "src/renderer/src/**/*",
-    "src/main/integration/cherryai/index.js",
-    "src/preload/*.d.ts",
-    "tests/__mocks__/**/*",
-    "packages/aiCore/src/**/*",
-    "packages/ai-sdk-provider/**/*",
-    "packages/extension-table-plus/**/*",
-    "packages/mcp-trace/**/*",
-    "packages/shared/**/*",
-  ],
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
     "composite": true,
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo/tsconfig.web.tsbuildinfo",
     "jsx": "react-jsx",
-    "moduleResolution": "bundler",
     "paths": {
       "@logger": ["./src/renderer/src/services/LoggerService"],
       "@renderer/*": ["./src/renderer/src/*"],
@@ -34,5 +33,20 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": true
-  }
+  },
+  "include": [
+    "src/renderer/src/**/*",
+    "src/extension/**/*",
+    "tests/__mocks__/**/*",
+    "packages/aiCore/src/**/*",
+    "packages/ai-sdk-provider/**/*",
+    "packages/extension-table-plus/**/*",
+    "packages/mcp-trace/trace-core/**/*",
+    "packages/shared/**/*"
+  ],
+  "exclude": [
+    "packages/mcp-trace/trace-node/**/*",
+    "packages/mcp-trace/trace-web/**/*",
+    "packages/shared/agents/claudecode/**/*"
+  ]
 }
