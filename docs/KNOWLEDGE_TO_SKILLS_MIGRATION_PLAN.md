@@ -1,698 +1,411 @@
 # Knowledge Base → Skills Migration Plan
 
-## Executive Summary
+## Overview
 
-Migrate the current "Knowledge Base" feature to a simplified "Skills" system. Skills are essentially prompts/instructions that teach the AI agent how to perform specific tasks, similar to Claude Code's skill system.
+**Goal**: Rename "Knowledge Base" to "Skills" throughout the codebase with minimal changes. This is a terminology shift, not a feature change.
 
----
-
-## Current State Analysis
-
-### What Knowledge Base Is Today
-
-The current implementation is a **full RAG (Retrieval-Augmented Generation) system**:
-
-| Feature | Description |
-|---------|-------------|
-| Vector Storage | LibSQL-based vector database with embeddings |
-| Multi-source Ingestion | Files, URLs, sitemaps, directories, notes, videos |
-| Semantic Search | Vector similarity search with optional reranking |
-| Processing Queue | Background processing with retry logic |
-| Preprocessing | OCR/document conversion (Doc2x, MinerU, Mistral) |
-| Chunking | Configurable chunk size and overlap |
-
-### Key Files Affected
-
-```
-src/
-├── main/services/KnowledgeService.ts          # Backend RAG service
-├── renderer/
-│   ├── src/types/knowledge.ts                 # Type definitions
-│   ├── src/store/knowledge.ts                 # Redux state
-│   ├── src/store/thunk/knowledgeThunk.ts      # Async actions
-│   ├── src/services/KnowledgeService.ts       # Frontend service
-│   ├── src/hooks/useKnowledge.ts              # React hooks
-│   ├── src/queue/KnowledgeQueue.ts            # Processing queue
-│   ├── src/databases/index.ts                 # Dexie schema
-│   ├── src/aiCore/tools/KnowledgeSearchTool.ts
-│   ├── src/aiCore/plugins/searchOrchestrationPlugin.ts
-│   └── src/pages/
-│       ├── knowledge/                         # Management UI
-│       ├── home/Inputbar/KnowledgeBaseInput.tsx
-│       ├── home/Inputbar/tools/components/KnowledgeBaseButton.tsx
-│       └── settings/AssistantSettings/AssistantKnowledgeBaseSettings.tsx
-packages/
-└── shared/IpcChannel.ts                       # IPC definitions
-```
+**Principle**: A Skill is essentially a prompt that teaches the agent how to do something. The existing "note" type in Knowledge Base maps directly to this concept.
 
 ---
 
-## Target State: Skills System
+## Terminology Mapping
 
-### What Skills Should Be
-
-Skills are **prompt-based instructions** that teach the AI how to perform specific tasks:
-
-```typescript
-interface Skill {
-  id: string
-  name: string
-  description: string
-
-  // Core: The instruction prompt
-  prompt: string
-
-  // Optional: Variables/placeholders in the prompt
-  variables?: SkillVariable[]
-
-  // Categorization
-  category?: string
-  tags?: string[]
-
-  // Metadata
-  createdAt: number
-  updatedAt: number
-
-  // Optional: Trigger patterns (auto-activate skill)
-  triggers?: string[]
-
-  // Optional: Icon for UI
-  icon?: string
-}
-
-interface SkillVariable {
-  name: string
-  description: string
-  required: boolean
-  defaultValue?: string
-}
-```
-
-### Example Skills
-
-```typescript
-// Code Review Skill
-{
-  id: 'code-review',
-  name: 'Code Review',
-  description: 'Review code for quality, bugs, and best practices',
-  prompt: `You are a senior code reviewer. When reviewing code:
-1. Check for bugs and edge cases
-2. Evaluate code quality and readability
-3. Suggest improvements and best practices
-4. Consider performance implications
-5. Verify error handling
-
-{{additional_context}}
-
-Review the following code:`,
-  variables: [
-    { name: 'additional_context', description: 'Additional review criteria', required: false }
-  ],
-  category: 'Development',
-  triggers: ['review', 'code review']
-}
-
-// Writing Assistant Skill
-{
-  id: 'writing-assistant',
-  name: 'Writing Assistant',
-  description: 'Help improve writing clarity and style',
-  prompt: `You are a professional editor. Help improve the writing by:
-- Enhancing clarity and conciseness
-- Fixing grammar and punctuation
-- Improving flow and structure
-- Maintaining the original voice and intent
-
-Tone: {{tone}}`,
-  variables: [
-    { name: 'tone', description: 'Desired tone (formal, casual, technical)', required: true, defaultValue: 'professional' }
-  ],
-  category: 'Writing'
-}
-```
+| Current Term | New Term |
+|--------------|----------|
+| Knowledge Base | Skill |
+| Knowledge Item | Skill Item |
+| knowledge_bases | skills |
+| knowledgeBase | skill |
+| KnowledgeBase | Skill |
 
 ---
 
-## Migration Strategy
+## File Renames
 
-### Option A: Clean Replacement (Recommended)
+### Types
+| From | To |
+|------|-----|
+| `src/renderer/src/types/knowledge.ts` | `src/renderer/src/types/skill.ts` |
 
-Completely replace Knowledge Base with Skills. This is simpler and aligns with the "skills are prompts" philosophy.
+**Type renames inside file:**
+- `KnowledgeItem` → `SkillItem`
+- `KnowledgeBase` → `Skill`
+- `KnowledgeItemType` → `SkillItemType`
+- `KnowledgeBaseSearchResult` → `SkillSearchResult`
+- `KnowledgeReference` → `SkillReference`
 
-**Pros:**
-- Simpler codebase
-- Clear conceptual model
-- Easier maintenance
-- Lower complexity for users
+### Store
+| From | To |
+|------|-----|
+| `src/renderer/src/store/knowledge.ts` | `src/renderer/src/store/skill.ts` |
+| `src/renderer/src/store/thunk/knowledgeThunk.ts` | `src/renderer/src/store/thunk/skillThunk.ts` |
 
-**Cons:**
-- Loses RAG capabilities
-- Users with existing knowledge bases need migration path
+**Slice rename:** `knowledge` → `skill`
 
-### Option B: Parallel Systems
+### Services
+| From | To |
+|------|-----|
+| `src/main/services/KnowledgeService.ts` | `src/main/services/SkillService.ts` |
+| `src/renderer/src/services/KnowledgeService.ts` | `src/renderer/src/services/SkillService.ts` |
 
-Keep Knowledge Base for RAG, add Skills as a separate feature.
+### Hooks
+| From | To |
+|------|-----|
+| `src/renderer/src/hooks/useKnowledge.ts` | `src/renderer/src/hooks/useSkill.ts` |
 
-**Pros:**
-- Preserves existing functionality
-- Gradual migration possible
+**Hook renames:**
+- `useKnowledge` → `useSkill`
+- `useKnowledgeBases` → `useSkills`
 
-**Cons:**
-- Increased complexity
-- Confusing UX with two similar features
-- More code to maintain
+### Queue
+| From | To |
+|------|-----|
+| `src/renderer/src/queue/KnowledgeQueue.ts` | `src/renderer/src/queue/SkillQueue.ts` |
 
-### Option C: Unified Model
+### AI Core
+| From | To |
+|------|-----|
+| `src/renderer/src/aiCore/tools/KnowledgeSearchTool.ts` | `src/renderer/src/aiCore/tools/SkillSearchTool.ts` |
 
-Rename Knowledge Base to Skills but keep dual modes: "Document Skills" (RAG) and "Prompt Skills".
+### Pages
+| From | To |
+|------|-----|
+| `src/renderer/src/pages/knowledge/` | `src/renderer/src/pages/skills/` |
+| `src/renderer/src/pages/knowledge/KnowledgePage.tsx` | `src/renderer/src/pages/skills/SkillsPage.tsx` |
+| `src/renderer/src/pages/knowledge/components/AddKnowledgeBasePopup.tsx` | `src/renderer/src/pages/skills/components/AddSkillPopup.tsx` |
+| `src/renderer/src/pages/knowledge/components/KnowledgeSearchPopup.tsx` | `src/renderer/src/pages/skills/components/SkillSearchPopup.tsx` |
 
-**Pros:**
-- Best of both worlds
-- Single UI paradigm
+### Input Bar Components
+| From | To |
+|------|-----|
+| `src/renderer/src/pages/home/Inputbar/KnowledgeBaseInput.tsx` | `src/renderer/src/pages/home/Inputbar/SkillInput.tsx` |
+| `src/renderer/src/pages/home/Inputbar/tools/components/KnowledgeBaseButton.tsx` | `src/renderer/src/pages/home/Inputbar/tools/components/SkillButton.tsx` |
+| `src/renderer/src/pages/home/Inputbar/tools/knowledgeBaseTool.tsx` | `src/renderer/src/pages/home/Inputbar/tools/skillTool.tsx` |
 
-**Cons:**
-- Most complex implementation
-- Potential user confusion
+### Settings
+| From | To |
+|------|-----|
+| `src/renderer/src/pages/settings/AssistantSettings/AssistantKnowledgeBaseSettings.tsx` | `src/renderer/src/pages/settings/AssistantSettings/AssistantSkillSettings.tsx` |
 
 ---
 
-## Recommended Implementation Plan (Option A)
+## IPC Channel Renames
 
-### Phase 1: Data Model & Types
+**File:** `packages/shared/IpcChannel.ts`
 
-**Create:** `src/renderer/src/types/skill.ts`
+| From | To |
+|------|-----|
+| `KnowledgeBase_Create` | `Skill_Create` |
+| `KnowledgeBase_Reset` | `Skill_Reset` |
+| `KnowledgeBase_Delete` | `Skill_Delete` |
+| `KnowledgeBase_Add` | `Skill_Add` |
+| `KnowledgeBase_Remove` | `Skill_Remove` |
+| `KnowledgeBase_Search` | `Skill_Search` |
+| `KnowledgeBase_Rerank` | `Skill_Rerank` |
+| `KnowledgeBase_Check_Quota` | `Skill_Check_Quota` |
 
-```typescript
-export interface Skill {
-  id: string
-  name: string
-  description: string
-  prompt: string
-  variables?: SkillVariable[]
-  category?: string
-  tags?: string[]
-  icon?: string
-  triggers?: string[]
-  enabled: boolean
-  createdAt: number
-  updatedAt: number
-}
+**File:** `src/main/ipc.ts` - Update handler registrations
 
-export interface SkillVariable {
-  name: string
-  description: string
-  required: boolean
-  defaultValue?: string
-  type: 'text' | 'select' | 'number'
-  options?: string[]  // For select type
-}
-
-export interface SkillExecution {
-  skillId: string
-  variables: Record<string, string>
-  timestamp: number
-}
-```
-
-**Modify:** Assistant type to reference skills
-
-```typescript
-// In types.ts
-interface Assistant {
-  // Remove: knowledge_bases?: KnowledgeBase[]
-  // Remove: knowledgeRecognition?: 'on' | 'off'
-
-  // Add:
-  skills?: string[]  // Skill IDs
-  skillAutoTrigger?: boolean  // Auto-detect and activate skills
-}
-```
-
-### Phase 2: State Management
-
-**Create:** `src/renderer/src/store/skill.ts`
-
-```typescript
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { Skill } from '@renderer/types/skill'
-
-interface SkillState {
-  skills: Skill[]
-  categories: string[]
-}
-
-const initialState: SkillState = {
-  skills: [],
-  categories: ['General', 'Development', 'Writing', 'Analysis']
-}
-
-const skillSlice = createSlice({
-  name: 'skill',
-  initialState,
-  reducers: {
-    addSkill: (state, action: PayloadAction<Skill>) => {
-      state.skills.push(action.payload)
-    },
-    updateSkill: (state, action: PayloadAction<Skill>) => {
-      const index = state.skills.findIndex(s => s.id === action.payload.id)
-      if (index !== -1) {
-        state.skills[index] = action.payload
-      }
-    },
-    deleteSkill: (state, action: PayloadAction<string>) => {
-      state.skills = state.skills.filter(s => s.id !== action.payload)
-    },
-    duplicateSkill: (state, action: PayloadAction<string>) => {
-      const skill = state.skills.find(s => s.id === action.payload)
-      if (skill) {
-        state.skills.push({
-          ...skill,
-          id: uuid(),
-          name: `${skill.name} (Copy)`,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        })
-      }
-    },
-    importSkills: (state, action: PayloadAction<Skill[]>) => {
-      state.skills.push(...action.payload)
-    },
-    reorderSkills: (state, action: PayloadAction<string[]>) => {
-      state.skills.sort((a, b) =>
-        action.payload.indexOf(a.id) - action.payload.indexOf(b.id)
-      )
-    }
-  }
-})
-```
-
-### Phase 3: UI Components
-
-#### 3.1 Skills Management Page
-
-**Create:** `src/renderer/src/pages/skills/`
-
-```
-skills/
-├── SkillsPage.tsx           # Main page with skill list
-├── components/
-│   ├── SkillCard.tsx        # Skill preview card
-│   ├── SkillEditor.tsx      # Create/edit skill form
-│   ├── SkillPromptEditor.tsx # Rich prompt editor with variable insertion
-│   ├── SkillVariableEditor.tsx # Variable definition UI
-│   ├── SkillImportExport.tsx # Import/export functionality
-│   └── SkillCategoryFilter.tsx # Category filtering
-└── hooks/
-    └── useSkill.ts          # Skill operations hook
-```
-
-#### 3.2 Input Bar Integration
-
-**Modify:** `src/renderer/src/pages/home/Inputbar/`
-
-```
-Inputbar/
-├── SkillInput.tsx           # Skill tags in input (replaces KnowledgeBaseInput)
-└── tools/
-    └── components/
-        └── SkillButton.tsx  # Skill selection button (replaces KnowledgeBaseButton)
-```
-
-**SkillButton behavior:**
-- Quick panel showing available skills
-- Filter by category
-- Search skills by name/description
-- One-click to add skill to current message
-- Show skill prompt preview on hover
-
-#### 3.3 Assistant Settings
-
-**Modify:** `src/renderer/src/pages/settings/AssistantSettings/`
-
-```typescript
-// AssistantSkillSettings.tsx (replaces AssistantKnowledgeBaseSettings)
-// - Select default skills for assistant
-// - Toggle auto-trigger mode
-// - Reorder skill priority
-```
-
-### Phase 4: Skill Execution Service
-
-**Create:** `src/renderer/src/services/SkillService.ts`
-
-```typescript
-export class SkillService {
-  /**
-   * Inject skill prompt into user message
-   */
-  static injectSkillPrompt(
-    message: string,
-    skill: Skill,
-    variables: Record<string, string>
-  ): string {
-    let prompt = skill.prompt
-
-    // Replace variables
-    for (const [key, value] of Object.entries(variables)) {
-      prompt = prompt.replace(new RegExp(`{{${key}}}`, 'g'), value)
-    }
-
-    // Remove unfilled optional variables
-    prompt = prompt.replace(/\{\{[^}]+\}\}/g, '')
-
-    return `${prompt}\n\n${message}`
-  }
-
-  /**
-   * Detect if message matches any skill triggers
-   */
-  static detectSkillTriggers(
-    message: string,
-    skills: Skill[]
-  ): Skill[] {
-    return skills.filter(skill =>
-      skill.enabled &&
-      skill.triggers?.some(trigger =>
-        message.toLowerCase().includes(trigger.toLowerCase())
-      )
-    )
-  }
-
-  /**
-   * Extract required variables from skill prompt
-   */
-  static extractVariables(skill: Skill): SkillVariable[] {
-    return skill.variables?.filter(v => v.required) ?? []
-  }
-}
-```
-
-### Phase 5: AI Core Integration
-
-**Modify:** `src/renderer/src/aiCore/plugins/`
-
-```typescript
-// skillInjectionPlugin.ts (replaces searchOrchestrationPlugin for skills)
-export const skillInjectionPlugin: MiddlewarePlugin = {
-  name: 'skillInjection',
-  priority: 100,
-
-  async beforeRequest(context) {
-    const { skills, message } = context
-
-    if (!skills?.length) return context
-
-    // Inject skill prompts
-    let enhancedMessage = message
-    for (const skill of skills) {
-      enhancedMessage = SkillService.injectSkillPrompt(
-        enhancedMessage,
-        skill,
-        context.skillVariables ?? {}
-      )
-    }
-
-    return { ...context, message: enhancedMessage }
-  }
-}
-```
-
-### Phase 6: Migration & Cleanup
-
-#### 6.1 Data Migration
-
-Create migration script for existing users:
-
-```typescript
-// src/renderer/src/store/migrations/knowledgeToSkills.ts
-export async function migrateKnowledgeToSkills(
-  knowledgeBases: KnowledgeBase[]
-): Promise<Skill[]> {
-  // For each knowledge base with notes, convert to skills
-  return knowledgeBases
-    .filter(kb => kb.items.some(i => i.type === 'note'))
-    .map(kb => ({
-      id: uuid(),
-      name: kb.name,
-      description: kb.description || `Migrated from knowledge base: ${kb.name}`,
-      prompt: kb.items
-        .filter(i => i.type === 'note')
-        .map(i => i.content)
-        .join('\n\n'),
-      category: 'Migrated',
-      enabled: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    }))
-}
-```
-
-#### 6.2 Files to Delete
-
-```
-DELETE:
-src/main/services/KnowledgeService.ts
-src/renderer/src/types/knowledge.ts
-src/renderer/src/store/knowledge.ts
-src/renderer/src/store/thunk/knowledgeThunk.ts
-src/renderer/src/services/KnowledgeService.ts
-src/renderer/src/hooks/useKnowledge.ts
-src/renderer/src/queue/KnowledgeQueue.ts
-src/renderer/src/aiCore/tools/KnowledgeSearchTool.ts
-src/renderer/src/pages/knowledge/ (entire directory)
-src/renderer/src/pages/home/Inputbar/KnowledgeBaseInput.tsx
-src/renderer/src/pages/home/Inputbar/tools/components/KnowledgeBaseButton.tsx
-src/renderer/src/pages/home/Inputbar/tools/knowledgeBaseTool.tsx
-src/renderer/src/pages/settings/AssistantSettings/AssistantKnowledgeBaseSettings.tsx
-```
-
-#### 6.3 Files to Modify
-
-```
-MODIFY:
-packages/shared/IpcChannel.ts           # Remove KnowledgeBase channels
-src/main/ipc.ts                         # Remove KnowledgeBase handlers
-src/renderer/src/databases/index.ts     # Remove knowledge_notes table (or rename)
-src/renderer/src/store/index.ts         # Replace knowledge reducer with skill
-src/renderer/src/types/index.ts         # Export skill types instead
-src/renderer/src/App.tsx               # Update routes
-src/renderer/src/i18n/locales/*.json   # Update translations
-```
-
-### Phase 7: Default Skills
-
-Ship with pre-built skills:
-
-```typescript
-const DEFAULT_SKILLS: Skill[] = [
-  {
-    id: 'code-review',
-    name: 'Code Review',
-    prompt: '...',
-    category: 'Development'
-  },
-  {
-    id: 'explain-code',
-    name: 'Explain Code',
-    prompt: '...',
-    category: 'Development'
-  },
-  {
-    id: 'writing-improve',
-    name: 'Improve Writing',
-    prompt: '...',
-    category: 'Writing'
-  },
-  {
-    id: 'summarize',
-    name: 'Summarize',
-    prompt: '...',
-    category: 'General'
-  },
-  {
-    id: 'translate',
-    name: 'Translate',
-    prompt: '...',
-    category: 'General'
-  }
-]
-```
+**File:** `src/preload/index.ts` - Update API exposure
+- `window.api.knowledgeBase` → `window.api.skill`
 
 ---
 
-## UI/UX Design
+## Database Schema
 
-### Skills Page Layout
+**File:** `src/renderer/src/databases/index.ts`
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Skills                                    [+ New Skill]    │
-├─────────────────────────────────────────────────────────────┤
-│  [All] [Development] [Writing] [Analysis] [Custom]          │
-│                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ 📝 Code Review  │  │ 💡 Explain Code │                  │
-│  │ Review code...  │  │ Explain what... │                  │
-│  │ [Edit] [Delete] │  │ [Edit] [Delete] │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-│                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ ✍️ Improve...   │  │ 📋 Summarize    │                  │
-│  │ Help improve... │  │ Create concise..│                  │
-│  │ [Edit] [Delete] │  │ [Edit] [Delete] │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-```
+| From | To |
+|------|-----|
+| `knowledge_notes` table | `skill_notes` table |
 
-### Skill Editor
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Edit Skill                                      [Save]     │
-├─────────────────────────────────────────────────────────────┤
-│  Name: [Code Review                              ]          │
-│                                                             │
-│  Category: [Development ▼]                                  │
-│                                                             │
-│  Description:                                               │
-│  [Review code for quality, bugs, and best practices    ]   │
-│                                                             │
-│  Prompt:                                                    │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ You are a senior code reviewer. When reviewing:     │   │
-│  │ 1. Check for bugs and edge cases                    │   │
-│  │ 2. Evaluate code quality and readability            │   │
-│  │ ...                                                 │   │
-│  │ {{additional_context}}                              │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                        [+ Add Variable]     │
-│                                                             │
-│  Variables:                                                 │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ additional_context (optional)                       │   │
-│  │ Description: Additional review criteria             │   │
-│  │ [Edit] [Remove]                                     │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  Triggers (auto-activate):                                  │
-│  [review] [code review] [+ Add]                            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Input Bar Integration
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ [Code Review ×] [Explain Code ×]                    │   │
-│  │                                                     │   │
-│  │ Please review this function...                      │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  [📎] [🔧 Skills ▼] [📷] [🎤]                    [Send ➤]  │
-└─────────────────────────────────────────────────────────────┘
-```
+**Migration:** Add Dexie upgrade to rename table (or keep old name for compatibility)
 
 ---
 
-## i18n Keys to Add/Modify
+## i18n Updates
+
+**Files to update:**
+- `src/renderer/src/i18n/locales/en-us.json`
+- `src/renderer/src/i18n/locales/zh-cn.json`
+- `src/renderer/src/i18n/locales/zh-tw.json`
+
+### English (en-us.json) Key Changes
 
 ```json
 {
-  "skills": {
+  "navbar": {
+    "knowledge_base": "Skills"  // was "Knowledge Base"
+  },
+  "assistant": {
+    "input_bar_tools": {
+      "knowledge_base": {
+        "label": "Skills",  // was "Knowledge Base"
+        "placeholder": "Select Skill"  // was "Select Knowledge Base"
+      }
+    },
+    "settings": {
+      "knowledge_base": {
+        "label": "Skill Settings",  // was "Knowledge Base Settings"
+        "enable": {
+          "label": "Use Skills",  // was "Use Knowledge Base"
+          "tip": "The assistant will use the large model's intent recognition capability to determine whether to use skills for answering."
+        }
+      }
+    }
+  },
+  "knowledge": {  // Rename entire section to "skill"
+    "add": {
+      "title": "Add Skill"  // was "Add Knowledge Base"
+    },
+    "delete_confirm": "Are you sure you want to delete this skill?",
+    "embedding_model_required": "Skill Embedding Model is required",
+    "empty": "No skills found",
+    "errors": {
+      "failed_to_create": "Skill creation failed",
+      "failed_to_edit": "Skill editing failed"
+    },
+    "name_required": "Skill Name is required",
+    "no_bases": "No skills available",
+    "no_match": "No matching content found in the skill.",
+    "search": "Search skill",
     "title": "Skills",
-    "add": "New Skill",
-    "edit": "Edit Skill",
-    "delete": "Delete Skill",
-    "duplicate": "Duplicate Skill",
-    "import": "Import Skills",
-    "export": "Export Skills",
-    "name": "Name",
-    "description": "Description",
-    "prompt": "Prompt",
-    "category": "Category",
-    "variables": "Variables",
-    "triggers": "Auto-trigger words",
-    "enabled": "Enabled",
-    "confirmDelete": "Are you sure you want to delete this skill?",
-    "categories": {
-      "all": "All",
-      "development": "Development",
-      "writing": "Writing",
-      "analysis": "Analysis",
-      "general": "General",
-      "custom": "Custom"
+    // ... rest of knowledge section renamed
+  },
+  "common": {
+    "knowledge_base": "Skill"  // was "Knowledge Base"
+  },
+  "topicActions": {
+    "knowledge": {
+      "success": "Topic successfully saved to skill ({{count}} items)"
     }
   }
 }
 ```
 
+### Full i18n Key Mapping
+
+| Old Key Path | New Key Path |
+|--------------|--------------|
+| `knowledge` | `skill` |
+| `knowledge.title` | `skill.title` ("Skills") |
+| `knowledge.add.title` | `skill.add.title` ("Add Skill") |
+| `knowledge.delete_confirm` | `skill.delete_confirm` |
+| `knowledge.embedding_model_required` | `skill.embedding_model_required` |
+| `knowledge.empty` | `skill.empty` ("No skills found") |
+| `knowledge.name_required` | `skill.name_required` |
+| `knowledge.no_bases` | `skill.no_bases` ("No skills available") |
+| `knowledge.search` | `skill.search` ("Search skill") |
+| `knowledge.settings.title` | `skill.settings.title` ("Skill Settings") |
+| `navbar.knowledge_base` | `navbar.skills` |
+| `assistant.input_bar_tools.knowledge_base` | `assistant.input_bar_tools.skill` |
+| `assistant.settings.knowledge_base` | `assistant.settings.skill` |
+| `common.knowledge_base` | `common.skill` |
+
+### Values to Change (Search/Replace in JSON)
+
+| Old Value | New Value |
+|-----------|-----------|
+| "Knowledge Base" | "Skill" |
+| "Knowledge Bases" | "Skills" |
+| "knowledge base" | "skill" |
+| "knowledge bases" | "skills" |
+| "no knowledge base" | "no skill" |
+| "knowledge_base" (in keys) | "skill" |
+
 ---
 
-## Testing Plan
+## Assistant Type Update
 
-### Unit Tests
+**File:** `src/renderer/src/types/index.ts` (or wherever Assistant type is defined)
 
 ```typescript
-// src/renderer/src/services/__tests__/SkillService.test.ts
-describe('SkillService', () => {
-  describe('injectSkillPrompt', () => {
-    it('should inject skill prompt before user message')
-    it('should replace variables in prompt')
-    it('should remove unfilled optional variables')
-  })
-
-  describe('detectSkillTriggers', () => {
-    it('should detect matching triggers')
-    it('should be case-insensitive')
-    it('should only check enabled skills')
-  })
-})
+interface Assistant {
+  // Rename property
+  skills?: Skill[]  // was knowledge_bases?: KnowledgeBase[]
+  skillRecognition?: 'on' | 'off'  // was knowledgeRecognition
+}
 ```
 
-### Integration Tests
+---
 
-- Skill CRUD operations
-- Skill selection in input bar
-- Skill injection in message pipeline
-- Assistant skill configuration
-- Import/export functionality
+## Import Path Updates
+
+All files importing from knowledge-related paths need updates:
+
+```typescript
+// Before
+import { KnowledgeBase } from '@renderer/types/knowledge'
+import { useKnowledge } from '@renderer/hooks/useKnowledge'
+import { KnowledgeService } from '@renderer/services/KnowledgeService'
+
+// After
+import { Skill } from '@renderer/types/skill'
+import { useSkill } from '@renderer/hooks/useSkill'
+import { SkillService } from '@renderer/services/SkillService'
+```
 
 ---
 
-## Rollout Plan
+## Files Requiring Import Updates
 
-1. **Phase 1**: Create new Skills feature alongside Knowledge Base
-2. **Phase 2**: Add migration tool for converting note-based knowledge bases
-3. **Phase 3**: Mark Knowledge Base as deprecated in UI
-4. **Phase 4**: Remove Knowledge Base in next major version
+Search for imports containing "knowledge" (case-insensitive):
 
----
+```bash
+grep -r "from.*knowledge" src/
+grep -r "import.*Knowledge" src/
+```
 
-## Open Questions
-
-1. **Should we keep any RAG functionality?**
-   - Option: "Document Skills" that reference files but don't use embeddings
-
-2. **Skill sharing/marketplace?**
-   - Could add skill import from URL/GitHub in future
-
-3. **Skill versioning?**
-   - Track changes to skills over time?
-
-4. **Skill composition?**
-   - Allow skills to reference/extend other skills?
+Expected files needing updates:
+- `src/renderer/src/store/index.ts`
+- `src/renderer/src/App.tsx` (routes)
+- `src/renderer/src/pages/home/Inputbar/Inputbar.tsx`
+- `src/renderer/src/pages/settings/AssistantSettings/index.tsx`
+- `src/renderer/src/aiCore/plugins/searchOrchestrationPlugin.ts`
+- Any file using `useKnowledge` or `useKnowledgeBases` hooks
 
 ---
 
-## Appendix: Comparison
+## Redux Store Update
 
-| Feature | Knowledge Base | Skills |
-|---------|---------------|--------|
-| Core concept | Document storage + retrieval | Prompt instructions |
-| Data storage | Vector DB + files | Simple text prompts |
-| Search | Semantic search | N/A (direct injection) |
-| Processing | Background queue | Instant |
-| Complexity | High | Low |
-| User mental model | "Library of documents" | "Teaching the AI" |
-| Setup effort | High (add docs, wait for processing) | Low (write prompt) |
+**File:** `src/renderer/src/store/index.ts`
+
+```typescript
+// Before
+import knowledge from './knowledge'
+
+// After
+import skill from './skill'
+
+const rootReducer = {
+  // ...
+  skill,  // was knowledge
+}
+```
+
+**Selector updates throughout codebase:**
+```typescript
+// Before
+state.knowledge.bases
+
+// After
+state.skill.skills  // or state.skill.bases if keeping internal structure
+```
+
+---
+
+## Route Updates
+
+**File:** `src/renderer/src/App.tsx` (or router config)
+
+```typescript
+// Before
+{ path: '/knowledge', element: <KnowledgePage /> }
+
+// After
+{ path: '/skills', element: <SkillsPage /> }
+```
+
+---
+
+## Migration Checklist
+
+### Phase 1: Type & Store Renames
+- [ ] Rename `src/renderer/src/types/knowledge.ts` → `skill.ts`
+- [ ] Update type names inside file
+- [ ] Rename `src/renderer/src/store/knowledge.ts` → `skill.ts`
+- [ ] Update slice name and action names
+- [ ] Rename `src/renderer/src/store/thunk/knowledgeThunk.ts` → `skillThunk.ts`
+- [ ] Update `src/renderer/src/store/index.ts` imports
+
+### Phase 2: Service Renames
+- [ ] Rename `src/main/services/KnowledgeService.ts` → `SkillService.ts`
+- [ ] Rename `src/renderer/src/services/KnowledgeService.ts` → `SkillService.ts`
+- [ ] Update class/function names inside
+
+### Phase 3: Hook Renames
+- [ ] Rename `src/renderer/src/hooks/useKnowledge.ts` → `useSkill.ts`
+- [ ] Update hook names: `useKnowledge` → `useSkill`, `useKnowledgeBases` → `useSkills`
+
+### Phase 4: Queue Rename
+- [ ] Rename `src/renderer/src/queue/KnowledgeQueue.ts` → `SkillQueue.ts`
+
+### Phase 5: AI Core Rename
+- [ ] Rename `src/renderer/src/aiCore/tools/KnowledgeSearchTool.ts` → `SkillSearchTool.ts`
+- [ ] Update `searchOrchestrationPlugin.ts` references
+
+### Phase 6: Page Renames
+- [ ] Rename `src/renderer/src/pages/knowledge/` → `skills/`
+- [ ] Rename all component files inside
+- [ ] Update component names
+
+### Phase 7: Input Bar Component Renames
+- [ ] Rename `KnowledgeBaseInput.tsx` → `SkillInput.tsx`
+- [ ] Rename `KnowledgeBaseButton.tsx` → `SkillButton.tsx`
+- [ ] Rename `knowledgeBaseTool.tsx` → `skillTool.tsx`
+- [ ] Update `Inputbar.tsx` imports
+
+### Phase 8: Settings Component Rename
+- [ ] Rename `AssistantKnowledgeBaseSettings.tsx` → `AssistantSkillSettings.tsx`
+
+### Phase 9: IPC Updates
+- [ ] Update `packages/shared/IpcChannel.ts` channel names
+- [ ] Update `src/main/ipc.ts` handler registrations
+- [ ] Update `src/preload/index.ts` API exposure
+
+### Phase 10: Database
+- [ ] Update `src/renderer/src/databases/index.ts` table name
+- [ ] Add migration in `upgrades.ts` if needed
+
+### Phase 11: i18n
+- [ ] Update `en-us.json` - rename `knowledge` section to `skill`
+- [ ] Update all "Knowledge Base" strings to "Skill"
+- [ ] Update `zh-cn.json` - same changes with Chinese translations
+- [ ] Update `zh-tw.json` - same changes with Traditional Chinese
+- [ ] Run `pnpm i18n:sync` to sync other locales
+
+### Phase 12: Import Path Updates
+- [ ] Find all files importing from old paths
+- [ ] Update import statements
+- [ ] Update any hardcoded "knowledge" strings in code
+
+### Phase 13: Route & Navigation
+- [ ] Update route from `/knowledge` to `/skills`
+- [ ] Update navigation links/buttons
+
+### Phase 14: Assistant Type
+- [ ] Rename `knowledge_bases` → `skills` property
+- [ ] Rename `knowledgeRecognition` → `skillRecognition`
+- [ ] Update all usages
+
+### Phase 15: Verification
+- [ ] Run `pnpm build:check` (lint + test + typecheck)
+- [ ] Manual testing of skills page
+- [ ] Test skill selection in input bar
+- [ ] Test assistant skill settings
+
+---
+
+## Search Patterns for Global Replace
+
+Use these patterns to find all occurrences:
+
+```bash
+# Find all knowledge-related code
+rg -i "knowledge" --type ts --type tsx
+rg "KnowledgeBase" --type ts --type tsx
+rg "knowledge_base" --type ts --type tsx
+
+# Find i18n usages
+rg "t\(['\"].*knowledge" --type ts --type tsx
+rg "knowledge" src/renderer/src/i18n/
+```
+
+---
+
+## Notes
+
+1. **No new features** - This is purely a rename operation
+2. **Preserve all existing functionality** - RAG, search, notes, files, etc. all stay the same
+3. **Database compatibility** - Consider keeping old table name internally with alias, or add proper migration
+4. **Backwards compatibility** - May need to handle old `knowledge_bases` property in Assistant for existing user data
