@@ -30,16 +30,10 @@ async function buildContentScript() {
       target: 'chrome120',
       sourcemap: !isProd,
       minify: isProd,
-      // Resolve btcp-browser-agent to the actual package files
+      // Map internal @btcp/* references to btcp-browser-agent subpaths
       alias: {
-        'btcp-browser-agent/extension': resolve(
-          __dirname,
-          '../node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/packages/extension/dist/index.js'
-        ),
-        'btcp-browser-agent': resolve(
-          __dirname,
-          '../node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/dist/index.js'
-        )
+        '@btcp/core': 'btcp-browser-agent/core',
+        '@btcp/extension': 'btcp-browser-agent/extension'
       },
       logLevel: 'info'
     })

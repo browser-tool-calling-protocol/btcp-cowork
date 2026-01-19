@@ -4,19 +4,17 @@
  * Demonstrates the BTCP browser tools by controlling the browser through
  * the btcp-browser-agent extension API with session management.
  *
- * Uses the createClient() API (following official popup.ts pattern):
- * - BackgroundAgent: Session/tab group management, navigation, screenshots
- * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
+ * Uses the BrowserAgentService singleton for shared sessions between
+ * demo UI and AI agent tools.
  *
- * Session Lifecycle (official pattern):
- * 1. popupInitialize() on mount - reconnect to existing sessions
- * 2. groupCreate() before demo - create new tab group session
- * 3. tabNew() for initial tab - creates tab in session
- * 4. Execute browser operations within session context
- * 5. groupDelete() on cleanup - close session and all tabs
+ * Session Lifecycle:
+ * 1. BrowserAgentService.initialize() on mount - set up shared client
+ * 2. ensureSession() before demo - create/get session group
+ * 3. Execute browser operations within session context
+ * 4. closeSession() on cleanup - clean up session and all tabs
  */
 
-import { createClient } from 'btcp-browser-agent/extension'
+import { browserAgentService } from '@renderer/services/BrowserAgentService'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface DemoStep {
@@ -62,24 +60,18 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
   const abortRef = useRef(false)
 
-  // Persistent client instance (following official popup.ts pattern)
-  const clientRef = useRef(createClient())
-
-  // Track active session (tab group)
-  const sessionRef = useRef<{ groupId: number } | null>(null)
-
-  // Initialize on mount (official popup pattern)
+  // Initialize BrowserAgentService on mount
   useEffect(() => {
-    const initializePopup = async () => {
+    const initializeService = async () => {
       try {
-        await clientRef.current.popupInitialize()
-        console.log('[Demo] Popup initialized')
+        await browserAgentService.initialize()
+        console.log('[Demo] BrowserAgentService initialized')
       } catch (err) {
-        console.error('Failed to initialize popup:', err)
+        console.error('Failed to initialize BrowserAgentService:', err)
       }
     }
 
-    initializePopup()
+    initializeService()
   }, [])
 
   const updateStep = useCallback((index: number, updates: Partial<DemoStep>) => {
@@ -87,7 +79,8 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
   }, [])
 
   const runProgrammaticDemo = useCallback(async (): Promise<unknown> => {
-    const client = clientRef.current
+    // Get the shared client from the singleton service
+    const client = browserAgentService.getClient()
 
     // Utility for delays (from example)
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -145,85 +138,49 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
       return null
     }
 
-    // Prerequisites: Create session and navigate in one step (FIXED)
-    console.log('[Demo] Checking session (prerequisite)...')
-    const { session: existingSession } = await client.sessionGetCurrent()
-    if (!existingSession) {
-      console.log('[Demo] No session found, creating session and navigating to Google...')
-      const { group } = await client.groupCreate()
-      sessionRef.current = { groupId: group.id }
-      console.log('[Demo] Session created:', group.id)
+    // Use BrowserAgentService for session management
+    console.log('[Demo] Ensuring session via BrowserAgentService...')
+    const groupId = await browserAgentService.ensureSession()
+    console.log('[Demo] Session ready:', groupId)
 
-      // Get tabs in the session to find the created tab
-      console.log('[Demo] Getting tabs in session...')
-      const tabs = await client.tabList()
-      console.log('[Demo] Tabs in session:', tabs)
+    // Navigate to Google
+    console.log('[Demo] Navigating to Google...')
+    try {
+      const navResult = await client.navigate('https://www.google.com')
+      console.log('[Demo] Navigate result:', navResult)
+    } catch (navError) {
+      console.error('[Demo] Navigate failed:', navError)
+      throw new Error(`Navigation failed: ${navError instanceof Error ? navError.message : String(navError)}`)
+    }
+    console.log('[Demo] Navigated to Google - waiting for page and content script to load...')
 
-      if (tabs.length === 0) {
-        throw new Error('No tabs found in created session')
-      }
-
-      // Use the first (and only) tab in the newly created group
-      const sessionTab = tabs[0]
-      console.log('[Demo] Using session tab:', sessionTab.id)
-
-      // Switch to the tab to set it as active
-      console.log('[Demo] Switching to tab:', sessionTab.id)
-      await client.tabSwitch(sessionTab.id)
-      console.log('[Demo] Tab switched successfully')
-
-      // Navigate to Google (reuses the blank tab created by groupCreate)
-      console.log('[Demo] Navigating to Google...')
+    // Wait for page to fully load and content script to be ready
+    // Retry snapshot until successful (content script is responding)
+    let snapshotReady = false
+    let retries = 0
+    while (!snapshotReady && retries < 10) {
+      await sleep(1000)
       try {
-        const navResult = await client.navigate('https://www.google.com')
-        console.log('[Demo] Navigate result:', navResult)
-      } catch (navError) {
-        console.error('[Demo] Navigate failed:', navError)
-        throw new Error(`Navigation failed: ${navError instanceof Error ? navError.message : String(navError)}`)
-      }
-      console.log('[Demo] Navigated to Google - waiting for page and content script to load...')
-
-      // Wait for page to fully load and content script to be ready
-      // Retry snapshot until successful (content script is responding)
-      let snapshotReady = false
-      let retries = 0
-      while (!snapshotReady && retries < 10) {
-        await sleep(1000)
-        try {
-          const testSnapshot = await client.snapshot({ format: 'tree' })
-          if (testSnapshot && testSnapshot.tree) {
-            snapshotReady = true
-            console.log('[Demo] Content script ready and responding')
-          }
-        } catch (err) {
-          retries++
-          console.log(`[Demo] Waiting for content script... (attempt ${retries}/10)`)
+        const testSnapshot = (await client.snapshot({ format: 'tree' })) as unknown as { tree: string }
+        if (testSnapshot && testSnapshot.tree) {
+          snapshotReady = true
+          console.log('[Demo] Content script ready and responding')
         }
+      } catch (err) {
+        retries++
+        console.log(`[Demo] Waiting for content script... (attempt ${retries}/10)`)
       }
+    }
 
-      if (!snapshotReady) {
-        throw new Error('Content script failed to respond after 10 seconds')
-      }
-    } else {
-      console.log('[Demo] Session exists:', existingSession.groupId)
-      sessionRef.current = { groupId: existingSession.groupId }
-
-      console.log('[Demo] Navigate to Google')
-      try {
-        const navResult = await client.navigate('https://www.google.com')
-        console.log('[Demo] Navigate result:', navResult)
-      } catch (navError) {
-        console.error('[Demo] Navigate failed:', navError)
-        throw new Error(`Navigation failed: ${navError instanceof Error ? navError.message : String(navError)}`)
-      }
-      await sleep(2000) // Wait for page to settle
+    if (!snapshotReady) {
+      throw new Error('Content script failed to respond after 10 seconds')
     }
 
     // Step 2: Take FRESH snapshot to understand page structure (EXACT COPY from example - line 161)
     console.log('[Demo] Take snapshot to analyze page structure')
     let snapshot1: string
     try {
-      const snapshotResult = await client.snapshot({ format: 'tree' })
+      const snapshotResult = (await client.snapshot({ format: 'tree' })) as unknown as { tree: string }
       snapshot1 = snapshotResult.tree
       console.log('[Demo] Snapshot captured:', snapshot1.split('\n').length, 'elements found')
       await sleep(500)
@@ -339,12 +296,12 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
   const stopDemo = useCallback(async () => {
     abortRef.current = true
-    // Clean up session (following popup.ts pattern)
-    if (sessionRef.current) {
+    // Clean up session via BrowserAgentService
+    const groupId = browserAgentService.getSessionGroupId()
+    if (groupId) {
       try {
-        console.log('[Demo] Closing session:', sessionRef.current.groupId)
-        await clientRef.current.groupDelete(sessionRef.current.groupId)
-        sessionRef.current = null
+        console.log('[Demo] Closing session via BrowserAgentService:', groupId)
+        await browserAgentService.closeSession()
         console.log('[Demo] Session closed')
       } catch (err) {
         console.error('[Demo] Failed to close session:', err)

@@ -35,6 +35,7 @@ import {
   getProviderByModel,
   getQuickModel
 } from './AssistantService'
+import { browserAgentService } from './BrowserAgentService'
 import { ConversationService } from './ConversationService'
 import { injectUserMessageWithKnowledgeSearchPrompt } from './KnowledgeService'
 import type { BlockManager } from './messageStreaming'
@@ -265,6 +266,14 @@ export async function fetchChatCompletion({
     logger.info('🌐 Browser Use ENABLED for assistant', {
       toolset: assistantBrowserUse?.toolset ?? browserUseState.globalSettings.toolset
     })
+    // Initialize the browser agent service for shared sessions
+    try {
+      await browserAgentService.initialize()
+      logger.info('🌐 BrowserAgentService initialized for chat completion')
+    } catch (initError) {
+      logger.error('Failed to initialize BrowserAgentService', initError as Error)
+      // Continue without browser use - the plugin will fall back to standalone mode
+    }
   } else {
     logger.warn('⚠️ Browser Use DISABLED for assistant')
   }

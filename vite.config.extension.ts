@@ -85,15 +85,6 @@ export default defineConfig({
       '@cherrystudio/ai-core': resolve(__dirname, 'packages/aiCore/src'),
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
-      // btcp-browser-agent - point to actual dist files in pnpm store
-      'btcp-browser-agent/extension': resolve(
-        __dirname,
-        'node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/packages/extension/dist/index.js'
-      ),
-      'btcp-browser-agent': resolve(
-        __dirname,
-        'node_modules/.pnpm/btcp-browser-agent@https+++codeload.github.com+browser-tool-calling-protocol+btcp-brows_ff624e6238813b976ba7bbcb664d8c45/node_modules/btcp-browser-agent/dist/index.js'
-      ),
       // Shim the preload imports
       '../preload': resolve(__dirname, 'src/extension/shim.ts')
     }

@@ -5,9 +5,38 @@
  * Uses the two-layer architecture:
  * - BrowserAgent: Browser-level operations (tabs, navigation, screenshots)
  * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
+ *
+ * Supports two modes:
+ * - Standalone: Uses BrowserAgent for direct browser control
+ * - Extension: Uses Client from btcp-browser-agent/extension for shared sessions
  */
 
 import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
+
+/**
+ * Client interface from btcp-browser-agent/extension
+ * Used for shared browser sessions between demo UI and AI agent tools
+ *
+ * Note: This interface matches the actual Client type from btcp-browser-agent/extension.
+ * Operations like press and scroll are done via the execute() method.
+ */
+export interface ExtensionClient {
+  popupInitialize(): Promise<void>
+  sessionGetCurrent(): Promise<{ session: { groupId: number } | null }>
+  groupCreate(): Promise<{ group: { id: number } }>
+  groupDelete(groupId: number): Promise<void>
+  tabList(): Promise<Array<{ id: number }>>
+  tabNew(): Promise<{ id: number }>
+  tabSwitch(tabId: number): Promise<void>
+  navigate(url: string): Promise<unknown>
+  snapshot(options?: { format?: 'tree' }): Promise<{ tree: string }>
+  click(selector: string): Promise<void>
+  type(selector: string, text: string): Promise<void>
+  fill(selector: string, value: string): Promise<void>
+  screenshot(): Promise<{ screenshot: string }>
+  getText(selector: string): Promise<string | null>
+  execute(command: { id: string; action: string; [key: string]: unknown }): Promise<unknown>
+}
 
 /**
  * Tool names available in the BTCP Browser Plugin
@@ -50,10 +79,17 @@ export interface BTCPBrowserPluginConfig {
   enabled?: boolean
 
   /**
-   * Pre-initialized BrowserAgent instance
+   * Pre-initialized BrowserAgent instance (standalone mode)
    * If not provided, agent initialization will be deferred until first use
    */
   agent?: BrowserAgent
+
+  /**
+   * Extension client instance (extension mode)
+   * Used for shared sessions between demo UI and AI agent tools
+   * Takes priority over agent if both are provided
+   */
+  client?: ExtensionClient
 
   /**
    * BrowserAgent constructor options (used if agent not provided)
