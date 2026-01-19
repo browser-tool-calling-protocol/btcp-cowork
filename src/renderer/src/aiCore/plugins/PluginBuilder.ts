@@ -1,9 +1,5 @@
 import type { AiPlugin } from '@cherrystudio/ai-core'
-import {
-  browserUsePlugin,
-  createPromptToolUsePlugin,
-  webSearchPlugin
-} from '@cherrystudio/ai-core/built-in/plugins'
+import { browserUsePlugin, createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { getEnableDeveloperMode } from '@renderer/hooks/useSettings'
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
@@ -44,8 +40,7 @@ export function buildPlugins(
     plugins.push(
       browserUsePlugin({
         enabled: true,
-        // Tools call this function to get the client from the singleton service
-        getClient: () => browserAgentService.getOrInit(),
+        service: browserAgentService,
         toolset: middlewareConfig.browserUseConfig.toolset,
         maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
         enableTracking: middlewareConfig.browserUseConfig.enableTracking,

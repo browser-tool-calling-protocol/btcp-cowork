@@ -645,8 +645,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       btcp-browser-agent:
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.7
+        version: 0.1.7
       builder-util-runtime:
         specifier: 9.5.0
         version: 9.5.0
@@ -5980,8 +5980,8 @@ packages:
   btcp-browser-agent@0.1.3:
     resolution: {integrity: sha512-XnM+JcKVJUf/uNCWqZjuGNA6LQB23lTmo27YLQ502I+4vRwAOBb4vhoIuPHqDqY+vPnhljHAuYXoTO5afeeFZw==}
 
-  btcp-browser-agent@0.1.4:
-    resolution: {integrity: sha512-G6ZrQa1qhWY9DwZsBm/iesdUuCVKxUMYqxNcO+FAEaRAIRdw8R34EfGN+xdqMMP9CvGfwNowCz4JM5U/E5iBCw==}
+  btcp-browser-agent@0.1.7:
+    resolution: {integrity: sha512-pM4hG1clptWmpl/n9kFUNVGHUSi1KsF8/A0OLQNYxMGv0pHaErG5IJCK8vWfFePLW10DkRtkJ8XUiq4LjaLefA==}
 
   buffer-alloc-unsafe@1.1.0:
     resolution: {integrity: sha512-TEM2iMIEQdJ2yjPJoSIsldnleVaAk1oW3DBVUykyOLsEsFmEc9kn+SFFPz+gl54KQNxlDnAwCXosOS9Okx2xAg==}
@@ -17984,7 +17984,7 @@ snapshots:
 
   btcp-browser-agent@0.1.3: {}
 
-  btcp-browser-agent@0.1.4: {}
+  btcp-browser-agent@0.1.7: {}
 
   buffer-alloc-unsafe@1.1.0: {}
 

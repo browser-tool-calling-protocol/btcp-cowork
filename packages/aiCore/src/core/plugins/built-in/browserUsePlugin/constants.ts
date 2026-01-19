@@ -93,6 +93,12 @@ You have access to browser automation tools using the Browser Tool Calling Proto
 Snapshots return refs like @ref:5, @ref:12 that remain stable across actions.
 Use these refs instead of CSS selectors when possible.
 
+## Snapshot Options
+- Use format "tree" (default) for interaction - captures buttons, links, inputs with @ref markers
+- Use format "markdown" for content extraction - captures readable page text
+- For large pages, use grep to filter: browser_snapshot({ grep: "button" })
+- For hidden elements (modals, dropdowns), use: browser_snapshot({ includeHidden: true })
+
 ## Tips
 - Use browser_fill for instant input, browser_type for character-by-character
 - Use browser_wait if page needs time to load after action

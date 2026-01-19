@@ -7,6 +7,7 @@
  * Based on the official btcp-browser-agent example build process.
  */
 
+// @ts-expect-error - esbuild is a devDependency and types may not be available during typecheck
 import * as esbuild from 'esbuild'
 import { statSync } from 'fs'
 import { dirname, resolve } from 'path'

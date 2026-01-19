@@ -105,13 +105,6 @@ export default function MinimalChat() {
   if (!activeAssistant || !activeTopic) {
     return (
       <Container>
-        <Header>
-          <Logo>Cherry Studio</Logo>
-          <OpenFullAppButton onClick={openFullApp} title="Open full app in window">
-            <ExternalLink size={14} />
-            <span>Full App</span>
-          </OpenFullAppButton>
-        </Header>
         <LoadingContainer>
           <LoadingText>Loading...</LoadingText>
         </LoadingContainer>

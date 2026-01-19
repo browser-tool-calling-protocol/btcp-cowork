@@ -6,30 +6,13 @@
  * The Client self-discovers the agent - we only work with the Client directly.
  */
 
+import type { Client } from 'btcp-browser-agent/extension'
+
 /**
- * Client interface from btcp-browser-agent/extension
- * Used for browser automation via the singleton BrowserAgentService
- *
- * Note: This interface matches the actual Client type from btcp-browser-agent/extension.
- * Operations like press and scroll are done via the execute() method.
+ * Re-export the Client type from btcp-browser-agent/extension
+ * This is the actual Client interface used for browser automation
  */
-export interface ExtensionClient {
-  popupInitialize(): Promise<void>
-  sessionGetCurrent(): Promise<{ session: { groupId: number } | null }>
-  groupCreate(): Promise<{ group: { id: number } }>
-  groupDelete(groupId: number): Promise<void>
-  tabList(): Promise<Array<{ id: number }>>
-  tabNew(): Promise<{ id: number }>
-  tabSwitch(tabId: number): Promise<void>
-  navigate(url: string): Promise<unknown>
-  snapshot(options?: { format?: 'tree' }): Promise<{ tree: string }>
-  click(selector: string): Promise<void>
-  type(selector: string, text: string): Promise<void>
-  fill(selector: string, value: string): Promise<void>
-  screenshot(): Promise<{ screenshot: string }>
-  getText(selector: string): Promise<string | null>
-  execute(command: { id: string; action: string; [key: string]: unknown }): Promise<unknown>
-}
+export type ExtensionClient = Client
 
 /**
  * Tool names available in the BTCP Browser Plugin
@@ -61,6 +44,24 @@ export type BTCPToolName =
 export type BTCPToolPreset = 'minimal' | 'standard' | 'full'
 
 /**
+ * Browser Agent Service interface
+ * The service that manages browser client lifecycle and sessions
+ */
+export interface BrowserAgentService {
+  /**
+   * Get or initialize the browser client
+   * @returns Promise resolving to the browser client
+   */
+  getOrInit(): Promise<ExtensionClient>
+
+  /**
+   * Ensure a browser session exists (creates one if needed)
+   * @returns Promise resolving to the session group ID
+   */
+  ensureSession(): Promise<number>
+}
+
+/**
  * Configuration options for the BTCP Browser Plugin
  */
 export interface BTCPBrowserPluginConfig {
@@ -71,11 +72,11 @@ export interface BTCPBrowserPluginConfig {
   enabled?: boolean
 
   /**
-   * Function to get the browser client from BrowserAgentService
-   * Called by tools when they need the client
-   * Example: () => browserAgentService.getOrInit()
+   * Browser agent service instance
+   * The plugin will call service.getOrInit() and service.ensureSession() internally
+   * Example: browserAgentService
    */
-  getClient?: () => Promise<ExtensionClient>
+  service?: BrowserAgentService
 
   /**
    * Which tool categories to expose
