@@ -167,6 +167,22 @@ const BUILT_IN_COMMANDS: Omit<SlashCommand, 'createdAt' | 'updatedAt'>[] = [
     isBuiltIn: true,
     enabled: true,
     order: 6
+  },
+  {
+    id: 'builtin-tools',
+    command: '/tools',
+    label: 'List Tools',
+    description: 'List available tools for the agent',
+    type: 'prompt-template',
+    template:
+      'List all available tools and their capabilities. For each tool, provide:\n- Tool name\n- Brief description\n- Key parameters or inputs it accepts',
+    args: [],
+    scope: 'global',
+    category: 'general',
+    icon: 'Wrench',
+    isBuiltIn: true,
+    enabled: true,
+    order: 7
   }
 ]
 
