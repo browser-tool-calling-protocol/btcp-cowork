@@ -10,68 +10,110 @@ Cherry Studio supports custom AI agents that provide autonomous assistant capabi
 
 > **Important**: This project is now a Chrome extension only (Electron backend removed in PR #24).
 
-### Current Limitations
+### Local Storage Implementation
 
-Agent CRUD operations currently **require a backend API server** that is not included in the Chrome extension:
+Agent CRUD operations now work **locally without a backend** using Redux + redux-persist:
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Agent Create | ❌ Not Available | Requires API server |
-| Agent Read | ❌ Not Available | Requires API server |
-| Agent Update | ❌ Not Available | Requires API server |
-| Agent Delete | ❌ Not Available | Requires API server |
-| Agent Sessions | ❌ Not Available | Requires API server |
-| Skills (Redux) | ✅ Available | Persisted via redux-persist |
-| Assistants | ✅ Available | Persisted via redux-persist |
-| Chat Messages | ✅ Available | Persisted via IndexedDB (Dexie) |
+| Feature | Status | Storage | Hook |
+|---------|--------|---------|------|
+| Agent Create | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Read | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Update | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Delete | ✅ Available | Redux → localStorage | `useLocalAgents` |
+| Agent Sessions | ✅ Available | Redux → localStorage | `useLocalSessions` |
+| Built-in Presets | ✅ Available | Redux → localStorage | `useAgentPresets` |
+| Skills | ✅ Available | Redux → localStorage | `useSkills` |
+| Assistants | ✅ Available | Redux → localStorage | `useAssistants` |
+| Chat Messages | ✅ Available | Dexie → IndexedDB | `useMessages` |
 
-### Why Agents Don't Work Offline
-
-1. **API Server Removed**: The `src/main` backend was removed, leaving only the Chrome extension
-2. **Extension Shim**: `src/extension/shim.ts` returns `{ running: false }` for `apiServer.getStatus()`
-3. **Hooks Disabled**: `useAgents` hook returns empty array when `apiServerRunning` is false
-4. **No Local Storage**: No IndexedDB or chrome.storage implementation for agents
-
-### Architecture Diagram (Current State)
+### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Chrome Extension                          │
 ├─────────────────────────────────────────────────────────────┤
 │  Renderer (React)                                           │
+│  ├── Agents ✅     → Redux + redux-persist → localStorage   │
+│  ├── Sessions ✅   → Redux + redux-persist → localStorage   │
+│  ├── Presets ✅    → Redux + redux-persist → localStorage   │
 │  ├── Assistants ✅ → Redux + redux-persist → localStorage   │
 │  ├── Skills ✅     → Redux + redux-persist → localStorage   │
-│  ├── Messages ✅   → Dexie → IndexedDB                      │
-│  └── Agents ❌     → AgentApiClient → [No Backend!]         │
+│  └── Messages ✅   → Dexie → IndexedDB                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Extension Shim (src/extension/shim.ts)                     │
-│  └── apiServer.getStatus() → { running: false }             │
+│  Local Hooks (No Backend Required)                          │
+│  ├── useLocalAgents()     - CRUD for agents                 │
+│  ├── useLocalSessions()   - CRUD for sessions               │
+│  └── useAgentPresets()    - Built-in agent templates        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Proposed Solution: Local Agent Storage
-
-To enable agent CRUD without a backend, implement local storage similar to how Skills work:
+### Local Agent Store (`src/renderer/src/store/agents.ts`)
 
 ```typescript
-// Proposed: src/renderer/src/store/agents.ts
 interface AgentsState {
-  agents: AgentEntity[]
+  agents: AgentEntity[]           // User-created agents
+  sessions: AgentSessionEntity[]  // Conversation sessions
+  presets: AgentPreset[]          // Built-in templates
+  presetsInitialized: boolean
 }
 
-// With redux-persist, agents would be saved to localStorage
+// Actions
+addAgent, updateAgent, deleteAgent, setAgents
+addSession, updateSession, deleteSession, setSessions
+setPresets, addPreset, installPreset
 ```
 
-Or use IndexedDB via Dexie:
+### Built-in Agent Presets
+
+The extension includes 5 built-in agent presets that can be installed locally:
+
+| Preset | Description | Permission Mode |
+|--------|-------------|-----------------|
+| Claude Code Assistant | General-purpose coding helper | `default` |
+| Web Developer | React/TypeScript specialist | `acceptEdits` |
+| Code Reviewer | Read-only code review | `default` |
+| Research Assistant | Codebase exploration | `default` |
+| Autonomous Developer | Full autonomy (use with caution) | `bypassPermissions` |
+
+### Using Local Hooks
 
 ```typescript
-// Proposed: Add to src/renderer/src/databases/index.ts
-db.version(11).stores({
-  // ... existing tables
-  agents: '&id, type, name, created_at, updated_at',
-  agent_sessions: '&id, agent_id, created_at'
+// Instead of useAgents() which requires API server:
+import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
+import { useLocalSessions } from '@renderer/hooks/agents/useLocalSessions'
+import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
+
+// Create an agent locally
+const { addAgent, agents } = useLocalAgents()
+await addAgent({
+  type: 'claude-code',
+  name: 'My Agent',
+  model: 'anthropic:claude-sonnet-4-20250514',
+  accessible_paths: ['/home/user/projects']
+})
+
+// Install a built-in preset
+const { presets, installPreset } = useAgentPresets()
+installPreset('preset-claude-code-general')
+
+// Create a session
+const { createSession } = useLocalSessions(agentId)
+await createSession({
+  model: agent.model,
+  accessible_paths: agent.accessible_paths
 })
 ```
+
+### Legacy API-Based Hooks
+
+The original API-based hooks still exist for compatibility but require a running backend:
+
+| Hook | Requires Backend | Local Alternative |
+|------|------------------|-------------------|
+| `useAgents` | ✅ Yes | `useLocalAgents` |
+| `useAgent` | ✅ Yes | `useLocalAgents.getAgent()` |
+| `useSessions` | ✅ Yes | `useLocalSessions` |
+| `useSession` | ✅ Yes | `useLocalSessions.getSession()` |
 
 ### Key Concepts
 
@@ -359,11 +401,23 @@ Plugins are managed through `PluginSettings.tsx` with install/uninstall capabili
 
 ## Key File Locations
 
+### Local Storage (New - No Backend Required)
+
+| Component | Path |
+|-----------|------|
+| **Agents Store** | `src/renderer/src/store/agents.ts` |
+| **Local Agents Hook** | `src/renderer/src/hooks/agents/useLocalAgents.ts` |
+| **Local Sessions Hook** | `src/renderer/src/hooks/agents/useLocalSessions.ts` |
+| **Agent Presets Hook** | `src/renderer/src/hooks/agents/useAgentPresets.ts` |
+| Minimal Store (Extension) | `src/extension/minimalStore.ts` |
+
+### Core Files
+
 | Component | Path |
 |-----------|------|
 | Core Types | `src/renderer/src/types/agent.ts` |
 | Skill Types | `src/renderer/src/types/skill.ts` |
-| API Client | `src/renderer/src/api/agent.ts` |
+| API Client (Legacy) | `src/renderer/src/api/agent.ts` |
 | Agent Config | `src/renderer/src/config/agent.ts` |
 | Runtime Store | `src/renderer/src/store/runtime.ts` |
 | Skill Store | `src/renderer/src/store/skill.ts` |
@@ -377,7 +431,21 @@ Plugins are managed through `PluginSettings.tsx` with install/uninstall capabili
 
 ## Sequence Diagrams
 
-### Agent Creation
+### Agent Creation (Local - No Backend)
+
+```
+User                 UI                    Redux Store         localStorage
+ |                   |                         |                    |
+ |--Create Agent---->|                         |                    |
+ |                   |--useLocalAgents()------>|                    |
+ |                   |--addAgent(form)-------->|                    |
+ |                   |                         |--dispatch(add)---->|
+ |                   |                         |--persist---------->|
+ |                   |<---AgentEntity----------|                    |
+ |<---Toast Success--|                         |                    |
+```
+
+### Agent Creation (Legacy - Requires Backend)
 
 ```
 User                 UI                    API Client            Backend
