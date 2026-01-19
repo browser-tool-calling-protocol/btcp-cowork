@@ -1,5 +1,5 @@
 import type { AiPlugin } from '@cherrystudio/ai-core'
-import { createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
+import { browserUsePlugin, createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { getEnableDeveloperMode } from '@renderer/hooks/useSettings'
 import type { Assistant } from '@renderer/types'
@@ -28,21 +28,40 @@ export function buildPlugins(
     )
   }
 
-  // 1. 模型内置搜索
+  // 1. 浏览器使用插件
+  if (middlewareConfig.enableBrowserUse && middlewareConfig.browserUseConfig) {
+    logger.info('🌐 Browser Use Plugin enabled', {
+      toolset: middlewareConfig.browserUseConfig.toolset,
+      maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
+      enableTracking: middlewareConfig.browserUseConfig.enableTracking,
+      injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt
+    })
+    plugins.push(
+      browserUsePlugin({
+        enabled: true,
+        toolset: middlewareConfig.browserUseConfig.toolset,
+        maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
+        enableTracking: middlewareConfig.browserUseConfig.enableTracking,
+        injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt
+      })
+    )
+  }
+
+  // 2. 模型内置搜索
   if (middlewareConfig.enableWebSearch && middlewareConfig.webSearchPluginConfig) {
     plugins.push(webSearchPlugin(middlewareConfig.webSearchPluginConfig))
   }
-  // 2. 支持工具调用时添加搜索插件
+  // 3. 支持工具调用时添加搜索插件
   if (middlewareConfig.isSupportedToolUse || middlewareConfig.isPromptToolUse) {
     plugins.push(searchOrchestrationPlugin(middlewareConfig.assistant, middlewareConfig.topicId || ''))
   }
 
-  // 3. 推理模型时添加推理插件
+  // 4. 推理模型时添加推理插件
   // if (middlewareConfig.enableReasoning) {
   //   plugins.push(reasoningTimePlugin)
   // }
 
-  // 4. 启用Prompt工具调用时添加工具插件
+  // 5. 启用Prompt工具调用时添加工具插件
   if (middlewareConfig.isPromptToolUse) {
     plugins.push(
       createPromptToolUsePlugin({
@@ -73,9 +92,14 @@ export function buildPlugins(
   //   plugins.push(googleToolsPlugin({ urlContext: true }))
   // }
 
-  logger.debug(
-    'Final plugin list:',
-    plugins.map((p) => p.name)
-  )
+  logger.info('📦 Active plugins:', {
+    count: plugins.length,
+    plugins: plugins.map((p) => p.name),
+    enableBrowserUse: middlewareConfig.enableBrowserUse,
+    enableWebSearch: middlewareConfig.enableWebSearch,
+    isSupportedToolUse: middlewareConfig.isSupportedToolUse,
+    isPromptToolUse: middlewareConfig.isPromptToolUse
+  })
+
   return plugins
 }

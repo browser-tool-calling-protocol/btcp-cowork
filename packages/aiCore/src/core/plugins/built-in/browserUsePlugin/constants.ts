@@ -22,16 +22,11 @@ export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
   /**
    * Standard: Common automation tasks
    * Suitable for most browser automation use cases
+   * Note: browser_launch/browser_close excluded - browser auto-launches on first use
    */
   standard: [
-    // Session management
-    'browser_launch',
-    'browser_close',
     // Navigation
     'browser_navigate',
-    'browser_back',
-    'browser_forward',
-    'browser_reload',
     // Inspection
     'browser_snapshot',
     'browser_get_text',
@@ -47,12 +42,9 @@ export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
 
   /**
    * Full: All capabilities
-   * Same as standard in minimal API
+   * Note: browser_launch/browser_close excluded - browser auto-launches on first use
    */
   full: [
-    // Session management
-    'browser_launch',
-    'browser_close',
     // Navigation
     'browser_navigate',
     'browser_back',

@@ -28,26 +28,12 @@ function getBtcpBrowserAgent() {
   }
   return btcpBrowserAgent
 }
+import { tool } from 'ai'
 import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ScreenshotResult, SnapshotResult } from './types'
-
-/**
- * Creates a browser tool definition compatible with Vercel AI SDK
- */
-function createTool<TParams extends z.ZodType, TResult>(config: {
-  description: string
-  parameters: TParams
-  execute: (args: z.infer<TParams>) => Promise<TResult>
-}) {
-  return {
-    description: config.description,
-    parameters: config.parameters,
-    execute: config.execute
-  }
-}
 
 /**
  * Browser Use Plugin Factory
@@ -118,9 +104,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
   const createBrowserTools = () => {
     return {
       // === Session Management ===
-      browser_launch: createTool({
+      browser_launch: tool({
         description: 'Launch the browser agent to start automation',
-        parameters: z.object({}),
+        inputSchema: z.object({}).describe('No parameters required'),
         execute: async () =>
           executeWithCallbacks('browser_launch', {}, async () => {
             await getAgent()
@@ -128,9 +114,11 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_close: createTool({
+      browser_close: tool({
         description: 'Close the browser session',
-        parameters: z.object({}),
+        inputSchema: z.object({
+          _: z.string().optional().describe('Unused parameter (tool requires no parameters)')
+        }),
         execute: async () =>
           executeWithCallbacks('browser_close', {}, async () => {
             if (agent) {
@@ -142,9 +130,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       // === Navigation (via execute command) ===
-      browser_navigate: createTool({
+      browser_navigate: tool({
         description: 'Navigate to a URL',
-        parameters: z.object({
+        inputSchema: z.object({
           url: z.string().describe('URL to navigate to')
         }),
         execute: async (args) =>
@@ -159,9 +147,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_back: createTool({
+      browser_back: tool({
         description: 'Go back in browser history',
-        parameters: z.object({}),
+        inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_back', {}, async () => {
             const browserAgent = await getAgent()
@@ -173,9 +161,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_forward: createTool({
+      browser_forward: tool({
         description: 'Go forward in browser history',
-        parameters: z.object({}),
+        inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_forward', {}, async () => {
             const browserAgent = await getAgent()
@@ -187,9 +175,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_reload: createTool({
+      browser_reload: tool({
         description: 'Reload the current page',
-        parameters: z.object({}),
+        inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_reload', {}, async () => {
             const browserAgent = await getAgent()
@@ -202,10 +190,10 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       // === Core Inspection ===
-      browser_snapshot: createTool({
+      browser_snapshot: tool({
         description:
           'Get an accessibility snapshot of the page with element references (@ref:N). Call this first to understand page structure.',
-        parameters: z.object({}),
+        inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_snapshot', {}, async () => {
             const browserAgent = await getAgent()
@@ -223,9 +211,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_get_text: createTool({
+      browser_get_text: tool({
         description: 'Get text content from an element',
-        parameters: z.object({
+        inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
@@ -237,9 +225,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       // === Core Interaction ===
-      browser_click: createTool({
+      browser_click: tool({
         description: 'Click an element',
-        parameters: z.object({
+        inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
@@ -250,9 +238,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_type: createTool({
+      browser_type: tool({
         description: 'Type text character by character',
-        parameters: z.object({
+        inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference'),
           text: z.string().describe('Text to type')
         }),
@@ -264,9 +252,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_fill: createTool({
+      browser_fill: tool({
         description: 'Fill an input field instantly',
-        parameters: z.object({
+        inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference'),
           value: z.string().describe('Value to fill')
         }),
@@ -278,9 +266,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_press: createTool({
+      browser_press: tool({
         description: 'Press a keyboard key (Enter, Tab, Escape, etc.)',
-        parameters: z.object({
+        inputSchema: z.object({
           key: z.string().describe('Key to press')
         }),
         execute: async (args) =>
@@ -291,9 +279,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_scroll: createTool({
+      browser_scroll: tool({
         description: 'Scroll the page',
-        parameters: z.object({
+        inputSchema: z.object({
           direction: z.enum(['up', 'down']).describe('Scroll direction')
         }),
         execute: async (args) =>
@@ -305,9 +293,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       // === Visual ===
-      browser_screenshot: createTool({
+      browser_screenshot: tool({
         description: 'Take a screenshot of the page',
-        parameters: z.object({}),
+        inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_screenshot', {}, async () => {
             const browserAgent = await getAgent()
@@ -337,21 +325,45 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     },
 
     transformParams: <T>(params: T, _context: AiRequestContext): T => {
-      if (!enabled) return params
+      console.log('🔧 [browserUsePlugin] transformParams called', {
+        enabled,
+        toolset,
+        maxSnapshotSize,
+        enableTracking,
+        injectSystemPrompt
+      })
+
+      if (!enabled) {
+        console.warn('⚠️ [browserUsePlugin] Plugin not enabled, skipping')
+        return params
+      }
 
       const browserTools = createBrowserTools()
       const selectedTools = filterTools(browserTools)
+
+      console.log('🛠️ [browserUsePlugin] Adding browser tools', {
+        toolCount: Object.keys(selectedTools).length,
+        tools: Object.keys(selectedTools),
+        toolset
+      })
 
       // Merge browser tools with existing tools
       const p = params as Record<string, unknown>
       const existingTools = (p.tools as Record<string, unknown>) || {}
       p.tools = { ...existingTools, ...selectedTools }
 
+      console.log('📦 [browserUsePlugin] Final tools', {
+        totalCount: Object.keys(p.tools).length,
+        allTools: Object.keys(p.tools),
+        hasBrowserTools: Object.keys(p.tools).some((t) => t.startsWith('browser_'))
+      })
+
       // Add browser-aware system prompt if enabled and not already present
       if (injectSystemPrompt) {
         const currentSystem = p.system as string | undefined
         if (!currentSystem?.includes('browser_snapshot')) {
           p.system = currentSystem ? `${currentSystem}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
+          console.log('📝 [browserUsePlugin] System prompt injected')
         }
       }
 

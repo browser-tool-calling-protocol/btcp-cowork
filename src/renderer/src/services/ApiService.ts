@@ -245,6 +245,30 @@ export async function fetchChatCompletion({
   const usePromptToolUse =
     isPromptToolUse(assistant) || (isToolUseModeFunction(assistant) && !isFunctionCallingModel(assistant.model))
 
+  // Get browser use settings from Redux store
+  const browserUseState = store.getState().browserUse
+  const assistantBrowserUse = browserUseState.byAssistant[assistant.id]
+  const enableBrowserUse = assistantBrowserUse?.enabled ?? false
+
+  // Always log browser use state for debugging
+  logger.info('🔍 Browser Use State Check', {
+    assistantId: assistant.id,
+    assistantName: assistant.name,
+    enableBrowserUse,
+    hasAssistantConfig: !!assistantBrowserUse,
+    assistantConfig: assistantBrowserUse,
+    globalSettings: browserUseState.globalSettings,
+    allAssistantConfigs: Object.keys(browserUseState.byAssistant)
+  })
+
+  if (enableBrowserUse) {
+    logger.info('🌐 Browser Use ENABLED for assistant', {
+      toolset: assistantBrowserUse?.toolset ?? browserUseState.globalSettings.toolset
+    })
+  } else {
+    logger.warn('⚠️ Browser Use DISABLED for assistant')
+  }
+
   const mcpMode = getEffectiveMcpMode(assistant)
   const middlewareConfig: AiSdkMiddlewareConfig = {
     streamOutput: assistant.settings?.streamOutput ?? true,
@@ -261,7 +285,16 @@ export async function fetchChatCompletion({
     mcpMode,
     mcpTools,
     uiMessages,
-    knowledgeRecognition: assistant.knowledgeRecognition
+    knowledgeRecognition: assistant.knowledgeRecognition,
+    enableBrowserUse,
+    browserUseConfig: enableBrowserUse
+      ? {
+          toolset: assistantBrowserUse?.toolset ?? browserUseState.globalSettings.toolset,
+          maxSnapshotSize: browserUseState.globalSettings.maxSnapshotSize,
+          enableTracking: browserUseState.globalSettings.enableTracking,
+          injectSystemPrompt: browserUseState.globalSettings.injectSystemPrompt
+        }
+      : undefined
   }
 
   // --- Call AI Completions ---

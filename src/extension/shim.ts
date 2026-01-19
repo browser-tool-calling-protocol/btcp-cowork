@@ -6,6 +6,40 @@
  * with minimal changes.
  */
 
+// CRITICAL: Define window.electron IMMEDIATELY before any other code runs
+// This prevents "Cannot read properties of undefined (reading 'ipcRenderer')" errors
+;(window as any).electron = {
+  process: {
+    platform: 'browser',
+    versions: { chrome: navigator.userAgent }
+  },
+  ipcRenderer: {
+    on: (channel: string, callback: (...args: any[]) => void) => {
+      const handler = (event: Event) => {
+        const customEvent = event as CustomEvent
+        if (customEvent.detail?.channel === channel) {
+          callback(...customEvent.detail.args)
+        }
+      }
+      window.addEventListener('ipc-message', handler)
+      return () => window.removeEventListener('ipc-message', handler)
+    },
+    once: (channel: string, callback: (...args: any[]) => void) => {
+      console.log(`[Extension] Ignoring ipcRenderer.once('${channel}')`)
+      return () => {}
+    },
+    removeListener: () => {},
+    removeAllListeners: () => {},
+    send: (channel: string, ...args: any[]) => {
+      console.log(`[Extension] Ignoring ipcRenderer.send('${channel}')`, args)
+    },
+    invoke: async (channel: string, ...args: any[]) => {
+      console.log(`[Extension] Ignoring ipcRenderer.invoke('${channel}')`, args)
+      return null
+    }
+  }
+}
+
 import type { WindowApiType } from '../preload'
 
 // Message types for background communication
@@ -811,50 +845,8 @@ const extensionApi: WindowApiType = {
   }
 })()
 
-// Also provide electron stub with ipcRenderer
-;(window as any).electron = {
-  process: {
-    platform: 'browser',
-    versions: { chrome: navigator.userAgent }
-  },
-  ipcRenderer: {
-    on: (channel: string, callback: (...args: any[]) => void) => {
-      // Listen for custom events that simulate IPC
-      const handler = (event: Event) => {
-        const customEvent = event as CustomEvent
-        if (customEvent.detail?.channel === channel) {
-          callback(...customEvent.detail.args)
-        }
-      }
-      window.addEventListener('ipc-message', handler)
-
-      // Return cleanup function
-      return () => {
-        window.removeEventListener('ipc-message', handler)
-      }
-    },
-    once: (channel: string, callback: (...args: any[]) => void) => {
-      console.log(`[Extension] Ignoring ipcRenderer.once('${channel}')`)
-      return () => {}
-    },
-    removeListener: (channel: string, callback: (...args: any[]) => void) => {
-      // No-op
-    },
-    removeAllListeners: (channel: string) => {
-      // No-op
-    },
-    send: (channel: string, ...args: any[]) => {
-      console.log(`[Extension] Ignoring ipcRenderer.send('${channel}')`, args)
-    },
-    invoke: async (channel: string, ...args: any[]) => {
-      console.log(`[Extension] Ignoring ipcRenderer.invoke('${channel}')`, args)
-      return null
-    }
-  }
-}
-
 // Assign to window immediately (synchronous)
-// Note: window.electron is already assigned above at line 808
+// Note: window.electron is already assigned at the top of this file
 window.api = extensionApi
 
 export { extensionApi }

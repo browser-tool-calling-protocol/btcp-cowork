@@ -4,9 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cherry Studio</title>
-    <!-- CRITICAL: Load shim-init.js FIRST as a regular script (not ES module) -->
-    <!-- This ensures window.api exists before Vite injects ES modules -->
-    <script src="/shim-init.js"></script>
     <style>
       html, body {
         margin: 0;
@@ -48,8 +45,9 @@
     <div id="spinner">
       <img src="/assets/images/logo.png" alt="Loading..." />
     </div>
+    <!-- CRITICAL: Load electron shim BEFORE the main module -->
+    <script src="./electron-shim.js"></script>
     <!-- Load sidepanel app entry (chat UI) -->
-    <!-- window.api is initialized in <head> before this loads -->
     <script type="module" src="./sidepanel.tsx"></script>
   </body>
 </html>

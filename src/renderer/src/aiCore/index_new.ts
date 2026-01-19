@@ -327,6 +327,15 @@ export default class ModernAiProvider {
     // 用构建好的插件数组创建executor
     const executor = createExecutor(this.config!.providerId, this.config!.options, plugins)
 
+    // Log available tools for debugging
+    if (params.tools && Object.keys(params.tools).length > 0) {
+      logger.info('🔧 Available tools:', {
+        count: Object.keys(params.tools).length,
+        tools: Object.keys(params.tools),
+        hasBrowserTools: Object.keys(params.tools).some((t) => t.startsWith('browser_'))
+      })
+    }
+
     // 创建带有中间件的执行器
     if (config.onChunk) {
       const accumulate = this.model!.supported_text_delta !== false // true and undefined

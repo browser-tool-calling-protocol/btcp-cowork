@@ -487,10 +487,25 @@ const ORIGIN_DEFAULT_MIN_APPS: MinAppType[] = [
 ]
 
 // 加载自定义小应用并合并到默认应用中
-let DEFAULT_MIN_APPS = [...ORIGIN_DEFAULT_MIN_APPS, ...(await loadCustomMiniApp())]
+// NOTE: Don't await at module level! This breaks extension initialization.
+// Instead, initialize DEFAULT_MIN_APPS with defaults only, and load custom apps lazily.
+let DEFAULT_MIN_APPS = [...ORIGIN_DEFAULT_MIN_APPS]
+let customAppsLoaded = false
+
+// Initialize custom mini apps (call this after window.api is ready)
+async function initializeCustomMiniApps() {
+  if (customAppsLoaded) return
+  try {
+    const customApps = await loadCustomMiniApp()
+    DEFAULT_MIN_APPS = [...ORIGIN_DEFAULT_MIN_APPS, ...customApps]
+    customAppsLoaded = true
+  } catch (error) {
+    logger.error('Failed to initialize custom mini apps:', error as Error)
+  }
+}
 
 function updateDefaultMinApps(param) {
   DEFAULT_MIN_APPS = param
 }
 
-export { DEFAULT_MIN_APPS, loadCustomMiniApp, ORIGIN_DEFAULT_MIN_APPS, updateDefaultMinApps }
+export { DEFAULT_MIN_APPS, initializeCustomMiniApps, loadCustomMiniApp, ORIGIN_DEFAULT_MIN_APPS, updateDefaultMinApps }

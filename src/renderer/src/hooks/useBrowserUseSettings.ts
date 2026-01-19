@@ -1,3 +1,4 @@
+import { loggerService } from '@logger'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
   type BrowserUseToolset,
@@ -11,6 +12,8 @@ import {
   setMaxSnapshotSize
 } from '@renderer/store/browserUse'
 import { useCallback } from 'react'
+
+const logger = loggerService.withContext('useBrowserUseSettings')
 
 export function useBrowserUseSettings() {
   const dispatch = useAppDispatch()
@@ -37,19 +40,32 @@ export function useBrowserUseForAssistant(assistantId: string) {
 
   const setEnabled = useCallback(
     (enabled: boolean, customToolset?: BrowserUseToolset) => {
+      logger.info('🔘 Browser Use Button Clicked', {
+        assistantId,
+        enabled,
+        customToolset,
+        currentState: assistantSettings
+      })
+
       if (enabled) {
+        const finalToolset = customToolset ?? globalSettings.toolset
+        logger.info('✅ Enabling Browser Use', {
+          assistantId,
+          toolset: finalToolset
+        })
         dispatch(
           setBrowserUseForAssistant({
             assistantId,
             enabled: true,
-            toolset: customToolset ?? globalSettings.toolset
+            toolset: finalToolset
           })
         )
       } else {
+        logger.info('❌ Disabling Browser Use', { assistantId })
         dispatch(clearBrowserUseForAssistant({ assistantId }))
       }
     },
-    [dispatch, assistantId, globalSettings.toolset]
+    [dispatch, assistantId, globalSettings.toolset, assistantSettings]
   )
 
   const setToolset = useCallback(

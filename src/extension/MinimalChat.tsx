@@ -60,6 +60,15 @@ export default function MinimalChat() {
   const [activeAssistant, setActiveAssistantState] = useState<Assistant | undefined>(assistants[0])
   const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(activeAssistant?.id ?? '')
 
+  // Debug logging
+  console.log('[MinimalChat] Render:', {
+    assistantsCount: assistants.length,
+    activeAssistant: activeAssistant?.id,
+    activeTopic: activeTopic?.id,
+    hasActiveAssistant: !!activeAssistant,
+    hasActiveTopic: !!activeTopic
+  })
+
   const setActiveAssistant = useCallback(
     (newAssistant: Assistant) => {
       if (newAssistant.id === activeAssistant?.id) return
@@ -121,8 +130,8 @@ export default function MinimalChat() {
         </OpenFullAppButton>
       </Header>
 
-      {/* Full Chat component with all features */}
-      <ChatWrapper>
+      {/* Match HomePage's ContentContainer structure */}
+      <ContentContainer>
         <DebugErrorBoundary>
           <Chat
             assistant={activeAssistant}
@@ -131,12 +140,12 @@ export default function MinimalChat() {
             setActiveAssistant={setActiveAssistant}
           />
         </DebugErrorBoundary>
-      </ChatWrapper>
+      </ContentContainer>
     </Container>
   )
 }
 
-// Styled Components
+// Styled Components - Match HomePage structure
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -187,19 +196,51 @@ const OpenFullAppButton = styled.button`
   }
 `
 
-const ChatWrapper = styled.div`
+// Match HomePage's ContentContainer exactly, with overrides for sidepanel
+const ContentContainer = styled.div`
+  display: flex;
   flex: 1;
-  min-height: 0;
+  flex-direction: row;
   overflow: hidden;
 
-  /* Override some Chat styles for sidepanel layout */
+  /* Ensure Chat component fills the container */
   #chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     height: 100%;
   }
 
-  #chat-main {
-    max-width: 100% !important;
+  /* HStack needs to fill height */
+  #chat > div {
     height: 100% !important;
+    flex: 1;
+  }
+
+  /* The motion.div inside HStack should fill vertically */
+  #chat > div > div {
+    height: 100% !important;
+  }
+
+  /* Main component - override the calculated mainHeight */
+  #chat-main {
+    height: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* The inner flex container that holds messages + inputbar */
+  #chat-main > div > div.flex.flex-1.flex-col.justify-between {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  /* Messages container must have constrained height to enable scroll */
+  #messages,
+  .messages-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
   }
 
   /* Hide the topic sidebar in sidepanel - use ChatNavbar dropdown instead */
