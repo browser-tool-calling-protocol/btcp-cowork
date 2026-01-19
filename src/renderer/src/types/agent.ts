@@ -25,11 +25,23 @@ export const SessionMessageRoleSchema = z.enum(sessionMessageRoles)
 
 export type SessionMessageType = TextStreamPart<Record<string, any>>['type']
 
-export const AgentTypeSchema = z.enum(['claude-code'])
+/**
+ * Agent types:
+ * - 'claude-code': Requires backend for file/shell tools (NOT available in extension)
+ * - 'skill-creator': Browser-compatible agent for creating skills (uses addSkill tool)
+ */
+export const AgentTypeSchema = z.enum(['claude-code', 'skill-creator'])
 export type AgentType = z.infer<typeof AgentTypeSchema>
 
 export const isAgentType = (type: unknown): type is AgentType => {
   return AgentTypeSchema.safeParse(type).success
+}
+
+/**
+ * Check if an agent type is compatible with browser/extension environment
+ */
+export const isBrowserCompatibleAgentType = (type: AgentType): boolean => {
+  return type === 'skill-creator'
 }
 
 // ------------------ Tool metadata ------------------

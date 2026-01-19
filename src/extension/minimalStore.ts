@@ -15,6 +15,7 @@
 
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
 // Essential slices only
+import agentsReducer from '@renderer/store/agents'
 import assistantsReducer from '@renderer/store/assistants'
 // backup is needed because settings imports types from it
 import backupReducer from '@renderer/store/backup'
@@ -24,10 +25,12 @@ import messageBlocksReducer from '@renderer/store/messageBlock'
 import newMessagesReducer from '@renderer/store/newMessage'
 import runtimeReducer from '@renderer/store/runtime'
 import settingsReducer from '@renderer/store/settings'
+import skillReducer from '@renderer/store/skill'
 import { persistReducer, persistStore } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
 const rootReducer = combineReducers({
+  agents: agentsReducer,
   assistants: assistantsReducer,
   settings: settingsReducer,
   llm: llmReducer,
@@ -35,7 +38,8 @@ const rootReducer = combineReducers({
   messages: newMessagesReducer,
   messageBlocks: messageBlocksReducer,
   inputTools: inputToolsReducer,
-  backup: backupReducer
+  backup: backupReducer,
+  skill: skillReducer
 })
 
 const persistConfig = {

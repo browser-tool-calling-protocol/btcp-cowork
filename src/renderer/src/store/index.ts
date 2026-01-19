@@ -21,6 +21,7 @@ import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, R
 import storage from 'redux-persist/lib/storage'
 
 import storeSyncService from '../services/StoreSyncService'
+import agents from './agents'
 import assistants from './assistants'
 import backup from './backup'
 import browserUse from './browserUse'
@@ -53,6 +54,7 @@ import websearch from './websearch'
 const logger = loggerService.withContext('Store')
 
 const rootReducer = combineReducers({
+  agents,
   assistants,
   backup,
   browserUse,
