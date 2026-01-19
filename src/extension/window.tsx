@@ -1,4 +1,3 @@
-/// <reference types="chrome" />
 /**
  * Side Panel Entry Point
  *

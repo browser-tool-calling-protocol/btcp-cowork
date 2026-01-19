@@ -1,4 +1,3 @@
-/// <reference types="chrome" />
 /**
  * Chrome Extension Background Service Worker
  *
@@ -180,7 +179,7 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
 
     // MCP operations (HTTP/SSE only)
     case 'mcp:connect': {
-      const server = payload as { id: string; url: string; transport: 'sse' | 'http' | 'stdio' }
+      const server = payload as { id: string; url: string; transport: 'sse' | 'http' }
       if (server.transport === 'stdio') {
         return { error: 'stdio transport not supported in Chrome extension' }
       }

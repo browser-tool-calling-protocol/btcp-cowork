@@ -1,4 +1,3 @@
-/// <reference types="chrome" />
 /**
  * Popup Entry Point
  *
