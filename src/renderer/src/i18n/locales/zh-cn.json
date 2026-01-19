@@ -752,7 +752,8 @@
       "send": "发送",
       "settings": "设置",
       "slash_commands": {
-        "description": "代理会话斜杠命令",
+        "description": "提示词模板和快捷命令",
+        "empty": "暂无可用的斜杠命令",
         "title": "斜杠命令"
       },
       "thinking": {

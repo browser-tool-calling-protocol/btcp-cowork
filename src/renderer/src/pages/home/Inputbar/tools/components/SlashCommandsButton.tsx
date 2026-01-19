@@ -1,27 +1,26 @@
 import { ActionIconButton } from '@renderer/components/Buttons'
 import { QuickPanelReservedSymbol } from '@renderer/components/QuickPanel'
-import type { ToolContext, ToolQuickPanelController } from '@renderer/pages/home/Inputbar/types'
+import type { ToolQuickPanelController } from '@renderer/pages/home/Inputbar/types'
+import type { SlashCommand } from '@renderer/types/slashCommand'
 import { Tooltip } from 'antd'
 import { Terminal } from 'lucide-react'
-import { type FC, type ReactElement, useCallback, useMemo } from 'react'
+import { type FC, type ReactElement, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
   quickPanelController: ToolQuickPanelController
-  session: ToolContext['session']
+  commands: SlashCommand[]
   openPanel: () => void
 }
 
 /**
  * SlashCommandsButton
  *
- * Simple button component that opens the SlashCommands panel (second level menu).
- * The openPanel handler is passed from the tool definition, keeping logic centralized.
+ * Button component that opens the SlashCommands panel.
+ * Works with global slash commands (prompt templates).
  */
-const SlashCommandsButton: FC<Props> = ({ quickPanelController, session, openPanel }): ReactElement => {
+const SlashCommandsButton: FC<Props> = ({ quickPanelController, commands, openPanel }): ReactElement => {
   const { t } = useTranslation()
-
-  const slashCommands = useMemo(() => session?.slashCommands || [], [session?.slashCommands])
 
   const handleOpenQuickPanel = useCallback(() => {
     if (quickPanelController.isVisible && quickPanelController.symbol === QuickPanelReservedSymbol.SlashCommands) {
@@ -31,7 +30,7 @@ const SlashCommandsButton: FC<Props> = ({ quickPanelController, session, openPan
     }
   }, [openPanel, quickPanelController])
 
-  const hasCommands = slashCommands.length > 0
+  const hasCommands = commands.length > 0
   const isActive =
     quickPanelController.isVisible && quickPanelController.symbol === QuickPanelReservedSymbol.SlashCommands
 
