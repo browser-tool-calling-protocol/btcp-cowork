@@ -1,4 +1,3 @@
-/// <reference types="chrome" />
 /**
  * Chrome Extension Shim for window.api
  *
@@ -40,6 +39,8 @@
     }
   }
 }
+
+import type { WindowApiType } from '../preload'
 
 // Message types for background communication
 type MessageType =
@@ -127,7 +128,7 @@ const noopReturn =
     Promise.resolve(value)
 
 // Create the extension API shim
-const extensionApi = {
+const extensionApi: WindowApiType = {
   // ===== App Info & Lifecycle =====
   getAppInfo: async () => ({
     version: chrome.runtime.getManifest().version,
@@ -841,7 +842,7 @@ const extensionApi = {
 
 // Assign to window immediately (synchronous)
 // Note: window.electron is already assigned at the top of this file
-// Cast to any to avoid strict type checking - shim provides compatibility layer
-window.api = extensionApi as any
+window.api = extensionApi
 
 export { extensionApi }
+export type { WindowApiType }
