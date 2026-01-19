@@ -1,10 +1,5 @@
 import type { AiPlugin } from '@cherrystudio/ai-core'
-import {
-  browserUsePlugin,
-  createPromptToolUsePlugin,
-  type ExtensionClient,
-  webSearchPlugin
-} from '@cherrystudio/ai-core/built-in/plugins'
+import { browserUsePlugin, createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { getEnableDeveloperMode } from '@renderer/hooks/useSettings'
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
@@ -36,23 +31,17 @@ export function buildPlugins(
 
   // 1. 浏览器使用插件
   if (middlewareConfig.enableBrowserUse && middlewareConfig.browserUseConfig) {
-    // Get the singleton client if available (extension mode)
-    // Cast to ExtensionClient since the actual Client type is compatible
-    const client = browserAgentService.isInitialized()
-      ? (browserAgentService.getClient() as unknown as ExtensionClient)
-      : undefined
-
     logger.info('🌐 Browser Use Plugin enabled', {
       toolset: middlewareConfig.browserUseConfig.toolset,
       maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
       enableTracking: middlewareConfig.browserUseConfig.enableTracking,
-      injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt,
-      mode: client ? 'extension' : 'standalone'
+      injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt
     })
     plugins.push(
       browserUsePlugin({
         enabled: true,
-        client, // Pass the singleton client if available
+        // Tools call this function to get the client from the singleton service
+        getClient: () => browserAgentService.getOrInit(),
         toolset: middlewareConfig.browserUseConfig.toolset,
         maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
         enableTracking: middlewareConfig.browserUseConfig.enableTracking,

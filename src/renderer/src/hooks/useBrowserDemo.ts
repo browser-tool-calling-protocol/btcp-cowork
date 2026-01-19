@@ -8,14 +8,14 @@
  * demo UI and AI agent tools.
  *
  * Session Lifecycle:
- * 1. BrowserAgentService.initialize() on mount - set up shared client
+ * 1. BrowserAgentService.getOrInit() - get or initialize the client
  * 2. ensureSession() before demo - create/get session group
  * 3. Execute browser operations within session context
  * 4. closeSession() on cleanup - clean up session and all tabs
  */
 
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 export interface DemoStep {
   id: string
@@ -60,27 +60,14 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
   const abortRef = useRef(false)
 
-  // Initialize BrowserAgentService on mount
-  useEffect(() => {
-    const initializeService = async () => {
-      try {
-        await browserAgentService.initialize()
-        console.log('[Demo] BrowserAgentService initialized')
-      } catch (err) {
-        console.error('Failed to initialize BrowserAgentService:', err)
-      }
-    }
-
-    initializeService()
-  }, [])
-
   const updateStep = useCallback((index: number, updates: Partial<DemoStep>) => {
     setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, ...updates } : step)))
   }, [])
 
   const runProgrammaticDemo = useCallback(async (): Promise<unknown> => {
-    // Get the shared client from the singleton service
-    const client = browserAgentService.getClient()
+    // Get or initialize the client from the singleton service
+    const client = await browserAgentService.getOrInit()
+    console.log('[Demo] Browser client ready')
 
     // Utility for delays (from example)
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))

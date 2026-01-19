@@ -4,44 +4,27 @@
  * Integrates btcp-browser-agent as a reusable plugin for @cherrystudio/ai-core,
  * enabling AI models to control browsers through the Browser Tool Calling Protocol (BTCP).
  *
- * The BrowserAgent provides DOM automation tools including:
- * - snapshot, click, type, fill, press, scroll for interaction
- * - getText, isVisible, getUrl, getTitle for inspection
+ * Uses the extension Client for browser automation:
+ * - snapshot, click, type, fill for interaction
+ * - getText for inspection
  * - screenshot for visual capture
+ *
+ * The Client self-discovers the agent - we only work with the Client directly.
  */
 
-import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
-import type { ExtensionClient } from './types'
-
-// Lazy-load btcp-browser-agent to avoid build-time dependency
-// This will be loaded at runtime when the plugin is actually used
-let btcpBrowserAgent: {
-  BrowserAgent: typeof BrowserAgent
-  generateCommandId: () => string
-} | null = null
-
-function getBtcpBrowserAgent() {
-  if (!btcpBrowserAgent) {
-    btcpBrowserAgent = require('btcp-browser-agent') as {
-      BrowserAgent: typeof BrowserAgent
-      generateCommandId: () => string
-    }
-  }
-  return btcpBrowserAgent
-}
-
-/**
- * Generate a unique command ID for extension client execute calls
- */
-function generateUniqueId(): string {
-  return `cmd_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-}
 import { tool } from 'ai'
 import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
-import type { BTCPBrowserPluginConfig, BTCPToolName, ScreenshotResult, SnapshotResult } from './types'
+import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
+
+/**
+ * Generate a unique command ID for execute calls
+ */
+function generateUniqueId(): string {
+  return `cmd_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+}
 
 /**
  * Browser Use Plugin Factory
@@ -54,7 +37,7 @@ import type { BTCPBrowserPluginConfig, BTCPToolName, ScreenshotResult, SnapshotR
  * import { createExecutor, browserUsePlugin } from '@cherrystudio/ai-core'
  *
  * const executor = createExecutor('anthropic', { apiKey: '...' }, [
- *   browserUsePlugin()
+ *   browserUsePlugin({ client: myBrowserClient })
  * ])
  *
  * const result = await executor.streamText({
@@ -69,9 +52,7 @@ import type { BTCPBrowserPluginConfig, BTCPToolName, ScreenshotResult, SnapshotR
 export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
   const {
     enabled = DEFAULT_CONFIG.enabled,
-    agent: providedAgent,
-    client: providedClient,
-    agentOptions = {},
+    getClient: getClientFn,
     toolset = DEFAULT_CONFIG.toolset,
     maxSnapshotSize = DEFAULT_CONFIG.maxSnapshotSize,
     enableTracking = DEFAULT_CONFIG.enableTracking,
@@ -81,40 +62,14 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     injectSystemPrompt = DEFAULT_CONFIG.injectSystemPrompt
   } = config
 
-  // Extension client mode (shared sessions between demo UI and AI tools)
-  const extensionClient: ExtensionClient | null = providedClient ?? null
-
-  // Lazy initialization of BrowserAgent (standalone mode, fallback if no client)
-  let agent: BrowserAgent | null = providedAgent ?? null
-  let agentLaunched = false
-
   /**
-   * Check if we're using extension client mode
+   * Get the client from the service (throws if not configured)
    */
-  const isExtensionMode = (): boolean => extensionClient !== null
-
-  /**
-   * Get BrowserAgent for standalone mode
-   */
-  const getAgent = async (): Promise<BrowserAgent> => {
-    if (!agent) {
-      agent = new (getBtcpBrowserAgent().BrowserAgent)(agentOptions as BrowserAgentConfig)
+  const getClient = async (): Promise<ExtensionClient> => {
+    if (!getClientFn) {
+      throw new Error('Browser client not configured. Pass getClient via browserUsePlugin({ getClient: ... })')
     }
-    if (!agentLaunched) {
-      await agent.launch()
-      agentLaunched = true
-    }
-    return agent
-  }
-
-  /**
-   * Get the extension client (throws if not in extension mode)
-   */
-  const getExtensionClient = (): ExtensionClient => {
-    if (!extensionClient) {
-      throw new Error('Extension client not provided')
-    }
-    return extensionClient
+    return getClientFn()
   }
 
   // Execution wrapper with callbacks
@@ -130,8 +85,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     }
   }
 
-  // Create minimal browser tools using the btcp-browser-agent API
-  // Supports both extension client mode and standalone BrowserAgent mode
+  // Create browser tools using the Client API
+  // Each tool calls getClient() to get the client from the service
   const createBrowserTools = () => {
     return {
       // === Session Management ===
@@ -140,12 +95,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).describe('No parameters required'),
         execute: async () =>
           executeWithCallbacks('browser_launch', {}, async () => {
-            if (isExtensionMode()) {
-              // Extension mode: client is already initialized by BrowserAgentService
-              return { success: true, mode: 'extension' }
-            }
-            await getAgent()
-            return { success: true, mode: 'standalone' }
+            // Get client from service (initializes if needed)
+            await getClient()
+            return { success: true }
           })
       }),
 
@@ -156,19 +108,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async () =>
           executeWithCallbacks('browser_close', {}, async () => {
-            if (isExtensionMode()) {
-              // Extension mode: session cleanup is handled by BrowserAgentService
-              return { success: true, mode: 'extension' }
-            }
-            if (agent) {
-              await agent.close()
-              agentLaunched = false
-            }
-            return { success: true, mode: 'standalone' }
+            // Session cleanup is handled by BrowserAgentService
+            return { success: true }
           })
       }),
 
-      // === Navigation (via execute command) ===
+      // === Navigation ===
       browser_navigate: tool({
         description: 'Navigate to a URL',
         inputSchema: z.object({
@@ -176,18 +121,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_navigate', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.navigate(args.url)
-              return { success: true, url: args.url, mode: 'extension' }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: getBtcpBrowserAgent().generateCommandId(),
-              action: 'navigate',
-              url: args.url
-            })
-            return { success: true, url: args.url, mode: 'standalone' }
+            const c = await getClient()
+            await c.navigate(args.url)
+            return { success: true, url: args.url }
           })
       }),
 
@@ -196,17 +132,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_back', {}, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.execute({ id: generateUniqueId(), action: 'back' })
-              return { success: true, mode: 'extension' }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: getBtcpBrowserAgent().generateCommandId(),
-              action: 'back'
-            })
-            return { success: true, mode: 'standalone' }
+            const c = await getClient()
+            await c.execute({ id: generateUniqueId(), action: 'back' })
+            return { success: true }
           })
       }),
 
@@ -215,17 +143,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_forward', {}, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.execute({ id: generateUniqueId(), action: 'forward' })
-              return { success: true, mode: 'extension' }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: getBtcpBrowserAgent().generateCommandId(),
-              action: 'forward'
-            })
-            return { success: true, mode: 'standalone' }
+            const c = await getClient()
+            await c.execute({ id: generateUniqueId(), action: 'forward' })
+            return { success: true }
           })
       }),
 
@@ -234,17 +154,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_reload', {}, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.execute({ id: generateUniqueId(), action: 'reload' })
-              return { success: true, mode: 'extension' }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.execute({
-              id: getBtcpBrowserAgent().generateCommandId(),
-              action: 'reload'
-            })
-            return { success: true, mode: 'standalone' }
+            const c = await getClient()
+            await c.execute({ id: generateUniqueId(), action: 'reload' })
+            return { success: true }
           })
       }),
 
@@ -255,31 +167,17 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_snapshot', {}, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              const result = await client.snapshot({ format: 'tree' })
-              const snapshotStr = result.tree
-              if (snapshotStr.length > maxSnapshotSize) {
-                return {
-                  snapshot: snapshotStr.substring(0, maxSnapshotSize),
-                  _truncated: true,
-                  _message: `Snapshot truncated to ${maxSnapshotSize} chars`
-                } as SnapshotResult
-              }
-              return { snapshot: snapshotStr } as SnapshotResult
-            }
-            const browserAgent = await getAgent()
-            const snapshot = await browserAgent.snapshot()
-
-            const snapshotStr = JSON.stringify(snapshot)
+            const c = await getClient()
+            const result = await c.snapshot({ format: 'tree' })
+            const snapshotStr = result.tree
             if (snapshotStr.length > maxSnapshotSize) {
               return {
-                ...snapshot,
+                snapshot: snapshotStr.substring(0, maxSnapshotSize),
                 _truncated: true,
                 _message: `Snapshot truncated to ${maxSnapshotSize} chars`
               } as SnapshotResult
             }
-            return snapshot as SnapshotResult
+            return { snapshot: snapshotStr } as SnapshotResult
           })
       }),
 
@@ -290,13 +188,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_get_text', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              const text = await client.getText(args.selector)
-              return { text }
-            }
-            const browserAgent = await getAgent()
-            const text = await browserAgent.getText(args.selector)
+            const c = await getClient()
+            const text = await c.getText(args.selector)
             return { text }
           })
       }),
@@ -309,13 +202,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_click', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.click(args.selector)
-              return { success: true, selector: args.selector }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.click(args.selector)
+            const c = await getClient()
+            await c.click(args.selector)
             return { success: true, selector: args.selector }
           })
       }),
@@ -328,13 +216,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_type', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.type(args.selector, args.text)
-              return { success: true }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.type(args.selector, args.text)
+            const c = await getClient()
+            await c.type(args.selector, args.text)
             return { success: true }
           })
       }),
@@ -347,13 +230,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_fill', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              await client.fill(args.selector, args.value)
-              return { success: true }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.fill(args.selector, args.value)
+            const c = await getClient()
+            await c.fill(args.selector, args.value)
             return { success: true }
           })
       }),
@@ -365,14 +243,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_press', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              // Use execute for key press in extension mode
-              await client.execute({ id: generateUniqueId(), action: 'press', key: args.key })
-              return { success: true }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.press(args.key)
+            const c = await getClient()
+            await c.execute({ id: generateUniqueId(), action: 'press', key: args.key })
             return { success: true }
           })
       }),
@@ -384,14 +256,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_scroll', args, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              // Use execute for scroll in extension mode
-              await client.execute({ id: generateUniqueId(), action: 'scroll', direction: args.direction })
-              return { success: true }
-            }
-            const browserAgent = await getAgent()
-            await browserAgent.scroll({ direction: args.direction })
+            const c = await getClient()
+            await c.execute({ id: generateUniqueId(), action: 'scroll', direction: args.direction })
             return { success: true }
           })
       }),
@@ -402,13 +268,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_screenshot', {}, async () => {
-            if (isExtensionMode()) {
-              const client = getExtensionClient()
-              const result = await client.screenshot()
-              return { image: result.screenshot, format: 'png' } as ScreenshotResult
-            }
-            const browserAgent = await getAgent()
-            const result = await browserAgent.screenshot({ format: 'png' })
+            const c = await getClient()
+            const result = await c.screenshot()
             return { image: result.screenshot, format: 'png' } as ScreenshotResult
           })
       })
@@ -429,13 +290,14 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     enforce: 'pre',
 
     configureContext: (context: AiRequestContext) => {
-      // Store agent reference in context for potential use by other plugins
-      context.btcpAgent = agent
+      // Store getClient function in context for potential use by other plugins
+      context.btcpGetClient = getClientFn
     },
 
     transformParams: <T>(params: T, _context: AiRequestContext): T => {
       console.log('🔧 [browserUsePlugin] transformParams called', {
         enabled,
+        hasGetClient: !!getClientFn,
         toolset,
         maxSnapshotSize,
         enableTracking,
@@ -444,6 +306,11 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
       if (!enabled) {
         console.warn('⚠️ [browserUsePlugin] Plugin not enabled, skipping')
+        return params
+      }
+
+      if (!getClientFn) {
+        console.warn('⚠️ [browserUsePlugin] No getClient function provided, skipping')
         return params
       }
 
@@ -482,8 +349,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
     onRequestEnd: async (_context: AiRequestContext, _result: unknown) => {
       // Cleanup tracking if enabled
-      if (enableTracking && agent) {
-        // The BrowserAgent API handles cleanup internally
+      if (enableTracking) {
+        // Session cleanup is handled by BrowserAgentService
       }
     }
   }

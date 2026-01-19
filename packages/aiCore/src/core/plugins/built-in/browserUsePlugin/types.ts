@@ -2,20 +2,13 @@
  * BTCP Browser Plugin Types
  *
  * Type definitions for the Browser Tool Calling Protocol plugin configuration.
- * Uses the two-layer architecture:
- * - BrowserAgent: Browser-level operations (tabs, navigation, screenshots)
- * - ContentAgent: DOM operations (click, fill, type, snapshot, etc.)
- *
- * Supports two modes:
- * - Standalone: Uses BrowserAgent for direct browser control
- * - Extension: Uses Client from btcp-browser-agent/extension for shared sessions
+ * Uses the extension Client for browser automation.
+ * The Client self-discovers the agent - we only work with the Client directly.
  */
-
-import type { BrowserAgent, BrowserAgentConfig } from './btcp-browser-agent'
 
 /**
  * Client interface from btcp-browser-agent/extension
- * Used for shared browser sessions between demo UI and AI agent tools
+ * Used for browser automation via the singleton BrowserAgentService
  *
  * Note: This interface matches the actual Client type from btcp-browser-agent/extension.
  * Operations like press and scroll are done via the execute() method.
@@ -40,21 +33,20 @@ export interface ExtensionClient {
 
 /**
  * Tool names available in the BTCP Browser Plugin
- * Minimal set of tools matching the btcp-browser-agent core API
  */
 export type BTCPToolName =
-  // Session/Tab Management (BrowserAgent)
+  // Session Management
   | 'browser_launch'
   | 'browser_close'
-  // Navigation (BrowserAgent)
+  // Navigation
   | 'browser_navigate'
   | 'browser_back'
   | 'browser_forward'
   | 'browser_reload'
-  // Core Inspection (ContentAgent)
+  // Core Inspection
   | 'browser_snapshot'
   | 'browser_get_text'
-  // Core Interaction (ContentAgent)
+  // Core Interaction
   | 'browser_click'
   | 'browser_type'
   | 'browser_fill'
@@ -79,22 +71,11 @@ export interface BTCPBrowserPluginConfig {
   enabled?: boolean
 
   /**
-   * Pre-initialized BrowserAgent instance (standalone mode)
-   * If not provided, agent initialization will be deferred until first use
+   * Function to get the browser client from BrowserAgentService
+   * Called by tools when they need the client
+   * Example: () => browserAgentService.getOrInit()
    */
-  agent?: BrowserAgent
-
-  /**
-   * Extension client instance (extension mode)
-   * Used for shared sessions between demo UI and AI agent tools
-   * Takes priority over agent if both are provided
-   */
-  client?: ExtensionClient
-
-  /**
-   * BrowserAgent constructor options (used if agent not provided)
-   */
-  agentOptions?: BrowserAgentConfig
+  getClient?: () => Promise<ExtensionClient>
 
   /**
    * Which tool categories to expose
@@ -143,10 +124,10 @@ export interface BTCPBrowserPluginConfig {
 }
 
 /**
- * Extended request context with BTCP agent
+ * Extended request context with BTCP getClient function
  */
 export interface BTCPRequestContext {
-  btcpAgent?: BrowserAgent
+  btcpGetClient?: () => Promise<ExtensionClient>
 }
 
 /**
@@ -175,6 +156,3 @@ export interface ScreenshotResult {
   image: string
   format: string
 }
-
-// Re-export BrowserAgent types for convenience
-export type { BrowserAgent, BrowserAgentConfig }

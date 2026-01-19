@@ -1,15 +1,16 @@
 /**
  * Browser Agent Service
  *
- * Singleton service that manages a shared browser agent client using the
+ * Singleton service that manages a shared browser client using the
  * btcp-browser-agent/extension API. This allows both the demo UI (useBrowserDemo)
  * and AI agent tools (browserUsePlugin) to share the same browser session.
  *
- * Session Lifecycle:
- * 1. initialize() - Call once on app start to set up the client
- * 2. getClient() - Get the shared client instance for browser operations
- * 3. ensureSession() - Create or get the active session group
- * 4. closeSession() - Clean up the session when done
+ * The client self-discovers the agent - we only work with the Client directly.
+ *
+ * Usage:
+ * - getOrInit() - Get the singleton client, initializing if needed (primary method)
+ * - ensureSession() - Create or get the active session group
+ * - closeSession() - Clean up the session when done
  */
 
 import { loggerService } from '@logger'
@@ -22,7 +23,7 @@ class BrowserAgentService {
   private client: Client | null = null
   private initialized = false
   private sessionGroupId: number | null = null
-  private initPromise: Promise<void> | null = null
+  private initPromise: Promise<Client> | null = null
 
   private constructor() {
     // Private constructor for singleton pattern
@@ -39,37 +40,39 @@ class BrowserAgentService {
   }
 
   /**
-   * Initialize the browser agent client
-   * Safe to call multiple times - will only initialize once
+   * Get the client, initializing if needed.
+   * This is the primary method to access the browser client.
    */
-  public async initialize(): Promise<void> {
+  public async getOrInit(): Promise<Client> {
+    // Return existing client if initialized
+    if (this.initialized && this.client) {
+      return this.client
+    }
+
     // Return existing promise if initialization is in progress
     if (this.initPromise) {
       return this.initPromise
     }
 
-    // Already initialized
-    if (this.initialized && this.client) {
-      return
-    }
-
+    // Initialize the client
     this.initPromise = this._doInitialize()
     try {
-      await this.initPromise
+      return await this.initPromise
     } finally {
       this.initPromise = null
     }
   }
 
-  private async _doInitialize(): Promise<void> {
+  private async _doInitialize(): Promise<Client> {
     try {
-      logger.info('Initializing browser agent client')
+      logger.info('Initializing browser client')
       this.client = createClient()
       await this.client.popupInitialize()
       this.initialized = true
-      logger.info('Browser agent client initialized successfully')
+      logger.info('Browser client initialized successfully')
+      return this.client
     } catch (error) {
-      logger.error('Failed to initialize browser agent client', error as Error)
+      logger.error('Failed to initialize browser client', error as Error)
       this.client = null
       this.initialized = false
       throw error
@@ -77,13 +80,10 @@ class BrowserAgentService {
   }
 
   /**
-   * Get the shared browser client instance
-   * @throws Error if service is not initialized
+   * Get the client if already initialized (sync access)
+   * Returns null if not initialized - use getOrInit() for guaranteed access
    */
-  public getClient(): Client {
-    if (!this.client) {
-      throw new Error('BrowserAgentService not initialized. Call initialize() first.')
-    }
+  public getClient(): Client | null {
     return this.client
   }
 
@@ -99,7 +99,7 @@ class BrowserAgentService {
    * @returns The session group ID
    */
   public async ensureSession(): Promise<number> {
-    const client = this.getClient()
+    const client = await this.getOrInit()
 
     // Check for existing session
     const { session: existingSession } = await client.sessionGetCurrent()
