@@ -17,7 +17,7 @@ const modelValidationErrorBody = (error: AgentModelValidationError) => ({
 })
 
 export const createSession = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId } = req.params
+  const agentId = req.params.agentId as string
   try {
     const sessionData = req.body
 
@@ -52,7 +52,7 @@ export const createSession = async (req: Request, res: Response): Promise<Respon
 }
 
 export const listSessions = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId } = req.params
+  const agentId = req.params.agentId as string
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0
@@ -89,7 +89,8 @@ export const listSessions = async (req: Request, res: Response): Promise<Respons
 
 export const getSession = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { agentId, sessionId } = req.params
+    const agentId = req.params.agentId as string
+    const sessionId = req.params.sessionId as string
     logger.debug('Getting session', { agentId, sessionId })
 
     const session = await sessionService.getSession(agentId, sessionId)
@@ -141,7 +142,8 @@ export const getSession = async (req: Request, res: Response): Promise<Response>
 }
 
 export const updateSession = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId, sessionId } = req.params
+  const agentId = req.params.agentId as string
+  const sessionId = req.params.sessionId as string
   try {
     logger.debug('Updating session', { agentId, sessionId })
     logger.debug('Replace payload', { body: req.body })
@@ -202,7 +204,8 @@ export const updateSession = async (req: Request, res: Response): Promise<Respon
 }
 
 export const patchSession = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId, sessionId } = req.params
+  const agentId = req.params.agentId as string
+  const sessionId = req.params.sessionId as string
   try {
     logger.debug('Patching session', { agentId, sessionId })
     logger.debug('Patch payload', { body: req.body })
@@ -262,7 +265,8 @@ export const patchSession = async (req: Request, res: Response): Promise<Respons
 
 export const deleteSession = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { agentId, sessionId } = req.params
+    const agentId = req.params.agentId as string
+    const sessionId = req.params.sessionId as string
     logger.debug('Deleting session', { agentId, sessionId })
 
     // First check if session exists and belongs to agent

@@ -13,7 +13,7 @@ export const handleValidationErrors = (_req: Request, _res: Response, next: any)
 // Middleware to check if agent exists
 export const checkAgentExists = async (req: Request, res: Response, next: any): Promise<void> => {
   try {
-    const { agentId } = req.params
+    const agentId = req.params.agentId as string
     const exists = await agentService.agentExists(agentId)
 
     if (!exists) {

@@ -24,7 +24,7 @@
       window.addEventListener('ipc-message', handler)
       return () => window.removeEventListener('ipc-message', handler)
     },
-    once: (channel: string, callback: (...args: any[]) => void) => {
+    once: (channel: string, _callback: (...args: any[]) => void) => {
       console.log(`[Extension] Ignoring ipcRenderer.once('${channel}')`)
       return () => {}
     },
@@ -54,11 +54,6 @@ type MessageType =
   | 'backup:s3'
   | 'config:get'
   | 'config:set'
-
-interface BackgroundMessage {
-  type: MessageType
-  payload?: unknown
-}
 
 // Helper to send messages to background service worker
 async function sendToBackground<T>(type: MessageType, payload?: unknown): Promise<T> {

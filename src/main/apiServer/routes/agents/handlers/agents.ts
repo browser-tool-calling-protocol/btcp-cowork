@@ -252,7 +252,7 @@ export const listAgents = async (req: Request, res: Response): Promise<Response>
  */
 export const getAgent = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { agentId } = req.params
+    const agentId = req.params.agentId as string
     logger.debug('Getting agent', { agentId })
 
     const agent = await agentService.getAgent(agentId)
@@ -329,7 +329,7 @@ export const getAgent = async (req: Request, res: Response): Promise<Response> =
  *               $ref: '#/components/schemas/Error'
  */
 export const updateAgent = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId } = req.params
+  const agentId = req.params.agentId as string
   try {
     logger.debug('Updating agent', { agentId })
     logger.debug('Replace payload', { body: req.body })
@@ -475,7 +475,7 @@ export const updateAgent = async (req: Request, res: Response): Promise<Response
  *               $ref: '#/components/schemas/Error'
  */
 export const patchAgent = async (req: Request, res: Response): Promise<Response> => {
-  const { agentId } = req.params
+  const agentId = req.params.agentId as string
   try {
     logger.debug('Partially updating agent', { agentId })
     logger.debug('Patch payload', { body: req.body })
@@ -553,7 +553,7 @@ export const patchAgent = async (req: Request, res: Response): Promise<Response>
  */
 export const deleteAgent = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { agentId } = req.params
+    const agentId = req.params.agentId as string
     logger.debug('Deleting agent', { agentId })
 
     const deleted = await agentService.deleteAgent(agentId)

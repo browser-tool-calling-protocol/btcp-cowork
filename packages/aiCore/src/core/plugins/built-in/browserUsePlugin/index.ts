@@ -436,7 +436,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }
     },
 
-    transformParams: <T>(params: T, _context: AiRequestContext): T => {
+    transformParams: <T>(params: T): T => {
       console.log('🔧 [browserUsePlugin] transformParams called', {
         enabled,
         hasService: !!service,
@@ -489,7 +489,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       return params
     },
 
-    onRequestEnd: async (_context: AiRequestContext, _result: unknown) => {
+    onRequestEnd: async () => {
       // Cleanup tracking if enabled
       if (enableTracking) {
         // Session cleanup is handled by BrowserAgentService
