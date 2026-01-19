@@ -2,7 +2,10 @@
  * useAgentPresets Hook
  *
  * Manages built-in agent presets that can be installed locally.
- * Provides default Claude Code agent configurations for common use cases.
+ * Currently empty as Claude Code agents require a backend which is not available
+ * in the Chrome extension environment.
+ *
+ * Future: Add browser-based agent presets when a browser-compatible agent type is implemented.
  *
  * Usage:
  *   const { presets, installPreset, isInstalled } = useAgentPresets()
@@ -18,127 +21,33 @@ import {
 import { useCallback, useEffect, useMemo } from 'react'
 
 /**
- * Built-in agent presets for common use cases
+ * Built-in agent presets
+ *
+ * NOTE: Currently empty because:
+ * - The only agent type is 'claude-code' which requires a backend to execute tools
+ *   (Bash, file read/write/edit, etc.)
+ * - Chrome extensions cannot run these tools - no filesystem access, no shell execution
+ *
+ * Future work needed:
+ * - Add 'browser-agent' type that uses BTCP tools (navigate, click, type, screenshot, snapshot)
+ * - Create presets for browser automation tasks
+ *
+ * Example future preset:
+ * {
+ *   id: 'preset-browser-assistant',
+ *   name: 'Browser Assistant',
+ *   description: 'Automates browser tasks using BTCP tools',
+ *   emoji: '🌐',
+ *   type: 'browser-agent',  // New type needed in AgentTypeSchema
+ *   model: 'anthropic:claude-sonnet-4-20250514',
+ *   instructions: 'You are a browser automation assistant...',
+ *   accessible_paths: [],
+ *   allowed_tools: ['navigate', 'click', 'type', 'fill', 'press', 'screenshot', 'snapshot'],
+ *   configuration: { permission_mode: 'default', max_turns: 50 },
+ *   isBuiltIn: true
+ * }
  */
-const BUILT_IN_PRESETS: AgentPreset[] = [
-  {
-    id: 'preset-claude-code-general',
-    name: 'Claude Code Assistant',
-    description:
-      'A general-purpose coding assistant powered by Claude. Helps with code review, debugging, and development tasks.',
-    emoji: '🤖',
-    type: 'claude-code',
-    model: 'anthropic:claude-sonnet-4-20250514',
-    instructions: `You are Claude Code, a helpful AI coding assistant. You help users with:
-- Code review and improvements
-- Debugging and fixing issues
-- Writing new features
-- Explaining code and concepts
-- Best practices and patterns
-
-Always be clear, concise, and provide working code examples when helpful.`,
-    accessible_paths: [],
-    allowed_tools: ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'],
-    configuration: {
-      permission_mode: 'default',
-      max_turns: 100
-    },
-    isBuiltIn: true
-  },
-  {
-    id: 'preset-claude-code-web',
-    name: 'Web Developer',
-    description: 'Specialized for web development with React, TypeScript, and modern frontend tools.',
-    emoji: '🌐',
-    type: 'claude-code',
-    model: 'anthropic:claude-sonnet-4-20250514',
-    instructions: `You are a web development specialist. You excel at:
-- React and TypeScript development
-- Modern CSS and styling (Tailwind, styled-components)
-- State management (Redux, Zustand, React Query)
-- API integration and data fetching
-- Performance optimization
-- Accessibility best practices
-
-Focus on clean, maintainable code with proper typing.`,
-    accessible_paths: [],
-    allowed_tools: ['Read', 'Glob', 'Grep', 'Edit', 'Write', 'WebSearch', 'WebFetch'],
-    configuration: {
-      permission_mode: 'acceptEdits',
-      max_turns: 100
-    },
-    isBuiltIn: true
-  },
-  {
-    id: 'preset-claude-code-reviewer',
-    name: 'Code Reviewer',
-    description: 'Reviews code for bugs, security issues, and best practices. Read-only mode for safety.',
-    emoji: '🔍',
-    type: 'claude-code',
-    model: 'anthropic:claude-sonnet-4-20250514',
-    instructions: `You are a code review specialist. Your role is to:
-- Identify bugs and potential issues
-- Check for security vulnerabilities
-- Suggest performance improvements
-- Ensure code follows best practices
-- Review for maintainability and readability
-
-Provide constructive feedback with specific line references and explanations.
-Do NOT make changes directly - only provide recommendations.`,
-    accessible_paths: [],
-    allowed_tools: ['Read', 'Glob', 'Grep'],
-    configuration: {
-      permission_mode: 'default',
-      max_turns: 50
-    },
-    isBuiltIn: true
-  },
-  {
-    id: 'preset-claude-code-researcher',
-    name: 'Research Assistant',
-    description: 'Helps research codebases, documentation, and web resources. Great for learning new projects.',
-    emoji: '📚',
-    type: 'claude-code',
-    model: 'anthropic:claude-sonnet-4-20250514',
-    instructions: `You are a research assistant specialized in understanding codebases and technologies. You help with:
-- Exploring and explaining code structure
-- Finding relevant documentation
-- Researching libraries and frameworks
-- Understanding design patterns used
-- Creating summaries and documentation
-
-Be thorough but concise. Use web search when needed for up-to-date information.`,
-    accessible_paths: [],
-    allowed_tools: ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'],
-    configuration: {
-      permission_mode: 'default',
-      max_turns: 100
-    },
-    isBuiltIn: true
-  },
-  {
-    id: 'preset-claude-code-autonomous',
-    name: 'Autonomous Developer',
-    description: 'Full autonomy for complex tasks. Use with caution - bypasses all permission checks.',
-    emoji: '⚡',
-    type: 'claude-code',
-    model: 'anthropic:claude-sonnet-4-20250514',
-    instructions: `You are an autonomous development agent with full access to complete complex tasks independently. You can:
-- Read, write, and edit files
-- Execute commands
-- Search the web
-- Make architectural decisions
-
-Always explain your reasoning and create backups before major changes.
-Use your autonomy responsibly and ask for confirmation on irreversible actions.`,
-    accessible_paths: [],
-    configuration: {
-      permission_mode: 'bypassPermissions',
-      max_turns: 200
-    },
-    isBuiltIn: true
-  }
-]
+const BUILT_IN_PRESETS: AgentPreset[] = []
 
 /**
  * Hook for managing built-in agent presets

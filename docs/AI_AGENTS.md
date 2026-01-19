@@ -4,27 +4,52 @@ This document describes how custom AI agents work in Cherry Studio, covering the
 
 ## Overview
 
-Cherry Studio supports custom AI agents that provide autonomous assistant capabilities. Currently, the system supports `claude-code` type agents, which are designed to handle complex tasks using Claude's capabilities with tool calling.
+Cherry Studio supports custom AI agents that provide autonomous assistant capabilities. The current agent type schema only supports `claude-code`, but this type **cannot run in the Chrome extension** because it requires backend tools (Bash, file system access) that are not available in browser environments.
 
 ## Chrome Extension Environment
 
 > **Important**: This project is now a Chrome extension only (Electron backend removed in PR #24).
 
+### Current Limitation: Claude Code Agents
+
+The existing `claude-code` agent type requires tools that are **NOT available** in Chrome extensions:
+
+| Claude Code Tool | Requires | Available in Extension |
+|------------------|----------|------------------------|
+| Bash | Shell execution | ❌ No |
+| Read/Write/Edit | Filesystem access | ❌ No |
+| Glob/Grep | Filesystem search | ❌ No |
+| WebSearch/WebFetch | Network access | ✅ Yes (limited) |
+
+**What IS available:** BTCP (Browser Tool Calling Protocol) tools for browser automation:
+- `navigate` - Navigate to URLs
+- `click` - Click elements
+- `type` / `fill` - Enter text
+- `press` - Press keys
+- `screenshot` - Capture screen
+- `snapshot` - Get DOM snapshot
+
+### Future: Browser Agent Type
+
+To enable agents in the extension, a new `browser-agent` type needs to be added that uses BTCP tools instead of filesystem tools. See `src/renderer/src/hooks/agents/useAgentPresets.ts` for a proposed structure.
+
 ### Local Storage Implementation
 
-Agent CRUD operations now work **locally without a backend** using Redux + redux-persist:
+The **storage layer** is ready - agent CRUD operations work locally using Redux + redux-persist:
 
 | Feature | Status | Storage | Hook |
 |---------|--------|---------|------|
-| Agent Create | ✅ Available | Redux → localStorage | `useLocalAgents` |
-| Agent Read | ✅ Available | Redux → localStorage | `useLocalAgents` |
-| Agent Update | ✅ Available | Redux → localStorage | `useLocalAgents` |
-| Agent Delete | ✅ Available | Redux → localStorage | `useLocalAgents` |
-| Agent Sessions | ✅ Available | Redux → localStorage | `useLocalSessions` |
-| Built-in Presets | ✅ Available | Redux → localStorage | `useAgentPresets` |
+| Agent Create | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
+| Agent Read | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
+| Agent Update | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
+| Agent Delete | ✅ Storage Ready | Redux → localStorage | `useLocalAgents` |
+| Agent Sessions | ✅ Storage Ready | Redux → localStorage | `useLocalSessions` |
+| Agent Presets | ⚠️ Empty (no browser-agent type) | Redux → localStorage | `useAgentPresets` |
 | Skills | ✅ Available | Redux → localStorage | `useSkills` |
 | Assistants | ✅ Available | Redux → localStorage | `useAssistants` |
 | Chat Messages | ✅ Available | Dexie → IndexedDB | `useMessages` |
+
+> **Note:** Storage is ready, but agents cannot execute because `claude-code` tools don't work in browsers.
 
 ### Architecture Diagram
 
@@ -65,43 +90,34 @@ setPresets, addPreset, installPreset
 
 ### Built-in Agent Presets
 
-The extension includes 5 built-in agent presets that can be installed locally:
+Currently **empty** - no presets available because:
+- The only agent type (`claude-code`) requires backend tools not available in browsers
+- Future: Add `browser-agent` type with BTCP tool presets
 
-| Preset | Description | Permission Mode |
-|--------|-------------|-----------------|
-| Claude Code Assistant | General-purpose coding helper | `default` |
-| Web Developer | React/TypeScript specialist | `acceptEdits` |
-| Code Reviewer | Read-only code review | `default` |
-| Research Assistant | Codebase exploration | `default` |
-| Autonomous Developer | Full autonomy (use with caution) | `bypassPermissions` |
+See `src/renderer/src/hooks/agents/useAgentPresets.ts` for proposed browser agent structure.
 
 ### Using Local Hooks
 
+The hooks are ready for use once a browser-compatible agent type is added:
+
 ```typescript
-// Instead of useAgents() which requires API server:
 import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
 import { useLocalSessions } from '@renderer/hooks/agents/useLocalSessions'
 import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
 
-// Create an agent locally
-const { addAgent, agents } = useLocalAgents()
-await addAgent({
-  type: 'claude-code',
-  name: 'My Agent',
-  model: 'anthropic:claude-sonnet-4-20250514',
-  accessible_paths: ['/home/user/projects']
-})
+// Storage operations work - agent type needs browser support
+const { addAgent, agents, updateAgent, deleteAgent } = useLocalAgents()
+const { sessions, createSession, deleteSession } = useLocalSessions(agentId)
+const { presets, installPreset } = useAgentPresets() // Currently empty
 
-// Install a built-in preset
-const { presets, installPreset } = useAgentPresets()
-installPreset('preset-claude-code-general')
-
-// Create a session
-const { createSession } = useLocalSessions(agentId)
-await createSession({
-  model: agent.model,
-  accessible_paths: agent.accessible_paths
-})
+// Future usage with browser-agent type:
+// await addAgent({
+//   type: 'browser-agent',  // New type needed
+//   name: 'Browser Assistant',
+//   model: 'anthropic:claude-sonnet-4-20250514',
+//   accessible_paths: [],
+//   allowed_tools: ['navigate', 'click', 'type', 'screenshot']
+// })
 ```
 
 ### Legacy API-Based Hooks
