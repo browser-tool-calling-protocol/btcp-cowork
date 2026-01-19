@@ -1,4 +1,3 @@
-import tseslint from '@electron-toolkit/eslint-config-ts'
 import eslint from '@eslint/js'
 import eslintReact from '@eslint-react/eslint-plugin'
 import { defineConfig } from 'eslint/config'
@@ -7,10 +6,11 @@ import oxlint from 'eslint-plugin-oxlint'
 import reactHooks from 'eslint-plugin-react-hooks'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
+import tseslint from 'typescript-eslint'
 
 export default defineConfig([
   eslint.configs.recommended,
-  tseslint.configs.recommended,
+  ...tseslint.configs.recommended,
   eslintReact.configs['recommended-typescript'],
   reactHooks.configs['recommended-latest'],
   {
@@ -54,7 +54,6 @@ export default defineConfig([
   {
     ignores: [
       'node_modules/**',
-      'build/**',
       'dist/**',
       'dist-extension/**',
       'out/**',
@@ -64,12 +63,42 @@ export default defineConfig([
       '.gitignore',
       '.conductor/**',
       'scripts/cloudflare-worker.js',
-      'src/main/integration/nutstore/sso/lib/**',
-      'src/main/integration/cherryai/index.js',
-      'src/main/integration/nutstore/sso/lib/**',
       'src/renderer/src/ui/**',
       'packages/**/dist'
     ]
+  },
+  // Node.js scripts environment
+  {
+    files: ['scripts/**/*.js', 'eslint.config.mjs'],
+    languageOptions: {
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        process: 'readonly',
+        console: 'readonly'
+      }
+    }
+  },
+  // Browser environment for extension JS files
+  {
+    files: ['src/extension/**/*.js'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        chrome: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly'
+      }
+    }
   },
   // turn off oxlint supported rules.
   ...oxlint.configs['flat/eslint'],
@@ -78,7 +107,7 @@ export default defineConfig([
   {
     // LoggerService Custom Rules - only apply to src directory
     files: ['src/**/*.{ts,tsx,js,jsx}'],
-    ignores: ['src/**/__tests__/**', 'src/**/__mocks__/**', 'src/**/*.test.*', 'src/preload/**'],
+    ignores: ['src/**/__tests__/**', 'src/**/__mocks__/**', 'src/**/*.test.*'],
     rules: {
       'no-restricted-syntax': [
         process.env.PRCI ? 'error' : 'warn',

@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 /**
  * Content Script - BTCP Browser Agent
  *

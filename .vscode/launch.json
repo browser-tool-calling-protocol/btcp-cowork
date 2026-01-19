@@ -1,38 +1,10 @@
 {
-  "compounds": [
-    {
-      "configurations": ["Debug Main Process", "Debug Renderer Process"],
-      "name": "Debug All",
-      "presentation": {
-        "order": 1
-      }
-    }
-  ],
   "configurations": [
     {
-      "cwd": "${workspaceRoot}",
-      "env": {
-        "REMOTE_DEBUGGING_PORT": "9222"
-      },
-      "envFile": "${workspaceFolder}/.env",
-      "name": "Debug Main Process",
-      "request": "launch",
-      "runtimeArgs": ["--inspect", "--sourcemap"],
-      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite",
-      "type": "node",
-      "windows": {
-        "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite.cmd"
-      }
-    },
-    {
-      "name": "Debug Renderer Process",
-      "port": 9222,
-      "presentation": {
-        "hidden": true
-      },
-      "request": "attach",
-      "timeout": 3000000,
+      "name": "Launch Chrome Extension",
       "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/src/renderer"
     }
   ],

@@ -1,6 +1,5 @@
 /// <reference types="vite/client" />
 
-import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk'
 import type KeyvStorage from '@kangfenmao/keyv-storage'
 import type { HookAPI } from 'antd/es/modal/useModal'
 import type { NavigateFunction } from 'react-router-dom'
@@ -26,6 +25,26 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+// Permissive type for window.api - allows any property access
+interface WindowApi {
+  [key: string]: any
+}
+
+interface ElectronApi {
+  process: {
+    platform: string
+    versions: { chrome: string }
+  }
+  ipcRenderer: {
+    on: (channel: string, callback: (...args: any[]) => void) => () => void
+    once: (channel: string, callback: (...args: any[]) => void) => () => void
+    removeListener: () => void
+    removeAllListeners: () => void
+    send: (channel: string, ...args: any[]) => void
+    invoke: (channel: string, ...args: any[]) => Promise<any>
+  }
+}
+
 declare global {
   interface Window {
     root: HTMLElement
@@ -33,6 +52,8 @@ declare global {
     keyv: KeyvStorage
     store: any
     navigate: NavigateFunction
+    api: WindowApi
+    electron: ElectronApi
     toast: {
       getToastQueue: typeof getToastQueue
       addToast: typeof addToast
@@ -51,7 +72,7 @@ declare global {
         behavior: 'allow' | 'deny'
         updatedInput?: Record<string, unknown>
         message?: string
-        updatedPermissions?: PermissionUpdate[]
+        updatedPermissions?: any[]
       }) => Promise<{ success: boolean }>
     }
   }

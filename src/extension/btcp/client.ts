@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 /**
  * Minimal BTCP Client for Chrome Extension
  * Vendorized from btcp-browser-agent to avoid build issues
@@ -6,6 +7,7 @@
 interface CommandBase {
   id: string
   action: string
+  [key: string]: any
 }
 
 interface ExtensionMessage {

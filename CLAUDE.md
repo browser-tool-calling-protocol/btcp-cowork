@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cherry Studio is a cross-platform desktop AI assistant client built with Electron, supporting multiple LLM providers (OpenAI, Anthropic, Google, Ollama, etc.). Uses React for the UI with Redux state management.
+Cherry Studio is a Chrome extension AI assistant client supporting multiple LLM providers (OpenAI, Anthropic, Google, Ollama, etc.). Uses React for the UI with Redux state management.
 
 ## Requirements
 
@@ -15,7 +15,6 @@ Cherry Studio is a cross-platform desktop AI assistant client built with Electro
 
 - **Keep it clear**: Write code that is easy to read, maintain, and explain.
 - **Match the house style**: Reuse existing patterns, naming, and conventions.
-- **Log centrally**: Route all logging through `loggerService` with the right context—no `console.log`.
 - **Lint, test, and format before completion**: Coding tasks are only complete after running `pnpm build:check` (runs lint + test + typecheck).
 - **Write conventional commits**: Commit small, focused changes using Conventional Commit messages (e.g., `feat:`, `fix:`, `refactor:`, `docs:`).
 
@@ -25,16 +24,14 @@ Cherry Studio is a cross-platform desktop AI assistant client built with Electro
 pnpm install          # Install dependencies
 cp .env.example .env  # Setup environment (first time only)
 pnpm dev              # Run in development mode with hot reload
-pnpm debug            # Debug mode, attach via chrome://inspect
+pnpm build            # Build extension for production
 pnpm build:check      # REQUIRED before commits (lint + test + typecheck)
 pnpm test             # Run all Vitest tests
-pnpm test:main        # Test main process only
 pnpm test:renderer    # Test renderer process only
 pnpm test:aicore      # Test aiCore package only
 pnpm lint             # Fix linting + typecheck
 pnpm format           # Auto-format with Biome
 pnpm i18n:sync        # Fix i18n sort issues
-pnpm build:win/mac/linux  # Build for specific platform
 ```
 
 ## Pull Request Workflow (CRITICAL)
@@ -52,21 +49,10 @@ When creating a Pull Request:
 
 ## Project Architecture
 
-### Electron Structure
+### Chrome Extension Structure
 
-- **Main Process** (`src/main/`): Node.js backend with services
-- **Renderer Process** (`src/renderer/`): React 19 UI with Redux Toolkit
-- **Preload Scripts** (`src/preload/`): Secure IPC bridge between processes
-
-### Key Services (src/main/services/)
-
-- `MCPService.ts` - Model Context Protocol server management
-- `KnowledgeService.ts` - RAG/knowledge base using embedjs
-- `WindowService.ts` - Electron window management
-- `FileStorage.ts` - Local file persistence
-- `BackupManager.ts` - WebDAV/S3 backup
-- `SelectionService.ts` - System-wide text selection handling
-- `CodeToolsService.ts` - Code execution tools
+- **Extension** (`src/extension/`): Chrome extension specific code (background scripts, content scripts, shims)
+- **Renderer** (`src/renderer/`): React 19 UI with Redux Toolkit
 
 ### AI Core (packages/aiCore/)
 
@@ -85,17 +71,8 @@ Standalone package providing a middleware pipeline for multiple AI providers. Us
 
 - `aiCore` - AI provider middleware (publishable as `@cherrystudio/ai-core`)
 - `shared` - Shared types and utilities
-- `mcp-trace` - MCP tracing tools
 - `ai-sdk-provider` - Custom AI SDK providers
-
-### Logging
-
-```typescript
-import { loggerService } from "@logger";
-const logger = loggerService.withContext("moduleName");
-// Renderer: loggerService.initWindowSource('windowName') first
-logger.info("message", CONTEXT);
-```
+- `extension-table-plus` - Table extension
 
 ### Internationalization
 
