@@ -2,17 +2,7 @@ import { loggerService } from '@logger'
 import { QuickPanelReservedSymbol } from '@renderer/components/QuickPanel'
 import SlashCommandService from '@renderer/services/SlashCommandService'
 import type { SlashCommand } from '@renderer/types/slashCommand'
-import {
-  Code,
-  FileText,
-  HelpCircle,
-  Languages,
-  type LucideIcon,
-  Search,
-  Sparkles,
-  Terminal,
-  Wrench
-} from 'lucide-react'
+import { type LucideIcon, Terminal, Wrench } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 
 import {
@@ -31,13 +21,7 @@ const logger = loggerService.withContext('SlashCommandsTool')
  * Map icon names to Lucide components
  */
 const ICON_MAP: Record<string, LucideIcon> = {
-  Languages,
-  FileText,
-  HelpCircle,
-  Code,
-  Search,
   Wrench,
-  Sparkles,
   Terminal
 }
 
