@@ -1483,7 +1483,8 @@ const migrateConfig = {
         }
       })
       state.assistants.assistants.forEach((assistant) => {
-        assistant.knowledgeRecognition = 'off'
+        // knowledgeRecognition removed - migration skipped
+        ;(assistant as any).knowledgeRecognition = 'off'
       })
       return state
     } catch (error) {
@@ -2068,16 +2069,12 @@ const migrateConfig = {
   },
   '126': (state: RootState) => {
     try {
-      state.knowledge.bases.forEach((base) => {
-        // @ts-ignore eslint-disable-next-line
+      // Knowledge feature removed - migration skipped
+      ;(state as any).knowledge?.bases?.forEach((base: any) => {
         if (base.preprocessOrOcrProvider) {
-          // @ts-ignore eslint-disable-next-line
           base.preprocessProvider = base.preprocessOrOcrProvider
-          // @ts-ignore eslint-disable-next-line
           delete base.preprocessOrOcrProvider
-          // @ts-ignore eslint-disable-next-line
           if (base.preprocessProvider.type === 'ocr') {
-            // @ts-ignore eslint-disable-next-line
             delete base.preprocessProvider
           }
         }
@@ -2453,9 +2450,10 @@ const migrateConfig = {
   },
   '147': (state: RootState) => {
     try {
-      state.knowledge.bases.forEach((base) => {
-        if ((base as any).framework) {
-          delete (base as any).framework
+      // Knowledge feature removed - migration skipped
+      ;(state as any).knowledge?.bases?.forEach((base: any) => {
+        if (base.framework) {
+          delete base.framework
         }
       })
       return state
@@ -2475,9 +2473,10 @@ const migrateConfig = {
   },
   '149': (state: RootState) => {
     try {
-      state.knowledge.bases.forEach((base) => {
-        if ((base as any).framework) {
-          delete (base as any).framework
+      // Knowledge feature removed - migration skipped
+      ;(state as any).knowledge?.bases?.forEach((base: any) => {
+        if (base.framework) {
+          delete base.framework
         }
       })
       return state
@@ -2544,9 +2543,10 @@ const migrateConfig = {
   },
   '155': (state: RootState) => {
     try {
-      state.knowledge.bases.forEach((base) => {
-        if ((base as any).framework) {
-          delete (base as any).framework
+      // Knowledge feature removed - migration skipped
+      ;(state as any).knowledge?.bases?.forEach((base: any) => {
+        if (base.framework) {
+          delete base.framework
         }
       })
       return state

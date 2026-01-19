@@ -15,7 +15,6 @@ import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
 import {
   Code,
-  FileSearch,
   Folder,
   Languages,
   LayoutGrid,
@@ -26,6 +25,7 @@ import {
   Palette,
   Settings,
   Sparkle,
+  Sparkles,
   Sun
 } from 'lucide-react'
 import type { FC } from 'react'
@@ -133,7 +133,7 @@ const MainMenus: FC = () => {
     paintings: <Palette size={18} className="icon" />,
     translate: <Languages size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
-    knowledge: <FileSearch size={18} className="icon" />,
+    skills: <Sparkles size={18} className="icon" />,
     files: <Folder size={18} className="icon" />,
     notes: <NotepadText size={18} className="icon" />,
     code_tools: <Code size={18} className="icon" />
@@ -145,7 +145,7 @@ const MainMenus: FC = () => {
     paintings: `/paintings/${defaultPaintingProvider}`,
     translate: '/translate',
     minapp: '/apps',
-    knowledge: '/knowledge',
+    skills: '/skills',
     files: '/files',
     code_tools: '/code',
     notes: '/notes'

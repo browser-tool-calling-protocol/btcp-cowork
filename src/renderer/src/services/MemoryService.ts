@@ -4,16 +4,15 @@ import store from '@renderer/store'
 import { selectMemoryConfig } from '@renderer/store/memory'
 import type {
   AddMemoryOptions,
+  ApiClient,
   AssistantMessage,
-  KnowledgeBase,
   MemoryHistoryItem,
   MemoryListOptions,
   MemorySearchOptions,
   MemorySearchResult
 } from '@types'
-import { now } from 'lodash'
 
-import { getKnowledgeBaseParams } from './KnowledgeService'
+import { getProviderByModel } from './AssistantService'
 
 const logger = loggerService.withContext('MemoryService')
 
@@ -208,19 +207,34 @@ class MemoryService {
       }
 
       const memoryConfig = selectMemoryConfig(store.getState())
-      const embeddingModel = memoryConfig.embeddingModel
+      const embeddingModelConfig = memoryConfig.embeddingModel
 
-      // Get knowledge base params for memory
-      const { embedApiClient: embeddingApiClient } = getKnowledgeBaseParams({
-        id: 'memory',
-        name: 'Memory',
-        model: getModel(embeddingModel?.id, embeddingModel?.provider),
-        dimensions: memoryConfig.embeddingDimensions,
-        items: [],
-        created_at: now(),
-        updated_at: now(),
-        version: 1
-      } as KnowledgeBase)
+      if (!embeddingModelConfig) {
+        logger.warn('No embedding model configured for memory')
+        return window.api.memory.setConfig(memoryConfig)
+      }
+
+      // Get the full model and provider info
+      const model = getModel(embeddingModelConfig.id, embeddingModelConfig.provider)
+      if (!model) {
+        logger.warn('Embedding model not found')
+        return window.api.memory.setConfig(memoryConfig)
+      }
+
+      const provider = getProviderByModel(model)
+      if (!provider) {
+        logger.warn('Provider not found for embedding model')
+        return window.api.memory.setConfig(memoryConfig)
+      }
+
+      // Create the embedding API client
+      const embeddingApiClient: ApiClient = {
+        model: model.id,
+        provider: provider.id,
+        apiKey: provider.apiKey,
+        apiVersion: provider.apiVersion,
+        baseURL: provider.apiHost
+      }
 
       return window.api.memory.setConfig({
         ...memoryConfig,

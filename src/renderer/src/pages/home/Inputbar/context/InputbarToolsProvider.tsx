@@ -1,6 +1,7 @@
 import type { QuickPanelListItem, QuickPanelReservedSymbol } from '@renderer/components/QuickPanel'
-import type { FileType, KnowledgeBase, Model } from '@renderer/types'
+import type { FileType, Model } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
+import type { Skill } from '@renderer/types/skill'
 import React, { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type QuickPanelTriggerHandler = (payload?: unknown) => void
@@ -15,7 +16,7 @@ export interface InputbarToolsState {
   /** Models mentioned in the input */
   mentionedModels: Model[]
   /** Selected knowledge base items */
-  selectedKnowledgeBases: KnowledgeBase[]
+  selectedSkills: Skill[]
   /** Whether the inputbar is expanded */
   isExpanded: boolean
 
@@ -77,7 +78,7 @@ export interface InputbarToolsDispatch {
   /** State setters */
   setFiles: React.Dispatch<React.SetStateAction<FileType[]>>
   setMentionedModels: React.Dispatch<React.SetStateAction<Model[]>>
-  setSelectedKnowledgeBases: React.Dispatch<React.SetStateAction<KnowledgeBase[]>>
+  setSelectedSkills: React.Dispatch<React.SetStateAction<Skill[]>>
   setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>
 
   /** Parent component actions */
@@ -145,7 +146,7 @@ interface InputbarToolsProviderProps {
   initialState?: Partial<{
     files: FileType[]
     mentionedModels: Model[]
-    selectedKnowledgeBases: KnowledgeBase[]
+    selectedSkills: Skill[]
     isExpanded: boolean
     couldAddImageFile: boolean
     extensions: string[]
@@ -164,9 +165,7 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
   // Core state
   const [files, setFiles] = useState<FileType[]>(initialState?.files || [])
   const [mentionedModels, setMentionedModels] = useState<Model[]>(initialState?.mentionedModels || [])
-  const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<KnowledgeBase[]>(
-    initialState?.selectedKnowledgeBases || []
-  )
+  const [selectedSkills, setSelectedSkills] = useState<Skill[]>(initialState?.selectedSkills || [])
   const [isExpanded, setIsExpanded] = useState(initialState?.isExpanded || false)
 
   // Derived state (internal management)
@@ -247,21 +246,13 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
     () => ({
       files,
       mentionedModels,
-      selectedKnowledgeBases,
+      selectedSkills,
       isExpanded,
       couldAddImageFile,
       couldMentionNotVisionModel,
       extensions
     }),
-    [
-      files,
-      mentionedModels,
-      selectedKnowledgeBases,
-      isExpanded,
-      couldAddImageFile,
-      couldMentionNotVisionModel,
-      extensions
-    ]
+    [files, mentionedModels, selectedSkills, isExpanded, couldAddImageFile, couldMentionNotVisionModel, extensions]
   )
 
   // Tools Registry API (stable references for tool buttons)
@@ -288,7 +279,7 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
       // State setters (React guarantees stable references)
       setFiles,
       setMentionedModels,
-      setSelectedKnowledgeBases,
+      setSelectedSkills,
       setIsExpanded,
 
       // Stable actions

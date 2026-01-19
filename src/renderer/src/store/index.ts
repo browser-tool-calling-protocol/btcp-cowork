@@ -27,7 +27,6 @@ import browserUse from './browserUse'
 import codeTools from './codeTools'
 import copilot from './copilot'
 import inputToolsReducer from './inputTools'
-import knowledge from './knowledge'
 import llm from './llm'
 import mcp from './mcp'
 import memory from './memory'
@@ -45,6 +44,7 @@ import runtime from './runtime'
 import selectionStore from './selectionStore'
 import settings from './settings'
 import shortcuts from './shortcuts'
+import skill from './skill'
 import tabs from './tabs'
 import toolPermissions from './toolPermissions'
 import translate from './translate'
@@ -63,7 +63,7 @@ const rootReducer = combineReducers({
   settings,
   runtime,
   shortcuts,
-  knowledge,
+  skill,
   minapps,
   websearch,
   mcp,
