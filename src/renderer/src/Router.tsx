@@ -12,13 +12,13 @@ import { useNavbarPosition } from './hooks/useSettings'
 import CodeToolsPage from './pages/code/CodeToolsPage'
 import FilesPage from './pages/files/FilesPage'
 import HomePage from './pages/home/HomePage'
-import KnowledgePage from './pages/knowledge/KnowledgePage'
 import LaunchpadPage from './pages/launchpad/LaunchpadPage'
 import MinAppPage from './pages/minapps/MinAppPage'
 import MinAppsPage from './pages/minapps/MinAppsPage'
 import NotesPage from './pages/notes/NotesPage'
 import PaintingsRoutePage from './pages/paintings/PaintingsRoutePage'
 import SettingsPage from './pages/settings/SettingsPage'
+import SkillsPage from './pages/skills/SkillsPage'
 import AssistantPresetsPage from './pages/store/assistants/presets/AssistantPresetsPage'
 import TranslatePage from './pages/translate/TranslatePage'
 
@@ -35,7 +35,7 @@ const Router: FC = () => {
           <Route path="/translate" element={<TranslatePage />} />
           <Route path="/files" element={<FilesPage />} />
           <Route path="/notes" element={<NotesPage />} />
-          <Route path="/knowledge" element={<KnowledgePage />} />
+          <Route path="/skills" element={<SkillsPage />} />
           <Route path="/apps/:appId" element={<MinAppPage />} />
           <Route path="/apps" element={<MinAppsPage />} />
           <Route path="/code" element={<CodeToolsPage />} />

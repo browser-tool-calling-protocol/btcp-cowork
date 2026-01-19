@@ -2,7 +2,6 @@
 import { loggerService } from '@logger'
 import { CopyIcon, DeleteIcon, EditIcon, RefreshIcon } from '@renderer/components/Icons'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
-import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
 import { SelectModelPopup } from '@renderer/components/Popups/SelectModelPopup'
 import { isEmbeddingModel, isRerankModel, isVisionModel } from '@renderer/config/models'
 import type { MessageMenubarButtonId, MessageMenubarScope } from '@renderer/config/registry/messageMenubar'
@@ -304,13 +303,6 @@ const MessageMenubar: FC<Props> = (props) => {
             onClick: () => {
               const fileName = dayjs(message.createdAt).format('YYYYMMDDHHmm') + '.md'
               window.api.file.save(fileName, mainTextContent)
-            }
-          },
-          {
-            label: t('chat.save.knowledge.title'),
-            key: 'knowledge',
-            onClick: () => {
-              SaveToKnowledgePopup.showForMessage(message)
             }
           }
         ]

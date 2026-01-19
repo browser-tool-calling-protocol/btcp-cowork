@@ -15,7 +15,8 @@ describe('websearch', () => {
       id,
       sourceUrl,
       content,
-      type: 'url'
+      type: 'url',
+      score: 0
     })
 
     it('should consolidate single reference to matching raw result', () => {
@@ -154,7 +155,8 @@ describe('websearch', () => {
       id,
       sourceUrl,
       content,
-      type: 'url'
+      type: 'url',
+      score: 0
     })
 
     it('should select references using round robin strategy', () => {

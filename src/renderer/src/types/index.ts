@@ -12,7 +12,6 @@ import * as z from 'zod'
 import type { StreamTextParams } from './aiCoreTypes'
 import type { Chunk } from './chunk'
 import type { FileMetadata } from './file'
-import type { KnowledgeBase, KnowledgeReference } from './knowledge'
 import type { MCPConfigSample, MCPServerInstallSource, McpServerType } from './mcp'
 import type { Message } from './newMessage'
 import type { BaseTool, MCPTool } from './tool'
@@ -20,12 +19,12 @@ import type { BaseTool, MCPTool } from './tool'
 export * from './agent'
 export * from './apiModels'
 export * from './apiServer'
-export * from './knowledge'
 export * from './mcp'
 export * from './notification'
 export * from './ocr'
 export * from './plugin'
 export * from './provider'
+export * from './skill'
 
 export type McpMode = 'disabled' | 'auto' | 'manual'
 
@@ -33,7 +32,7 @@ export type Assistant = {
   id: string
   name: string
   prompt: string
-  knowledge_bases?: KnowledgeBase[]
+  skills?: string[] // Array of skill IDs
   topics: Topic[]
   type: string
   emoji?: string
@@ -52,7 +51,6 @@ export type Assistant = {
   /** MCP mode: 'disabled' (no MCP), 'auto' (hub server only), 'manual' (user selects servers) */
   mcpMode?: McpMode
   mcpServers?: MCPServer[]
-  knowledgeRecognition?: 'off' | 'on'
   regularPhrases?: QuickPhrase[] // Added for regular phrase
   tags?: string[] // 助手标签
   enableMemory?: boolean
@@ -687,6 +685,59 @@ export enum WebSearchSource {
 export type WebSearchResponse = {
   results?: WebSearchResults
   source: WebSearchSource
+}
+
+/**
+ * Preprocess provider types for document processing services (OCR, PDF parsing, etc.)
+ */
+export const PreprocessProviderIds = {
+  doc2x: 'doc2x',
+  mistral: 'mistral',
+  mineru: 'mineru',
+  'open-mineru': 'open-mineru'
+} as const
+
+export type PreprocessProviderId = keyof typeof PreprocessProviderIds
+
+export const isPreprocessProviderId = (id: string): id is PreprocessProviderId => {
+  return Object.hasOwn(PreprocessProviderIds, id)
+}
+
+export type PreprocessProvider = {
+  id: PreprocessProviderId
+  name: string
+  apiKey: string
+  apiHost: string
+  model?: string
+  options?: Record<string, any>
+  quota?: number
+}
+
+/**
+ * Knowledge reference for search results and citations
+ * Used by web search RAG and citation display
+ */
+export type KnowledgeReference = {
+  id: number
+  content: string
+  sourceUrl: string
+  type: 'file' | 'url' | 'note' | 'sitemap' | 'directory' | 'memory' | 'video'
+  score: number
+  file?: FileMetadata
+  metadata?: Record<string, any>
+}
+
+/**
+ * @deprecated Legacy type kept for database schema compatibility
+ * Knowledge notes were used for storing notes attached to knowledge bases
+ */
+export type KnowledgeNoteItem = {
+  id: string
+  baseId: string
+  type: string
+  content: string
+  created_at: number
+  updated_at: number
 }
 
 export type WebSearchPhase = 'default' | 'fetch_complete' | 'rag' | 'rag_complete' | 'rag_failed' | 'cutoff'

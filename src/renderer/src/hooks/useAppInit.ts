@@ -4,7 +4,6 @@ import { isLocalAi } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
-import KnowledgeQueue from '@renderer/queue/KnowledgeQueue'
 import MemoryService from '@renderer/services/MemoryService'
 import { useAppDispatch } from '@renderer/store'
 import { useAppSelector } from '@renderer/store'
@@ -153,10 +152,6 @@ export function useAppInit() {
       dispatch(setResourcesPath(info.resourcesPath))
     })
   }, [dispatch])
-
-  useEffect(() => {
-    KnowledgeQueue.checkAllBases()
-  }, [])
 
   useEffect(() => {
     let customCssElement = document.getElementById('user-defined-custom-css') as HTMLStyleElement

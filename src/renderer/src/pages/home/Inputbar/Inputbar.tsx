@@ -14,6 +14,7 @@ import { useInputText } from '@renderer/hooks/useInputText'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
+import { useSkills } from '@renderer/hooks/useSkill'
 import { useTextareaResize } from '@renderer/hooks/useTextareaResize'
 import { useTimer } from '@renderer/hooks/useTimer'
 import {
@@ -32,8 +33,9 @@ import { estimateTextTokens as estimateTxtTokens, estimateUserPromptUsage } from
 import WebSearchService from '@renderer/services/WebSearchService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { sendMessage as _sendMessage } from '@renderer/store/thunk/messageThunk'
-import { type Assistant, type FileType, type KnowledgeBase, type Model, type Topic, TopicType } from '@renderer/types'
+import { type Assistant, type FileType, type Model, type Topic, TopicType } from '@renderer/types'
 import type { MessageInputBaseParams } from '@renderer/types/newMessage'
+import type { Skill } from '@renderer/types/skill'
 import { delay } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
@@ -44,9 +46,9 @@ import { useTranslation } from 'react-i18next'
 
 import { InputbarCore } from './components/InputbarCore'
 import InputbarTools from './InputbarTools'
-import KnowledgeBaseInput from './KnowledgeBaseInput'
 import MentionModelsInput from './MentionModelsInput'
 import { getInputbarConfig } from './registry'
+import SkillInput from './SkillInput'
 import TokenCount from './TokenCount'
 
 const logger = loggerService.withContext('Inputbar')
@@ -97,12 +99,12 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
     () => ({
       files: [] as FileType[],
       mentionedModels: initialMentionedModels,
-      selectedKnowledgeBases: initialAssistant.knowledge_bases ?? [],
+      selectedSkills: [] as Skill[],
       isExpanded: false,
       couldAddImageFile: false,
       extensions: [] as string[]
     }),
-    [initialMentionedModels, initialAssistant.knowledge_bases]
+    [initialMentionedModels]
   )
 
   return (
@@ -130,8 +132,8 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const scope = topic.type ?? TopicType.Chat
   const config = getInputbarConfig(scope)
 
-  const { files, mentionedModels, selectedKnowledgeBases } = useInputbarToolsState()
-  const { setFiles, setMentionedModels, setSelectedKnowledgeBases } = useInputbarToolsDispatch()
+  const { files, mentionedModels, selectedSkills } = useInputbarToolsState()
+  const { setFiles, setMentionedModels, setSelectedSkills } = useInputbarToolsDispatch()
   const { setCouldAddImageFile } = useInputbarToolsInternalDispatch()
 
   const { text, setText } = useInputText({
@@ -152,6 +154,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   })
 
   const { assistant, addTopic, model, setModel, updateAssistant } = useAssistant(initialAssistant.id)
+  const { skills: allSkills } = useSkills()
   const { sendMessageShortcut, showInputEstimatedTokens, enableQuickPanelTriggers } = useSettings()
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
   const [contextCount, setContextCount] = useState({ current: 0, max: 0 })
@@ -322,13 +325,13 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     [mentionedModels, setMentionedModels]
   )
 
-  const handleRemoveKnowledgeBase = useCallback(
-    (knowledgeBase: KnowledgeBase) => {
-      const nextKnowledgeBases = assistant.knowledge_bases?.filter((kb) => kb.id !== knowledgeBase.id)
-      updateAssistant({ ...assistant, knowledge_bases: nextKnowledgeBases })
-      setSelectedKnowledgeBases(nextKnowledgeBases ?? [])
+  const handleRemoveSkill = useCallback(
+    (skill: Skill) => {
+      const nextSkills = assistant.skills?.filter((id) => id !== skill.id) ?? []
+      updateAssistant({ ...assistant, skills: nextSkills })
+      setSelectedSkills((prev) => prev.filter((s) => s.id !== skill.id))
     },
-    [assistant, setSelectedKnowledgeBases, updateAssistant]
+    [assistant, setSelectedSkills, updateAssistant]
   )
 
   const handleToggleExpanded = useCallback(
@@ -400,17 +403,21 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   }, [
     topic.id,
     assistant.mcpServers,
-    assistant.knowledge_bases,
+    assistant.skills,
     assistant.enableWebSearch,
     assistant.webSearchProviderId,
     mentionedModels,
     focusTextarea
   ])
 
-  // TODO: Just use assistant.knowledge_bases as selectedKnowledgeBases. context state is overdesigned.
+  // Update selected skills when assistant's skill IDs change
   useEffect(() => {
-    setSelectedKnowledgeBases(assistant.knowledge_bases ?? [])
-  }, [assistant.knowledge_bases, setSelectedKnowledgeBases])
+    const skillIds = assistant.skills ?? []
+    const selectedSkillObjects = skillIds
+      .map((id) => allSkills.find((s) => s.id === id))
+      .filter((s): s is Skill => s !== undefined)
+    setSelectedSkills(selectedSkillObjects)
+  }, [assistant.skills, allSkills, setSelectedSkills])
 
   useEffect(() => {
     // Disable web search if model doesn't support it
@@ -443,12 +450,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   // topContent: 所有顶部预览内容
   const topContent = (
     <>
-      {selectedKnowledgeBases.length > 0 && (
-        <KnowledgeBaseInput
-          selectedKnowledgeBases={selectedKnowledgeBases}
-          onRemoveKnowledgeBase={handleRemoveKnowledgeBase}
-        />
-      )}
+      {selectedSkills.length > 0 && <SkillInput selectedSkills={selectedSkills} onRemoveSkill={handleRemoveSkill} />}
 
       {mentionedModels.length > 0 && (
         <MentionModelsInput selectedModels={mentionedModels} onRemoveModel={handleRemoveModel} />
