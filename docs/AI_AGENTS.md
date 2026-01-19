@@ -6,6 +6,73 @@ This document describes how custom AI agents work in Cherry Studio, covering the
 
 Cherry Studio supports custom AI agents that provide autonomous assistant capabilities. Currently, the system supports `claude-code` type agents, which are designed to handle complex tasks using Claude's capabilities with tool calling.
 
+## Chrome Extension Environment
+
+> **Important**: This project is now a Chrome extension only (Electron backend removed in PR #24).
+
+### Current Limitations
+
+Agent CRUD operations currently **require a backend API server** that is not included in the Chrome extension:
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Agent Create | ❌ Not Available | Requires API server |
+| Agent Read | ❌ Not Available | Requires API server |
+| Agent Update | ❌ Not Available | Requires API server |
+| Agent Delete | ❌ Not Available | Requires API server |
+| Agent Sessions | ❌ Not Available | Requires API server |
+| Skills (Redux) | ✅ Available | Persisted via redux-persist |
+| Assistants | ✅ Available | Persisted via redux-persist |
+| Chat Messages | ✅ Available | Persisted via IndexedDB (Dexie) |
+
+### Why Agents Don't Work Offline
+
+1. **API Server Removed**: The `src/main` backend was removed, leaving only the Chrome extension
+2. **Extension Shim**: `src/extension/shim.ts` returns `{ running: false }` for `apiServer.getStatus()`
+3. **Hooks Disabled**: `useAgents` hook returns empty array when `apiServerRunning` is false
+4. **No Local Storage**: No IndexedDB or chrome.storage implementation for agents
+
+### Architecture Diagram (Current State)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Chrome Extension                          │
+├─────────────────────────────────────────────────────────────┤
+│  Renderer (React)                                           │
+│  ├── Assistants ✅ → Redux + redux-persist → localStorage   │
+│  ├── Skills ✅     → Redux + redux-persist → localStorage   │
+│  ├── Messages ✅   → Dexie → IndexedDB                      │
+│  └── Agents ❌     → AgentApiClient → [No Backend!]         │
+├─────────────────────────────────────────────────────────────┤
+│  Extension Shim (src/extension/shim.ts)                     │
+│  └── apiServer.getStatus() → { running: false }             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Proposed Solution: Local Agent Storage
+
+To enable agent CRUD without a backend, implement local storage similar to how Skills work:
+
+```typescript
+// Proposed: src/renderer/src/store/agents.ts
+interface AgentsState {
+  agents: AgentEntity[]
+}
+
+// With redux-persist, agents would be saved to localStorage
+```
+
+Or use IndexedDB via Dexie:
+
+```typescript
+// Proposed: Add to src/renderer/src/databases/index.ts
+db.version(11).stores({
+  // ... existing tables
+  agents: '&id, type, name, created_at, updated_at',
+  agent_sessions: '&id, agent_id, created_at'
+})
+```
+
 ### Key Concepts
 
 - **Agent**: A reusable configuration that defines an AI assistant's behavior, tools, and permissions
