@@ -11,8 +11,9 @@ import type { AdaptedApiModel, ApiModel, ApiModelsFilter, Model, ModelType } fro
 import { objectEntries } from '@renderer/types'
 import { classNames, filterModelsByKeywords } from '@renderer/utils'
 import { apiModelAdapter, getModelTags } from '@renderer/utils/model'
-import { Avatar, Divider, Empty, Modal } from 'antd'
+import { Avatar, Button, Divider, Empty, Modal } from 'antd'
 import { first, groupBy, sortBy } from 'lodash'
+import { Settings2 } from 'lucide-react'
 import React, {
   startTransition,
   useCallback,
@@ -23,6 +24,7 @@ import React, {
   useRef,
   useState
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import { useModelTagFilter } from './filters'
@@ -52,6 +54,7 @@ export type FilterType = Exclude<ModelType, 'text'> | 'free'
 // const logger = loggerService.withContext('SelectModelPopup')
 
 const PopupContainer: React.FC<Props> = ({ model, apiFilter, modelFilter, showTagFilter = true, resolve }) => {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(true)
   const listRef = useRef<DynamicVirtualListRef>(null)
   const [_searchText, setSearchText] = useState('')
@@ -372,6 +375,19 @@ const PopupContainer: React.FC<Props> = ({ model, apiFilter, modelFilter, showTa
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
         </EmptyState>
       )}
+      <Divider style={{ margin: '8px 0 0 0', borderBlockStartWidth: 0.5 }} />
+      <FooterContainer>
+        <Button
+          type="text"
+          icon={<Settings2 size={14} />}
+          onClick={() => {
+            setOpen(false)
+            resolve(undefined)
+            window.navigate('/settings/model')
+          }}>
+          {t('navigate.model_settings')}
+        </Button>
+      </FooterContainer>
     </Modal>
   )
 }
@@ -489,6 +505,12 @@ const EmptyState = styled.div`
   justify-content: center;
   align-items: center;
   height: 200px;
+`
+
+const FooterContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px 0;
 `
 
 const TopViewKey = 'SelectModelPopup'
