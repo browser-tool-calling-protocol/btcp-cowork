@@ -19,7 +19,6 @@ Cherry Studio is a cross-platform AI assistant client with both a Chrome extensi
 - **Match the house style**: Reuse existing patterns, naming, and conventions.
 - **Log centrally**: Route all logging through `loggerService` with the right context—no `console.log`.
 - **Lint, test, and format before completion**: Coding tasks are only complete after running `pnpm build:check` (runs lint + test + typecheck).
-- **Write conventional commits**: Commit small, focused changes using Conventional Commit messages (e.g., `feat:`, `fix:`, `refactor:`, `docs:`).
 
 ## Development Commands
 
@@ -28,7 +27,7 @@ pnpm install          # Install dependencies
 cp .env.example .env  # Setup environment (first time only)
 pnpm dev              # Run in development mode with hot reload
 pnpm debug            # Debug mode, attach via chrome://inspect
-pnpm build:check      # REQUIRED before commits (lint + test + typecheck)
+pnpm build:check      # Run lint + test + typecheck
 pnpm test             # Run all Vitest tests
 pnpm test:main        # Test main process only
 pnpm test:renderer    # Test renderer process only
@@ -38,19 +37,6 @@ pnpm format           # Auto-format with Biome
 pnpm i18n:sync        # Fix i18n sort issues
 pnpm build:win/mac/linux  # Build for specific platform
 ```
-
-## Pull Request Workflow (CRITICAL)
-
-When creating a Pull Request:
-1. **Read the PR template first**: Always read `.github/pull_request_template.md` before creating the PR
-2. **Follow ALL template sections**: Include every section (even if N/A)
-3. **Current restriction**: PRs changing Redux data models or IndexedDB schemas are NOT accepted until v2.0.0
-
-### Branch Naming Convention
-- Features: `feature/issue-number-brief-description`
-- Bug fixes: `fix/issue-number-brief-description`
-- Docs: `docs/brief-description`
-- Hotfixes: `hotfix/issue-number-brief-description`
 
 ## Project Architecture
 
