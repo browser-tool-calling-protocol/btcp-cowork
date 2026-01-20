@@ -41,7 +41,7 @@
     "default_title": "Cherry Studio - Click to open side panel"
   },
   "side_panel": {
-    "default_path": "src/extension/sidepanel.html"
+    "default_path": "extension/sidepanel.html"
   },
   "content_scripts": [
     {

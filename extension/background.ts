@@ -72,7 +72,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Handle "Open in Window" separately
   if (info.menuItemId === 'cherry-open-window') {
     await chrome.windows.create({
-      url: chrome.runtime.getURL('src/extension/window.html'),
+      url: chrome.runtime.getURL('extension/window.html'),
       type: 'popup',
       width: 1200,
       height: 800,
@@ -114,7 +114,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       // Programmatically set and open side panel for this tab
       await chrome.sidePanel.setOptions({
         tabId: tab.id,
-        path: 'src/extension/sidepanel.html',
+        path: 'extension/sidepanel.html',
         enabled: true
       })
       await chrome.sidePanel.open({ tabId: tab.id })
@@ -122,7 +122,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   } else if (command === 'open_window') {
     // Window access via keyboard shortcut or icon click
     await chrome.windows.create({
-      url: chrome.runtime.getURL('src/extension/window.html'),
+      url: chrome.runtime.getURL('extension/window.html'),
       type: 'popup',
       width: 1200,
       height: 800,
