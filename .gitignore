@@ -75,3 +75,4 @@ YOUR_MEMORY_FILE_PATH
 .sessions/
 
 dist-extension/
+dist-web/
