@@ -1,8 +1,7 @@
 import { loggerService } from '@logger'
 import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { useAppDispatch } from '@renderer/store'
-import { selectSessionsByAgentId } from '@renderer/store/agents'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setActiveSessionIdAction, setActiveTopicOrSessionAction } from '@renderer/store/runtime'
 import { useCallback, useEffect } from 'react'
 
@@ -21,6 +20,9 @@ export const useAgentSessionInitializer = () => {
   const { isRunning: apiServerRunning } = useApiServer()
   const { chat } = useRuntime()
   const { activeAgentId, activeSessionIdMap } = chat
+
+  // Get all sessions from Redux store for when API server is not running
+  const allSessions = useAppSelector((state) => state.agents?.sessions || [])
 
   /**
    * Initialize session for the given agent by loading its sessions
@@ -48,8 +50,7 @@ export const useAgentSessionInitializer = () => {
           sessions = response.data || []
         } else {
           // Load sessions from Redux store
-          const state = (dispatch as any).getState()
-          sessions = selectSessionsByAgentId(state, agentId)
+          sessions = allSessions.filter((s) => s.agent_id === agentId)
         }
 
         if (sessions && sessions.length > 0) {
@@ -70,7 +71,7 @@ export const useAgentSessionInitializer = () => {
         dispatch(setActiveTopicOrSessionAction('session'))
       }
     },
-    [client, dispatch, activeSessionIdMap, apiServerRunning]
+    [client, dispatch, activeSessionIdMap, apiServerRunning, allSessions]
   )
 
   /**
