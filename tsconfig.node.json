@@ -1,11 +1,11 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
-    "electron.vite.config.*",
+    "electron/vite.config.*",
     "scripts",
-    "src/main/**/*",
-    "src/main/env.d.ts",
-    "src/preload/**/*",
+    "electron/main/**/*",
+    "electron/main/env.d.ts",
+    "electron/preload/**/*",
     "src/renderer/src/services/traceApi.ts",
     "src/renderer/src/types/*",
     "packages/mcp-trace/**/*",
@@ -21,8 +21,8 @@
       "vitest/globals"
     ],
     "paths": {
-      "@logger": ["./src/main/services/LoggerService"],
-      "@main/*": ["./src/main/*"],
+      "@logger": ["./electron/main/services/LoggerService"],
+      "@main/*": ["./electron/main/*"],
       "@types": ["./src/renderer/src/types/index.ts"],
       "@shared/*": ["./packages/shared/*"],
       "@mcp-trace/*": ["./packages/mcp-trace/*"],

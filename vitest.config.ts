@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
-import electronViteConfig from './electron.vite.config'
+import electronViteConfig from './electron/vite.config'
 
 const mainConfig = (electronViteConfig as any).main
 const rendererConfig = (electronViteConfig as any).renderer
@@ -19,7 +19,7 @@ export default defineConfig({
           name: 'main',
           environment: 'node',
           setupFiles: ['tests/main.setup.ts'],
-          include: ['src/main/**/*.{test,spec}.{ts,tsx}', 'src/main/**/__tests__/**/*.{test,spec}.{ts,tsx}']
+          include: ['electron/main/**/*.{test,spec}.{ts,tsx}', 'electron/main/**/__tests__/**/*.{test,spec}.{ts,tsx}']
         }
       },
       // 渲染进程单元测试配置
