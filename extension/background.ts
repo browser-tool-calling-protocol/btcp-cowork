@@ -180,7 +180,7 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
 
     // MCP operations (HTTP/SSE only)
     case 'mcp:connect': {
-      const server = payload as { id: string; url: string; transport: 'sse' | 'http' }
+      const server = payload as { id: string; url: string; transport: 'sse' | 'http' | 'stdio' }
       if (server.transport === 'stdio') {
         return { error: 'stdio transport not supported in Chrome extension' }
       }

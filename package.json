@@ -16,10 +16,10 @@
     "build": "pnpm build:content && vite build --config vite.config.extension.ts",
     "build:content": "tsx scripts/build-content.ts",
     "build:check": "pnpm lint && pnpm test",
-    "dev:desktop": "dotenv electron-vite dev -c electron/vite.config.ts",
-    "dev:desktop:watch": "dotenv electron-vite dev -c electron/vite.config.ts -- -w",
-    "debug:desktop": "electron-vite -c electron/vite.config.ts -- --inspect --sourcemap --remote-debugging-port=9222",
-    "build:desktop": "npm run typecheck && electron-vite build -c electron/vite.config.ts",
+    "dev:desktop": "dotenv electron-vite dev",
+    "dev:desktop:watch": "dotenv electron-vite dev -- -w",
+    "debug:desktop": "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
+    "build:desktop": "npm run typecheck && electron-vite build",
     "build:desktop:unpack": "dotenv npm run build:desktop && electron-builder -c electron/builder.yml --dir",
     "build:win": "dotenv npm run build:desktop && electron-builder -c electron/builder.yml --win --x64 --arm64",
     "build:win:x64": "dotenv npm run build:desktop && electron-builder -c electron/builder.yml --win --x64",
@@ -396,7 +396,8 @@
       "libsql@0.4.7": "patches/libsql-npm-0.4.7-444e260fb1.patch",
       "@ai-sdk/openai-compatible@1.0.28": "patches/@ai-sdk__openai-compatible@1.0.28.patch",
       "@anthropic-ai/claude-agent-sdk@0.1.76": "patches/@anthropic-ai__claude-agent-sdk@0.1.76.patch",
-      "@openrouter/ai-sdk-provider": "patches/@openrouter__ai-sdk-provider.patch"
+      "@openrouter/ai-sdk-provider": "patches/@openrouter__ai-sdk-provider.patch",
+      "jaison@2.1.1": "patches/jaison@2.1.1.patch"
     },
     "onlyBuiltDependencies": [
       "@kangfenmao/keyv-storage",

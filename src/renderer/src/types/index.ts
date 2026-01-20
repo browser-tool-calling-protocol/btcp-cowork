@@ -292,6 +292,7 @@ export type Model = {
   name: string
   group: string
   owned_by?: string
+  provider_name?: string
   description?: string
   capabilities?: ModelCapability[]
   /**

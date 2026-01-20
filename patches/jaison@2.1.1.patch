@@ -1,0 +1,13 @@
+diff --git a/lib/tokenizer.ts b/lib/tokenizer.ts
+index 1234567..abcdefg 100644
+--- a/lib/tokenizer.ts
++++ b/lib/tokenizer.ts
+@@ -130,7 +130,7 @@ function parseStringToken(jsonString: string, startPos: number): StringTokenResu
+     const len = jsonString.length;
+     const quoteChar = jsonString[startPos]; // Can be " or '
+     let pos = startPos + 1; // Skip opening quote
+-    let tokenValue: string;
++    let tokenValue: string = '';
+     let foundEarlyTermination = false;
+
+     while (pos < len) {

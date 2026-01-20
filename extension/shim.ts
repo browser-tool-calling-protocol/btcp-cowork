@@ -165,10 +165,8 @@ const extensionApi: WindowApiType = {
   setTestChannel: noop,
   setTheme: async (theme) => {
     // Determine actual theme (resolve 'system' to light/dark)
-    let actualTheme = theme
-    if (theme === 'system') {
-      actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
+    const actualTheme: 'light' | 'dark' =
+      theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme
 
     // Apply theme classes
     document.documentElement.classList.remove('light', 'dark')
@@ -215,7 +213,7 @@ const extensionApi: WindowApiType = {
   },
   logToMain: async (source, level, message, data) => {
     const logFn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log
-    const sourceName = source?.name || 'unknown'
+    const sourceName = source?.module || source?.window || source?.process || 'unknown'
     logFn(`[${sourceName}]`, message, ...(data || []))
   },
   setFullScreen: noop,
@@ -232,7 +230,7 @@ const extensionApi: WindowApiType = {
     send: async (notification) => {
       if (Notification.permission === 'granted') {
         new Notification(notification.title || 'Cherry Studio', {
-          body: notification.body
+          body: notification.message
         })
       } else if (Notification.permission !== 'denied') {
         await Notification.requestPermission()
@@ -246,7 +244,7 @@ const extensionApi: WindowApiType = {
     getCpuName: noopReturn(''),
     checkGitBash: noopReturn(false),
     getGitBashPath: noopReturn(null),
-    getGitBashPathInfo: noopReturn({ isInstalled: false, path: null }),
+    getGitBashPathInfo: noopReturn({ path: null, source: null }),
     setGitBashPath: noopReturn(false)
   },
 
@@ -332,17 +330,17 @@ const extensionApi: WindowApiType = {
               return {
                 id,
                 name: file.name,
+                origin_name: file.name,
                 path: file.name,
                 size: file.size,
                 ext: file.name.split('.').pop() || '',
                 type: file.type,
-                base64: null,
                 created_at: new Date().toISOString(),
                 count: 1
               }
             })
           )
-          resolve(files)
+          resolve(files as any)
         }
         input.click()
       })
@@ -368,17 +366,18 @@ const extensionApi: WindowApiType = {
     get: async (fileId) => {
       const file = await fileStorage.get(fileId)
       if (!file) return null
+      const name = (file.metadata.name as string) || ''
       return {
         id: fileId,
-        name: (file.metadata.name as string) || '',
-        path: (file.metadata.name as string) || '',
+        name,
+        origin_name: name,
+        path: name,
         size: file.metadata.size as number,
-        ext: ((file.metadata.name as string) || '').split('.').pop() || '',
+        ext: name.split('.').pop() || '',
         type: file.metadata.type as string,
-        base64: null,
         created_at: new Date().toISOString(),
         count: 1
-      }
+      } as any
     },
     createTempFile: async () => crypto.randomUUID(),
     mkdir: noop,
@@ -475,7 +474,7 @@ const extensionApi: WindowApiType = {
     pauseFileWatcher: noop,
     resumeFileWatcher: noop,
     batchUploadMarkdown: noopReturn([]),
-    onFileChange: () => () => {},
+    onFileChange: (() => () => {}) as any,
     showInFolder: noop
   },
 
@@ -518,18 +517,6 @@ const extensionApi: WindowApiType = {
     update: noop
   },
 
-  // ===== Knowledge Base (limited in extension) =====
-  knowledgeBase: {
-    create: noopReturn({ success: true }),
-    reset: noop,
-    delete: noop,
-    add: noop,
-    remove: noop,
-    search: noopReturn([]),
-    rerank: noopReturn([]),
-    checkQuota: noopReturn({ withinQuota: true })
-  },
-
   // ===== Memory (use chrome.storage) =====
   memory: {
     add: noop,
@@ -552,10 +539,10 @@ const extensionApi: WindowApiType = {
   },
 
   fileService: {
-    upload: noopReturn({ id: '', status: 'error' }),
+    upload: noopReturn({ fileId: '', displayName: '', status: 'failed' as const }),
     list: noopReturn({ files: [] }),
     delete: noop,
-    retrieve: noopReturn({ id: '', status: 'error' })
+    retrieve: noopReturn({ fileId: '', displayName: '', status: 'failed' as const })
   },
 
   selectionMenu: {
@@ -639,7 +626,7 @@ const extensionApi: WindowApiType = {
     abortTool: noop,
     getServerVersion: noopReturn(null),
     getServerLogs: noopReturn([]),
-    onServerLog: () => () => {}
+    onServerLog: (() => () => {}) as any
   },
 
   python: {
@@ -774,36 +761,49 @@ const extensionApi: WindowApiType = {
     unmaximize: noop,
     close: async () => window.close(),
     isMaximized: noopReturn(false),
-    onMaximizedChange: () => () => {}
+    onMaximizedChange: (() => () => {}) as any
   },
 
   apiServer: {
-    getStatus: noopReturn({ running: false, port: 0 }),
-    start: noopReturn({ success: false }),
-    restart: noopReturn({ success: false }),
+    getStatus: noopReturn({
+      running: false,
+      port: 0,
+      config: { enabled: false, port: 39123, host: 'localhost', apiKey: '' }
+    }),
+    start: noopReturn({ success: false, error: 'Not supported in extension' }),
+    restart: noopReturn({ success: false, error: 'Not supported in extension' }),
     stop: noopReturn({ success: true }),
-    onReady: () => () => {}
+    onReady: (() => () => {}) as any
   },
 
   claudeCodePlugin: {
-    listAvailable: noopReturn({ success: false, data: { plugins: [] } }),
-    install: noopReturn({ success: false }),
-    uninstall: noopReturn({ success: false }),
-    listInstalled: noopReturn({ success: true, data: [] }),
-    invalidateCache: noopReturn({ success: true }),
-    readContent: noopReturn({ success: false }),
-    writeContent: noopReturn({ success: false })
+    listAvailable: noopReturn({
+      success: false,
+      error: { type: 'UNKNOWN', message: 'Not supported in extension' }
+    } as any),
+    install: noopReturn({ success: false, error: { type: 'UNKNOWN', message: 'Not supported in extension' } } as any),
+    uninstall: noopReturn({ success: false, error: { type: 'UNKNOWN', message: 'Not supported in extension' } } as any),
+    listInstalled: noopReturn({ success: true, data: undefined } as any),
+    invalidateCache: noopReturn({ success: true, data: undefined } as any),
+    readContent: noopReturn({
+      success: false,
+      error: { type: 'UNKNOWN', message: 'Not supported in extension' }
+    } as any),
+    writeContent: noopReturn({
+      success: false,
+      error: { type: 'UNKNOWN', message: 'Not supported in extension' }
+    } as any)
   },
 
   localTransfer: {
-    getState: noopReturn({ services: [], scanning: false }),
-    startScan: noopReturn({ services: [], scanning: true }),
-    stopScan: noopReturn({ services: [], scanning: false }),
-    connect: noopReturn({ success: false }),
+    getState: noopReturn({ services: [], isScanning: false, lastUpdatedAt: 0 }),
+    startScan: noopReturn({ services: [], isScanning: true, lastUpdatedAt: 0 }),
+    stopScan: noopReturn({ services: [], isScanning: false, lastUpdatedAt: 0 }),
+    connect: noopReturn({ type: 'handshake_ack', accepted: false } as any),
     disconnect: noop,
-    onServicesUpdated: () => () => {},
-    onClientEvent: () => () => {},
-    sendFile: noopReturn({ success: false }),
+    onServicesUpdated: (() => () => {}) as any,
+    onClientEvent: (() => () => {}) as any,
+    sendFile: noopReturn({ type: 'file_complete', transferId: '' } as any),
     cancelTransfer: noop
   }
 }
@@ -813,7 +813,9 @@ const extensionApi: WindowApiType = {
 
 // Initialize theme from storage or system preference
 ;(async () => {
-  const { theme, actualTheme } = await chrome.storage.local.get(['theme', 'actualTheme'])
+  const result = await chrome.storage.local.get(['theme', 'actualTheme'])
+  const theme = result.theme as string | undefined
+  const actualTheme = result.actualTheme as string | undefined
   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   const themeToApply = actualTheme || systemTheme
 

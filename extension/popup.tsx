@@ -6,7 +6,7 @@
  * Provides fast access to common features.
  */
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 // Simple styles (avoiding full Ant Design for popup performance)

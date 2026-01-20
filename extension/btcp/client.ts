@@ -7,6 +7,7 @@
 interface CommandBase {
   id: string
   action: string
+  [key: string]: unknown
 }
 
 interface ExtensionMessage {

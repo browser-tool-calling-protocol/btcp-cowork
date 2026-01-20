@@ -1,5 +1,8 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "exclude": [
+    "**/node_modules/**"
+  ],
   "include": [
     "local/src/renderer/**/*",
     "src/renderer/src/**/*",
@@ -16,6 +19,7 @@
   "compilerOptions": {
     "composite": true,
     "incremental": true,
+    "skipLibCheck": true,
     "tsBuildInfoFile": ".tsbuildinfo/tsconfig.web.tsbuildinfo",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",

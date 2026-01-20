@@ -80,8 +80,8 @@ exports.default = async function (context) {
   await downloadPackages()
 
   const excludePackages = async (packagesToExclude) => {
-    // 从项目根目录的 electron-builder.yml 读取 files 配置，避免多次覆盖配置导致出错
-    const electronBuilderConfigPath = path.join(__dirname, '..', 'electron-builder.yml')
+    // 从 electron/ 目录的 builder.yml 读取 files 配置，避免多次覆盖配置导致出错
+    const electronBuilderConfigPath = path.join(__dirname, '..', 'electron', 'builder.yml')
     const electronBuilderConfig = yaml.load(fs.readFileSync(electronBuilderConfigPath, 'utf-8'))
     let filters = electronBuilderConfig.files
 

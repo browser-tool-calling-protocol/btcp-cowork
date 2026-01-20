@@ -99,7 +99,7 @@ const AgentSessionInputbar: FC<Props> = ({ agentId, sessionId }) => {
       agentId,
       sessionId,
       slashCommands: session.slash_commands,
-      tools: session.tools,
+      tools: (session as any).tools,
       accessiblePaths: session.accessible_paths ?? []
     }
   }, [session, agentId, sessionId])

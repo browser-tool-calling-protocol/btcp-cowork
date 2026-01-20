@@ -61,7 +61,8 @@ files:
   - "!node_modules/js-tiktoken"
   - "!node_modules/@tavily/core/node_modules/js-tiktoken"
   - "!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}"
-  - "!node_modules/selection-hook/prebuilds/**/*" # we rebuild .node, don't use prebuilds
+  # Using prebuilds for selection-hook since npmRebuild is disabled
+  # - "!node_modules/selection-hook/prebuilds/**/*" # we rebuild .node, don't use prebuilds
   - "!node_modules/selection-hook/node_modules" # we don't need what in the node_modules dir
   - "!node_modules/selection-hook/src" # we don't need source files
   - "!node_modules/tesseract.js-core/{tesseract-core.js,tesseract-core.wasm,tesseract-core.wasm.js}" # we don't need source files
@@ -136,6 +137,7 @@ publish:
   url: https://releases.cherry-ai.com
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+npmRebuild: false
 beforePack: scripts/before-pack.js
 afterPack: scripts/after-pack.js
 afterSign: scripts/notarize.js

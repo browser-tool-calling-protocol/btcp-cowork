@@ -143,6 +143,8 @@ const agentsSlice = createSlice({
           allowed_tools: preset.allowed_tools,
           mcps: preset.mcps,
           configuration: {
+            permission_mode: preset.configuration?.permission_mode ?? 'default',
+            max_turns: preset.configuration?.max_turns ?? 100,
             ...preset.configuration,
             avatar: preset.emoji
           },

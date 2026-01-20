@@ -1,13 +1,14 @@
 import react from '@vitejs/plugin-react-swc'
 import { CodeInspectorPlugin } from 'code-inspector-plugin'
 import { defineConfig } from 'electron-vite'
+import { createRequire } from 'module'
 import { dirname, resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { fileURLToPath } from 'url'
 
-// assert not supported by biome
-// import pkg from './package.json' assert { type: 'json' }
-import pkg from '../package.json'
+// createRequire allows importing JSON in ESM
+const require = createRequire(import.meta.url)
+const pkg = require('./package.json')
 
 const visualizerPlugin = (type: 'renderer' | 'main') => {
   return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : []
@@ -16,18 +17,13 @@ const visualizerPlugin = (type: 'renderer' | 'main') => {
 const isDev = process.env.NODE_ENV === 'development'
 const isProd = process.env.NODE_ENV === 'production'
 
-// Root directory (parent of electron/)
+// Root directory (project root)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const rootDir = resolve(__dirname, '..')
-
-console.log('Loading electron-vite config from:', __filename)
-console.log('Root directory:', rootDir)
-console.log('Main entry:', resolve(rootDir, 'electron/main/index.ts'))
+const rootDir = __dirname
 
 export default defineConfig({
   main: {
-    entry: resolve(rootDir, 'electron/main/index.ts'),
     plugins: [...visualizerPlugin('main')],
     resolve: {
       alias: {
@@ -44,11 +40,13 @@ export default defineConfig({
         entry: resolve(rootDir, 'electron/main/index.ts')
       },
       rollupOptions: {
-        input: resolve(rootDir, 'electron/main/index.ts'),
         external: [
           'bufferutil',
           'utf-8-validate',
           'electron',
+          // Native modules with binary dependencies
+          'font-list',
+          'jsdom',
           // Native bindings for libsql
           '@libsql/darwin-arm64',
           '@libsql/darwin-x64',
@@ -58,11 +56,10 @@ export default defineConfig({
           '@libsql/linux-x64-musl',
           '@libsql/win32-x64-msvc',
           '@strongtz/win32-arm64-msvc',
-          ...Object.keys(pkg.dependencies)
+          ...Object.keys(pkg.dependencies || {})
         ],
         output: {
-          manualChunks: undefined, // 彻底禁用代码分割 - 返回 null 强制单文件打包
-          inlineDynamicImports: true // 内联所有动态导入，这是关键配置
+          inlineDynamicImports: true
         },
         onwarn(warning, warn) {
           if (warning.code === 'COMMONJS_VARIABLE_IN_ESM') return
@@ -77,7 +74,6 @@ export default defineConfig({
     }
   },
   preload: {
-    entry: resolve(rootDir, 'electron/preload/index.ts'),
     plugins: [
       react({
         tsDecorators: true
@@ -93,19 +89,15 @@ export default defineConfig({
       lib: {
         entry: resolve(rootDir, 'electron/preload/index.ts')
       },
-      rollupOptions: {
-        input: resolve(rootDir, 'electron/preload/index.ts')
-      },
       sourcemap: isDev
     }
   },
   renderer: {
     plugins: [
-      (async () => (await import('@tailwindcss/vite')).default())(),
       react({
         tsDecorators: true
       }),
-      ...(isDev ? [CodeInspectorPlugin({ bundler: 'vite' })] : []), // 只在开发环境下启用 CodeInspectorPlugin
+      ...(isDev ? [CodeInspectorPlugin({ bundler: 'vite' })] : []),
       ...visualizerPlugin('renderer')
     ],
     resolve: {
@@ -126,14 +118,11 @@ export default defineConfig({
     optimizeDeps: {
       exclude: ['pyodide'],
       esbuildOptions: {
-        target: 'esnext' // for dev
+        target: 'esnext'
       }
     },
-    worker: {
-      format: 'es'
-    },
     build: {
-      target: 'esnext', // for build
+      target: 'esnext',
       rollupOptions: {
         input: {
           index: resolve(rootDir, 'src/renderer/index.html'),

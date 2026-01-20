@@ -626,8 +626,8 @@ const migrateConfig = {
     try {
       state.assistants.defaultAssistant.type = 'assistant'
 
-      // @ts-ignore
-      state.agents.agents.forEach((agent) => {
+      // @ts-ignore - Migration: Old agent type was 'agent', new types are 'claude-code' | 'skill-creator'
+      state.agents.agents.forEach((agent: any) => {
         agent.type = 'agent'
         // @ts-ignore eslint-disable-next-line
         delete agent.group
@@ -1131,8 +1131,8 @@ const migrateConfig = {
         }
       })
 
-      // @ts-ignore
-      state.agents.agents.forEach((agent) => {
+      // @ts-ignore - Migration: Legacy agent format had emoji and name fields
+      state.agents.agents.forEach((agent: any) => {
         const leadingEmoji = getLeadingEmoji(agent.name)
         if (leadingEmoji) {
           agent.emoji = leadingEmoji
@@ -2612,8 +2612,9 @@ const migrateConfig = {
           // @ts-ignore model is not defined in Agent
           agent.model.provider = 'cherryai'
         }
-        if (agent.defaultModel?.provider === 'cherryin') {
-          agent.defaultModel.provider = 'cherryai'
+        // @ts-ignore - Migration: Legacy agent format had defaultModel field
+        if ((agent as any).defaultModel?.provider === 'cherryin') {
+          ;(agent as any).defaultModel.provider = 'cherryai'
         }
       })
       return state
