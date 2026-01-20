@@ -54,6 +54,24 @@ type Props = {
 
 const AgentSessionInputbar: FC<Props> = ({ agentId, sessionId }) => {
   const { session } = useSession(agentId, sessionId)
+
+  // Debug logging
+  useEffect(() => {
+    logger.info('[AgentSessionInputbar] Render state', {
+      agentId,
+      sessionId,
+      hasSession: !!session,
+      sessionData: session
+        ? {
+            id: session.id,
+            name: session.name,
+            model: session.model,
+            agent_id: session.agent_id
+          }
+        : null
+    })
+  }, [agentId, sessionId, session])
+
   // FIXME: 不应该使用ref将action传到context提供给tool，权宜之计
   const actionsRef = useRef({
     resizeTextArea: () => {},
@@ -64,7 +82,12 @@ const AgentSessionInputbar: FC<Props> = ({ agentId, sessionId }) => {
 
   // Create assistant stub with session data
   const assistantStub = useMemo<Assistant | null>(() => {
-    if (!session) return null
+    if (!session) {
+      logger.warn('[AgentSessionInputbar] Cannot create assistant stub - session is null')
+      return null
+    }
+
+    logger.info('[AgentSessionInputbar] Creating assistant stub', { sessionId: session.id })
 
     // Extract model info
     const [providerId, actualModelId] = session.model?.split(':') ?? [undefined, undefined]
@@ -115,8 +138,11 @@ const AgentSessionInputbar: FC<Props> = ({ agentId, sessionId }) => {
   )
 
   if (!assistantStub) {
+    logger.warn('[AgentSessionInputbar] assistantStub is null - not rendering inputbar')
     return null // Wait for session to load
   }
+
+  logger.info('[AgentSessionInputbar] Rendering inputbar', { assistantId: assistantStub.id })
 
   return (
     <InputbarToolsProvider
@@ -343,6 +369,16 @@ const AgentSessionInputbarInner: FC<InnerProps> = ({ assistant, agentId, session
 
   const sendDisabled = inputEmpty && files.length === 0
 
+  // Debug logging for send button state
+  useEffect(() => {
+    logger.info('[AgentSessionInputbar] Send button state', {
+      sendDisabled,
+      inputEmpty,
+      filesCount: files.length,
+      textLength: text.length
+    })
+  }, [sendDisabled, inputEmpty, files.length, text.length])
+
   const streamingAskIds = useMemo(() => {
     if (!topicMessages) {
       return []
@@ -385,11 +421,22 @@ const AgentSessionInputbarInner: FC<InnerProps> = ({ assistant, agentId, session
   }, [dispatch, sessionTopicId, streamingAskIds])
 
   const sendMessage = useCallback(async () => {
+    logger.info('[AgentSessionInputbar] sendMessage called', {
+      sendDisabled,
+      textLength: text.length,
+      filesCount: files.length
+    })
+
     if (sendDisabled) {
+      logger.warn('[AgentSessionInputbar] sendMessage blocked - sendDisabled is true')
       return
     }
 
-    logger.info('Starting to send message')
+    logger.info('[AgentSessionInputbar] Starting to send message', {
+      agentId,
+      sessionId,
+      sessionTopicId
+    })
 
     try {
       const userMessageId = uuid()
