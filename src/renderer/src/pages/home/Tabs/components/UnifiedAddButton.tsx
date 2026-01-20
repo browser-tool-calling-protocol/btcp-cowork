@@ -1,5 +1,6 @@
 import AddAssistantOrAgentPopup from '@renderer/components/Popups/AddAssistantOrAgentPopup'
 import AgentModalPopup from '@renderer/components/Popups/agent/AgentModal'
+import { isExtension } from '@renderer/config/constant'
 import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useAppDispatch } from '@renderer/store'
 import { setActiveTopicOrSessionAction } from '@renderer/store/runtime'
@@ -54,7 +55,10 @@ const UnifiedAddButton: FC<UnifiedAddButtonProps> = ({ onCreateAssistant, setAct
         }
 
         if (type === 'agent') {
-          !apiServerRunning && startApiServer()
+          // Only start API server in Electron mode - extension uses local agent service
+          if (!isExtension && !apiServerRunning) {
+            startApiServer()
+          }
           AgentModalPopup.show({ afterSubmit: afterCreate })
         }
       }
