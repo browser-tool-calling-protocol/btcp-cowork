@@ -237,16 +237,20 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       // === Core Inspection (matching BrowserAgent API) ===
       browser_snapshot: tool({
         description:
-          'Get a snapshot of the page. Use format "tree" (default) for interactive elements with @ref markers, or "markdown" for readable page content extraction.',
+          'Get a snapshot of the page. Use mode "interaction" (default) for clickable elements, "content" for text extraction, "outline" for page structure. Use format "tree" (default) for @ref markers, "markdown" for readable text.',
         inputSchema: z.object({
+          mode: z
+            .enum(['interaction', 'content', 'outline'])
+            .optional()
+            .describe(
+              'Snapshot mode: "interaction" for clickable elements (default), "content" for text extraction, "outline" for page structure'
+            ),
           format: z
             .enum(['tree', 'markdown'])
             .optional()
-            .describe('Output format: "tree" for interaction (default), "markdown" for content extraction'),
+            .describe('Output format: "tree" for @ref markers (default), "markdown" for readable text'),
           selector: z.string().optional().describe('CSS selector to snapshot a specific element instead of full page'),
-          interactive: z.boolean().optional().describe('Only include interactive elements (default: true for tree)'),
           maxDepth: z.number().optional().describe('Maximum depth of DOM tree to traverse'),
-          compact: z.boolean().optional().describe('Use compact output format (default: true)'),
           includeHidden: z
             .boolean()
             .optional()
@@ -263,12 +267,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
             // Build snapshot options matching BrowserAgent API
             const options: Record<string, unknown> = {
+              mode: args.mode || 'interaction',
               format: args.format || 'tree',
-              compact: args.compact !== false // Default to compact for token efficiency
+              compact: true // Always use compact for token efficiency
             }
 
             if (args.selector) options.selector = args.selector
-            if (args.interactive !== undefined) options.interactive = args.interactive
             if (args.maxDepth !== undefined) options.maxDepth = args.maxDepth
             if (args.includeHidden) options.includeHidden = true
             if (args.grep) options.grep = args.grep
@@ -281,7 +285,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             }
 
             console.log(
-              `[browser_snapshot] Captured ${snapshotStr.length} chars (format: ${options.format})${args.grep ? ` (filtered by: ${args.grep})` : ''}`
+              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.grep ? ` (filtered by: ${args.grep})` : ''}`
             )
 
             if (snapshotStr.length > maxSnapshotSize) {

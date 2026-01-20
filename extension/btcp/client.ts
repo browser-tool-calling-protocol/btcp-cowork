@@ -89,11 +89,11 @@ export function createClient() {
     // DOM operations - matching BrowserAgent API
     async snapshot(
       options: {
-        interactive?: boolean
+        mode?: 'interaction' | 'content' | 'outline'
+        format?: 'tree' | 'markdown'
+        selector?: string
         maxDepth?: number
         compact?: boolean
-        selector?: string
-        format?: string
         includeHidden?: boolean
         grep?: string
       } = {}
