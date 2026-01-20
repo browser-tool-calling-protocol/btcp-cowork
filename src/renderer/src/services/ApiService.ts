@@ -251,9 +251,7 @@ export async function fetchChatCompletion({
   })
 
   if (enableBrowserUse) {
-    logger.info('🌐 Browser Use ENABLED for assistant', {
-      toolset: assistantBrowserUse?.toolset ?? browserUseState.globalSettings.toolset
-    })
+    logger.info('🌐 Browser Use ENABLED for assistant')
     // Browser client will be initialized lazily when tools are first called
   } else {
     logger.warn('⚠️ Browser Use DISABLED for assistant')
@@ -278,7 +276,6 @@ export async function fetchChatCompletion({
     enableBrowserUse,
     browserUseConfig: enableBrowserUse
       ? {
-          toolset: assistantBrowserUse?.toolset ?? browserUseState.globalSettings.toolset,
           maxSnapshotSize: browserUseState.globalSettings.maxSnapshotSize,
           enableTracking: browserUseState.globalSettings.enableTracking,
           injectSystemPrompt: browserUseState.globalSettings.injectSystemPrompt

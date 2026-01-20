@@ -1,7 +1,6 @@
 import type { WebSearchPluginConfig } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { isAnthropicModel, isGemini3Model, isSupportedThinkingTokenQwenModel } from '@renderer/config/models'
-import type { BrowserUseToolset } from '@renderer/store/browserUse'
 import type { McpMode, MCPTool } from '@renderer/types'
 import { type Assistant, type Message, type Model, type Provider, SystemProviderIds } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
@@ -51,7 +50,6 @@ export interface AiSdkMiddlewareConfig {
   enableBrowserUse?: boolean
   // 浏览器使用配置
   browserUseConfig?: {
-    toolset: BrowserUseToolset
     maxSnapshotSize: number
     enableTracking: boolean
     injectSystemPrompt: boolean

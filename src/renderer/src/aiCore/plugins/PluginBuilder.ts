@@ -32,7 +32,6 @@ export function buildPlugins(
   // 1. 浏览器使用插件
   if (middlewareConfig.enableBrowserUse && middlewareConfig.browserUseConfig) {
     logger.info('🌐 Browser Use Plugin enabled', {
-      toolset: middlewareConfig.browserUseConfig.toolset,
       maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
       enableTracking: middlewareConfig.browserUseConfig.enableTracking,
       injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt
@@ -41,7 +40,6 @@ export function buildPlugins(
       browserUsePlugin({
         enabled: true,
         service: browserAgentService,
-        toolset: middlewareConfig.browserUseConfig.toolset,
         maxSnapshotSize: middlewareConfig.browserUseConfig.maxSnapshotSize,
         enableTracking: middlewareConfig.browserUseConfig.enableTracking,
         injectSystemPrompt: middlewareConfig.browserUseConfig.injectSystemPrompt

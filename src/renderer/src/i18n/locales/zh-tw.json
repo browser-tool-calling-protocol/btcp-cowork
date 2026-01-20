@@ -4792,25 +4792,9 @@
         },
         "title": "[to be translated]:Browser Use",
         "tools": {
+          "all_tools_description": "[to be translated]:All browser automation tools are available to AI models",
           "available": "[to be translated]:Available Browser Tools",
-          "description": "[to be translated]:Tools enabled for the '{{preset}}' preset",
           "title": "[to be translated]:Tools"
-        },
-        "toolset": {
-          "description": "[to be translated]:Choose which browser tools are available to AI models",
-          "full": {
-            "description": "[to be translated]:All tools including JavaScript execution and iframe handling",
-            "label": "[to be translated]:Full (Advanced)"
-          },
-          "label": "[to be translated]:Default Toolset",
-          "minimal": {
-            "description": "[to be translated]:Safe read-only operations: snapshot, URL, title, text extraction",
-            "label": "[to be translated]:Minimal (Read-only)"
-          },
-          "standard": {
-            "description": "[to be translated]:Common automation: navigation, clicks, typing, forms, scrolling",
-            "label": "[to be translated]:Standard"
-          }
         },
         "tracking": {
           "description": "[to be translated]:Track network requests and console logs for debugging",

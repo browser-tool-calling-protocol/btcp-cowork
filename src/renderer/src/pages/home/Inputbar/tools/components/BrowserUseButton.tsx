@@ -20,7 +20,7 @@ const BrowserUseButton: FC<Props> = ({ assistantId }) => {
     if (isEnabled) {
       disable()
     } else {
-      setEnabled(true, 'standard')
+      setEnabled(true)
     }
   }, [isEnabled, setEnabled, disable])
 
