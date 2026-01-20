@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import { CodeInspectorPlugin } from 'code-inspector-plugin'
 import { defineConfig } from 'electron-vite'
@@ -94,6 +95,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [
+      tailwindcss(),
       react({
         tsDecorators: true
       }),
