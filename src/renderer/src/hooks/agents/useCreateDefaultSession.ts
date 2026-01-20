@@ -16,7 +16,7 @@ const logger = loggerService.withContext('useCreateDefaultSession')
  */
 export const useCreateDefaultSession = (agentId: string | null) => {
   const { agent } = useAgent(agentId)
-  const { isRunning: apiServerRunning } = useApiServer()
+  const { apiServerRunning } = useApiServer()
 
   // Use local sessions when API server is not running (extension mode)
   const sessionsApi = useSessions(apiServerRunning ? agentId : null)

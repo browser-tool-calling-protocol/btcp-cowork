@@ -17,7 +17,7 @@ const logger = loggerService.withContext('useAgentSessionInitializer')
 export const useAgentSessionInitializer = () => {
   const dispatch = useAppDispatch()
   const client = useAgentClient()
-  const { isRunning: apiServerRunning } = useApiServer()
+  const { apiServerRunning } = useApiServer()
   const { chat } = useRuntime()
   const { activeAgentId, activeSessionIdMap } = chat
 

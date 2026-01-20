@@ -27,7 +27,7 @@ interface SessionsProps {
 
 const Sessions: React.FC<SessionsProps> = ({ agentId }) => {
   const { t } = useTranslation()
-  const { isRunning: apiServerRunning } = useApiServer()
+  const { apiServerRunning } = useApiServer()
 
   // Use local sessions when API server is not running (extension mode)
   const sessionsApi = useSessions(apiServerRunning ? agentId : null)

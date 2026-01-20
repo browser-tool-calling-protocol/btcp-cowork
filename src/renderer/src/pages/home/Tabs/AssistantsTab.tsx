@@ -32,7 +32,7 @@ interface AssistantsTabProps {
 const AssistantsTab: FC<AssistantsTabProps> = (props) => {
   const { activeAssistant, setActiveAssistant, onCreateAssistant, onCreateDefaultAssistant } = props
   const containerRef = useRef<HTMLDivElement>(null)
-  const { apiServerConfig, isRunning: apiServerRunning } = useApiServer()
+  const { apiServerConfig, apiServerRunning } = useApiServer()
   const apiServerEnabled = apiServerConfig.enabled
   const { chat } = useRuntime()
   const { t } = useTranslation()
