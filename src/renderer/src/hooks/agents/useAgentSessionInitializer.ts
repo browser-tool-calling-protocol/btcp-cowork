@@ -1,6 +1,8 @@
 import { loggerService } from '@logger'
+import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useAppDispatch } from '@renderer/store'
+import { selectSessionsByAgentId } from '@renderer/store/agents'
 import { setActiveSessionIdAction, setActiveTopicOrSessionAction } from '@renderer/store/runtime'
 import { useCallback, useEffect } from 'react'
 
@@ -16,6 +18,7 @@ const logger = loggerService.withContext('useAgentSessionInitializer')
 export const useAgentSessionInitializer = () => {
   const dispatch = useAppDispatch()
   const client = useAgentClient()
+  const { isRunning: apiServerRunning } = useApiServer()
   const { chat } = useRuntime()
   const { activeAgentId, activeSessionIdMap } = chat
 
@@ -36,9 +39,18 @@ export const useAgentSessionInitializer = () => {
           return
         }
 
-        // Load sessions for this agent
-        const response = await client.listSessions(agentId)
-        const sessions = response.data
+        let sessions = []
+
+        // Use local sessions when API server is not running (extension mode)
+        if (apiServerRunning) {
+          // Load sessions from API server
+          const response = await client.listSessions(agentId)
+          sessions = response.data || []
+        } else {
+          // Load sessions from Redux store
+          const state = (dispatch as any).getState()
+          sessions = selectSessionsByAgentId(state, agentId)
+        }
 
         if (sessions && sessions.length > 0) {
           // Get the latest session (first in the list, assuming they're sorted by updatedAt)
@@ -58,7 +70,7 @@ export const useAgentSessionInitializer = () => {
         dispatch(setActiveTopicOrSessionAction('session'))
       }
     },
-    [client, dispatch, activeSessionIdMap]
+    [client, dispatch, activeSessionIdMap, apiServerRunning]
   )
 
   /**
