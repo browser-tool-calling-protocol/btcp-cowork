@@ -23,7 +23,7 @@ async function buildContentScript() {
     console.log('Building content script with esbuild...')
 
     const result = await esbuild.build({
-      entryPoints: [resolve(__dirname, '../src/extension/content.ts')],
+      entryPoints: [resolve(__dirname, '../extension/content.ts')],
       bundle: true,
       outfile: resolve(__dirname, '../dist-extension/content.js'),
       format: 'esm',

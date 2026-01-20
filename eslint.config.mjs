@@ -64,9 +64,9 @@ export default defineConfig([
       '.gitignore',
       '.conductor/**',
       'scripts/cloudflare-worker.js',
-      'src/main/integration/nutstore/sso/lib/**',
-      'src/main/integration/cherryai/index.js',
-      'src/main/integration/nutstore/sso/lib/**',
+      'electron/main/integration/nutstore/sso/lib/**',
+      'electron/main/integration/cherryai/index.js',
+      'electron/main/integration/nutstore/sso/lib/**',
       'src/renderer/src/ui/**',
       'packages/**/dist'
     ]
@@ -78,7 +78,7 @@ export default defineConfig([
   {
     // LoggerService Custom Rules - only apply to src directory
     files: ['src/**/*.{ts,tsx,js,jsx}'],
-    ignores: ['src/**/__tests__/**', 'src/**/__mocks__/**', 'src/**/*.test.*', 'src/preload/**'],
+    ignores: ['src/**/__tests__/**', 'src/**/__mocks__/**', 'src/**/*.test.*', 'electron/preload/**'],
     rules: {
       'no-restricted-syntax': [
         process.env.PRCI ? 'error' : 'warn',

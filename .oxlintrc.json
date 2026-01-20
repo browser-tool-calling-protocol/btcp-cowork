@@ -15,9 +15,9 @@
     ".yarn/**",
     ".gitignore",
     "scripts/cloudflare-worker.js",
-    "src/main/integration/nutstore/sso/lib/**",
-    "src/main/integration/cherryai/index.js",
-    "src/main/integration/nutstore/sso/lib/**",
+    "electron/main/integration/nutstore/sso/lib/**",
+    "electron/main/integration/cherryai/index.js",
+    "electron/main/integration/nutstore/sso/lib/**",
     "src/renderer/src/ui/**",
     "packages/**/dist",
     "eslint.config.mjs"
@@ -27,7 +27,7 @@
       "env": {
         "node": true
       },
-      "files": ["src/main/**", "resources/scripts/**", "scripts/**", "playwright.config.ts", "electron.vite.config.ts"]
+      "files": ["electron/main/**", "resources/scripts/**", "scripts/**", "playwright.config.ts", "electron/vite.config.ts"]
     },
     {
       "env": {
@@ -35,6 +35,7 @@
       },
       "files": [
         "src/renderer/**/*.{ts,tsx}",
+        "extension/**/*.{ts,tsx}",
         "packages/aiCore/**",
         "packages/extension-table-plus/**"
       ]
@@ -51,7 +52,7 @@
         "browser": true,
         "node": true
       },
-      "files": ["src/preload/**"]
+      "files": ["electron/preload/**"]
     },
     {
       "files": ["packages/ai-sdk-provider/**"],
