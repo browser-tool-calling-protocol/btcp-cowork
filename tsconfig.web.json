@@ -3,6 +3,7 @@
   "include": [
     "local/src/renderer/**/*",
     "src/renderer/src/**/*",
+    "extension/**/*",
     "electron/main/integration/cherryai/index.js",
     "electron/preload/*.d.ts",
     "tests/__mocks__/**/*",

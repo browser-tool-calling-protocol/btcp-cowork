@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 /**
  * Minimal BTCP Client for Chrome Extension
  * Vendorized from btcp-browser-agent to avoid build issues

@@ -35,6 +35,7 @@
       },
       "files": [
         "src/renderer/**/*.{ts,tsx}",
+        "extension/**/*.{ts,tsx}",
         "packages/aiCore/**",
         "packages/extension-table-plus/**"
       ]

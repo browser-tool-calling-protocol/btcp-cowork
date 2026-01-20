@@ -54,9 +54,9 @@ When creating a Pull Request:
 
 ## Project Architecture
 
-### Chrome Extension (Primary)
+### Chrome Extension (Primary, in `extension/` folder)
 
-- **Extension** (`src/extension/`): Chrome extension entry points (background, content, popup, sidepanel)
+- **Extension** (`extension/`): Chrome extension entry points (background, content, popup, sidepanel)
 - **Renderer** (`src/renderer/`): Shared React 19 UI with Redux Toolkit (used by both extension and Electron)
 
 ### Electron Desktop App (in `electron/` folder)

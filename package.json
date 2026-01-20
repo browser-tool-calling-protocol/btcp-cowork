@@ -187,6 +187,7 @@
     "@tiptap/y-tiptap": "^3.0.0",
     "@truto/turndown-plugin-gfm": "^1.0.2",
     "@tryfabric/martian": "^1.2.4",
+    "@types/chrome": "^0.1.34",
     "@types/cli-progress": "^3",
     "@types/content-type": "^1.1.9",
     "@types/cors": "^2.8.19",

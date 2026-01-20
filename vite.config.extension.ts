@@ -32,7 +32,7 @@ function copyExtensionFiles() {
       }
 
       // Copy manifest
-      const manifestSrc = resolve(__dirname, 'src/extension/manifest.json')
+      const manifestSrc = resolve(__dirname, 'extension/manifest.json')
       if (existsSync(manifestSrc)) {
         copyFileSync(manifestSrc, resolve(outDir, 'manifest.json'))
       }
@@ -86,7 +86,7 @@ export default defineConfig({
       '@cherrystudio/extension-table-plus': resolve(__dirname, 'packages/extension-table-plus/src'),
       '@cherrystudio/ai-sdk-provider': resolve(__dirname, 'packages/ai-sdk-provider/src'),
       // Shim the preload imports
-      '../preload': resolve(__dirname, 'src/extension/shim.ts')
+      '../preload': resolve(__dirname, 'extension/shim.ts')
     }
   },
 
@@ -110,17 +110,17 @@ export default defineConfig({
     rollupOptions: {
       input: {
         // Shim initialization (loaded as regular script, not ES module)
-        'shim-init': resolve(__dirname, 'src/extension/shim-init.js'),
+        'shim-init': resolve(__dirname, 'extension/shim-init.js'),
         // Shim must be built first as a separate module
-        shim: resolve(__dirname, 'src/extension/shim.ts'),
+        shim: resolve(__dirname, 'extension/shim.ts'),
         // Sidepanel entry (chat UI)
-        'sidepanel-app': resolve(__dirname, 'src/extension/sidepanel.tsx'),
+        'sidepanel-app': resolve(__dirname, 'extension/sidepanel.tsx'),
         // Main UI entry points
-        sidepanel: resolve(__dirname, 'src/extension/sidepanel.html'),
-        window: resolve(__dirname, 'src/extension/window.html'),
-        popup: resolve(__dirname, 'src/extension/popup.html'),
+        sidepanel: resolve(__dirname, 'extension/sidepanel.html'),
+        window: resolve(__dirname, 'extension/window.html'),
+        popup: resolve(__dirname, 'extension/popup.html'),
         // Background service worker (module)
-        background: resolve(__dirname, 'src/extension/background.ts')
+        background: resolve(__dirname, 'extension/background.ts')
         // Content script is built separately with esbuild (see scripts/build-content.js)
         // to create a single bundled file without code splitting
       },

@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 /**
  * Chrome Extension Background Service Worker
  *

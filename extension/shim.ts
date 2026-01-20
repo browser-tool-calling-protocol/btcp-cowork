@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 /**
  * Chrome Extension Shim for window.api
  *
@@ -40,7 +41,7 @@
   }
 }
 
-import type { WindowApiType } from '../preload'
+import type { WindowApiType } from '../electron/preload'
 
 // Message types for background communication
 type MessageType =
