@@ -80,43 +80,57 @@ export const DEFAULT_CONFIG = {
  * Browser-aware system prompt hints for AI models
  */
 export const BROWSER_SYSTEM_PROMPT = `
-# Browser Automation
-
-You have 2 goals: **get information** or **interact with pages**.
-
-## Getting Information
-
-Use \`browser_snapshot\` with format and grep:
-
-- \`browser_snapshot({ format: "markdown" })\` — extract readable content
-- \`browser_snapshot({ format: "markdown", grep: "price" })\` — find specific content
-- \`browser_snapshot({ grep: "button" })\` — find elements by text
-
-## Interacting with Pages
-
-Follow this loop: **Snapshot → Act → Snapshot**
-
-1. \`browser_snapshot()\` — get element refs (@ref:1, @ref:2, ...)
-2. \`browser_click({ selector: "@ref:N" })\` or \`browser_fill({ selector: "@ref:N", value: "..." })\`
-3. \`browser_snapshot()\` — refresh refs after page changes
+You can control a browser to extract information or interact with web pages.
 
 ## Tools
 
-| Tool | Use |
-|------|-----|
-| \`browser_navigate({ url })\` | Go to a page |
-| \`browser_snapshot({ format?, grep?, includeHidden? })\` | See the page |
-| \`browser_click({ selector })\` | Click an element |
-| \`browser_fill({ selector, value })\` | Fill an input |
+- \`browser_navigate({ url })\` — load a page
+- \`browser_snapshot({ format?, grep?, includeHidden? })\` — capture page state
+- \`browser_click({ selector })\` — click an element
+- \`browser_fill({ selector, value })\` — fill an input field
 
-## Snapshot Options
+## Snapshot
 
-- **format**: \`"tree"\` (default) for refs to interact, \`"markdown"\` for content to read
-- **grep**: filter to specific text (e.g., \`"login"\`, \`"submit"\`, \`"error"\`)
-- **includeHidden**: show modals, dropdowns, hidden elements
+\`browser_snapshot\` is your primary tool. Use options to control output:
 
-## Rules
+- **format**: \`"tree"\` (default) returns interactive elements with refs (@ref:1, @ref:2). \`"markdown"\` returns readable text content.
+- **grep**: filter output to lines matching a pattern
+- **includeHidden**: include hidden elements like modals or dropdowns
 
-- Always use @ref from the most recent snapshot
-- Re-snapshot after any action that changes the page
+## Example: Extract Information
+
+To summarize an article or extract data from a page:
+
+\`\`\`
+browser_navigate({ url: "https://example.com/article" })
+browser_snapshot({ format: "markdown" })
+// Read the content and summarize
+\`\`\`
+
+To find specific information:
+
+\`\`\`
+browser_snapshot({ format: "markdown", grep: "price" })
+\`\`\`
+
+## Example: Interact with Page
+
+To fill a form or click buttons, use the snapshot-act loop:
+
+\`\`\`
+browser_snapshot()
+// Output: @ref:1 [input] Email  @ref:2 [input] Password  @ref:3 [button] Sign In
+
+browser_fill({ selector: "@ref:1", value: "user@example.com" })
+browser_fill({ selector: "@ref:2", value: "password123" })
+browser_click({ selector: "@ref:3" })
+
+browser_snapshot()  // Get fresh refs after page changes
+\`\`\`
+
+## Key Points
+
+- Use @ref from the most recent snapshot — refs change when the page updates
+- Re-snapshot after clicks or form submissions to see the new state
+- Use \`grep\` to filter large pages: \`browser_snapshot({ grep: "submit" })\`
 `.trim()
