@@ -11,7 +11,15 @@ import { createContext, use, useEffect, useMemo, useRef, useState } from 'react'
 
 import { registerAgentService } from './AgentServiceRegistry'
 import type { AgentServiceMode, IAgentService } from './IAgentService'
+import { LocalAgentService } from './LocalAgentService'
 import { ServerAgentService } from './ServerAgentService'
+
+/**
+ * Detect if running in extension/browser mode (no Electron backend)
+ */
+function isExtensionMode(): boolean {
+  return typeof window !== 'undefined' && !window.electron
+}
 
 const logger = loggerService.withContext('AgentServiceProvider')
 
@@ -55,14 +63,18 @@ interface AgentServiceProviderProps extends PropsWithChildren {
  */
 export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, forceMode, onReady, onError }) => {
   const { apiServer } = useSettings()
+
+  // Detect default mode based on environment
+  const defaultMode: AgentServiceMode = isExtensionMode() ? 'local' : 'server'
+
   const [service, setService] = useState<IAgentService | null>(null)
-  const [mode, setMode] = useState<AgentServiceMode>(forceMode ?? 'server')
+  const [mode, setMode] = useState<AgentServiceMode>(forceMode ?? defaultMode)
   const [isReady, setIsReady] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   // Track previous config to detect changes
-  const prevConfigRef = useRef<{ host: string; port: number; apiKey: string } | null>(null)
+  const prevConfigRef = useRef<{ host: string; port: number; apiKey: string; mode: AgentServiceMode } | null>(null)
 
   // Initialize or update the service when settings change
   useEffect(() => {
@@ -78,14 +90,16 @@ export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, 
           const currentConfig = {
             host: apiServer.host,
             port: apiServer.port,
-            apiKey: apiServer.apiKey
+            apiKey: apiServer.apiKey,
+            mode: effectiveMode
           }
 
           const configChanged =
             !prevConfigRef.current ||
             prevConfigRef.current.host !== currentConfig.host ||
             prevConfigRef.current.port !== currentConfig.port ||
-            prevConfigRef.current.apiKey !== currentConfig.apiKey
+            prevConfigRef.current.apiKey !== currentConfig.apiKey ||
+            prevConfigRef.current.mode !== currentConfig.mode
 
           if (!configChanged && service && service.mode === 'server') {
             // Config hasn't changed, keep existing service
@@ -96,17 +110,24 @@ export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, 
           prevConfigRef.current = currentConfig
 
           if (!apiServer.enabled) {
-            logger.info('API server is disabled, service not available')
-            setService(null)
-            setIsReady(false)
+            logger.info('API server is disabled, falling back to local service')
+            // Fall back to local service
+            const localService = new LocalAgentService()
+            setService(localService)
+            setIsReady(true)
+            setMode('local')
+            onReady?.(localService)
             setIsInitializing(false)
             return
           }
 
           if (!apiServer.apiKey) {
-            logger.warn('API server key not configured')
-            setService(null)
-            setIsReady(false)
+            logger.warn('API server key not configured, falling back to local service')
+            const localService = new LocalAgentService()
+            setService(localService)
+            setIsReady(true)
+            setMode('local')
+            onReady?.(localService)
             setIsInitializing(false)
             return
           }
@@ -132,16 +153,40 @@ export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, 
             logger.info('Server agent service initialized successfully')
             onReady?.(serverService)
           } else {
-            logger.warn('Server agent service not available')
-            setService(serverService) // Keep service but mark as not ready
-            setIsReady(false)
+            logger.warn('Server agent service not available, falling back to local service')
+            // Fall back to local service
+            const localService = new LocalAgentService()
+            setService(localService)
+            setIsReady(true)
+            setMode('local')
+            onReady?.(localService)
           }
         } else {
-          // Local mode - will be implemented in LocalAgentService
-          logger.info('Local agent service mode requested (not yet implemented)')
-          setService(null)
-          setIsReady(false)
-          setError(new Error('Local agent service not yet implemented'))
+          // Local mode
+          logger.info('Initializing local agent service')
+
+          // Check if config changed
+          const currentConfig = {
+            host: '',
+            port: 0,
+            apiKey: '',
+            mode: effectiveMode
+          }
+
+          if (prevConfigRef.current?.mode === 'local' && service && service.mode === 'local') {
+            // Already in local mode with a service
+            setIsInitializing(false)
+            return
+          }
+
+          prevConfigRef.current = currentConfig
+
+          const localService = new LocalAgentService()
+          setService(localService)
+          setIsReady(true)
+          setMode('local')
+          logger.info('Local agent service initialized successfully')
+          onReady?.(localService)
         }
       } catch (err) {
         const serviceError = err instanceof Error ? err : new Error(String(err))
@@ -155,7 +200,7 @@ export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, 
     }
 
     initService()
-  }, [apiServer.enabled, apiServer.host, apiServer.port, apiServer.apiKey, forceMode, mode, onReady, onError])
+  }, [apiServer.enabled, apiServer.host, apiServer.port, apiServer.apiKey, forceMode, mode, onReady, onError, service])
 
   // Register service in global registry for non-React code (thunks)
   useEffect(() => {

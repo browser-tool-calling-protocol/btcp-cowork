@@ -20,6 +20,9 @@ export {
 // Server implementation
 export { createServerAgentService, ServerAgentService, type ServerAgentServiceConfig } from './ServerAgentService'
 
+// Local implementation (for extension/browser mode)
+export { createLocalAgentService, LocalAgentService } from './LocalAgentService'
+
 // React context and hooks
 export {
   AgentServiceProvider,
