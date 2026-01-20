@@ -57,6 +57,17 @@ const Chat: FC<Props> = (props) => {
   const sessionAgentId = activeTopicOrSession === 'session' ? activeAgentId : null
   const { createDefaultSession } = useCreateDefaultSession(sessionAgentId)
 
+  // Debug logging for render conditions
+  React.useEffect(() => {
+    logger.info('[Chat] Render state', {
+      activeTopicOrSession,
+      activeAgentId,
+      activeSessionId,
+      sessionIdMap: activeSessionIdMap,
+      willRenderAgentInput: activeTopicOrSession === 'session' && !!activeAgentId && !!activeSessionId
+    })
+  }, [activeTopicOrSession, activeAgentId, activeSessionId, activeSessionIdMap])
+
   const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
   const [filterIncludeUser, setFilterIncludeUser] = useState(false)
