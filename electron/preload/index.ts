@@ -51,8 +51,8 @@ import type {
   PluginResult,
   UninstallPluginOptions,
   WritePluginContentOptions
-} from '../renderer/src/types/plugin'
-import type { ActionItem } from '../renderer/src/types/selectionTypes'
+} from '../../src/renderer/src/types/plugin'
+import type { ActionItem } from '../../src/renderer/src/types/selectionTypes'
 
 type DirectoryListOptions = {
   recursive?: boolean

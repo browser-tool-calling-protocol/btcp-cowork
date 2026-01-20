@@ -17,7 +17,7 @@
       "envFile": "${workspaceFolder}/.env",
       "name": "Debug Main Process",
       "request": "launch",
-      "runtimeArgs": ["--inspect", "--sourcemap"],
+      "runtimeArgs": ["-c", "electron/vite.config.ts", "--inspect", "--sourcemap"],
       "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite",
       "type": "node",
       "windows": {

@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cherry Studio is a cross-platform desktop AI assistant client built with Electron, supporting multiple LLM providers (OpenAI, Anthropic, Google, Ollama, etc.). Uses React for the UI with Redux state management.
+Cherry Studio is a cross-platform AI assistant client with both a Chrome extension and an Electron desktop app, supporting multiple LLM providers (OpenAI, Anthropic, Google, Ollama, etc.). Uses React for the UI with Redux state management.
+
+**Current Focus**: Chrome extension development. The Electron desktop app code has been moved to the `electron/` folder for future development.
 
 ## Requirements
 
@@ -52,13 +54,18 @@ When creating a Pull Request:
 
 ## Project Architecture
 
-### Electron Structure
+### Chrome Extension (Primary)
 
-- **Main Process** (`src/main/`): Node.js backend with services
-- **Renderer Process** (`src/renderer/`): React 19 UI with Redux Toolkit
-- **Preload Scripts** (`src/preload/`): Secure IPC bridge between processes
+- **Extension** (`src/extension/`): Chrome extension entry points (background, content, popup, sidepanel)
+- **Renderer** (`src/renderer/`): Shared React 19 UI with Redux Toolkit (used by both extension and Electron)
 
-### Key Services (src/main/services/)
+### Electron Desktop App (in `electron/` folder)
+
+- **Main Process** (`electron/main/`): Node.js backend with services
+- **Preload Scripts** (`electron/preload/`): Secure IPC bridge between processes
+- **Build Assets** (`electron/build/`): Desktop app icons, installers, etc.
+
+### Key Electron Services (electron/main/services/)
 
 - `MCPService.ts` - Model Context Protocol server management
 - `KnowledgeService.ts` - RAG/knowledge base using embedjs

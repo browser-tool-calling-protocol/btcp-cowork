@@ -12,7 +12,7 @@ import type {
   TextSelectionData
 } from 'selection-hook'
 
-import type { ActionItem } from '../../renderer/src/types/selectionTypes'
+import type { ActionItem } from '../../../src/renderer/src/types/selectionTypes'
 import { ConfigKeys, configManager } from './ConfigManager'
 import storeSyncService from './StoreSyncService'
 

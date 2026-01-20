@@ -11,7 +11,7 @@ electronLanguages:
   - en # for macOS
   - de
 directories:
-  buildResources: build
+  buildResources: electron/build
 
 protocols:
   - name: Cherry Studio
@@ -28,6 +28,7 @@ files:
   - "!**/{tsconfig.json,tsconfig.tsbuildinfo,tsconfig.node.json,tsconfig.web.json}"
   - "!**/{.editorconfig,.jekyll-metadata}"
   - "!src"
+  - "!electron"
   - "!config"
   - "!patches"
   - "!app-upgrade-config.json"
@@ -93,14 +94,14 @@ nsis:
   createDesktopShortcut: always
   allowToChangeInstallationDirectory: true
   oneClick: false
-  include: build/nsis-installer.nsh
+  include: electron/build/nsis-installer.nsh
   buildUniversalInstaller: false
   differentialPackage: false
 portable:
   artifactName: ${productName}-${version}-${arch}-portable.${ext}
   buildUniversalInstaller: false
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlementsInherit: electron/build/entitlements.mac.plist
   notarize: false
   artifactName: ${productName}-${version}-${arch}.${ext}
   extendInfo:

@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax */
 import type { LogContextData, LogLevel, LogSourceWithContext } from '@shared/config/logger'
 import { LEVEL, LEVEL_MAP } from '@shared/config/logger'
 import { IpcChannel } from '@shared/IpcChannel'

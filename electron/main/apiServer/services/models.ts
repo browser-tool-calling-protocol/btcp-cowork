@@ -1,6 +1,6 @@
 import { isEmpty } from 'lodash'
 
-import type { ApiModel, ApiModelsFilter, ApiModelsResponse } from '../../../renderer/src/types/apiModels'
+import type { ApiModel, ApiModelsFilter, ApiModelsResponse } from '../../../../src/renderer/src/types/apiModels'
 import { loggerService } from '../../services/LoggerService'
 import {
   getAvailableProviders,

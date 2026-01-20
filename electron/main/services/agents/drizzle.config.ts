@@ -37,7 +37,7 @@ export const dbPath = resolvedDbPath
 
 export default defineConfig({
   dialect: 'sqlite',
-  schema: './src/main/services/agents/database/schema/index.ts',
+  schema: './electron/main/services/agents/database/schema/index.ts',
   out: './resources/database/drizzle',
   dbCredentials: {
     url: `file:${resolvedDbPath}`
