@@ -108,22 +108,16 @@ Snapshots return refs like @ref:5, @ref:12 that remain stable across actions.
 Use these refs instead of CSS selectors when possible.
 
 ## Snapshot Options
-browser_snapshot({mode?, format?, selector?, maxDepth?, includeHidden?, grep?})
+browser_snapshot({mode?, format?})
 
 **Mode** (what to capture):
-- "interaction" (default) - Captures clickable/interactive elements (buttons, links, inputs)
-- "content" - Captures text content for reading/extraction
-- "outline" - Captures page structure and layout
+- "interaction" (default) - Clickable elements (buttons, links, inputs)
+- "content" - Text content for reading
+- "outline" - Page structure
 
 **Format** (how to output):
-- "tree" (default) - Tree structure with @ref markers for element targeting
-- "markdown" - Readable text format for content extraction
-
-**Other options**:
-- selector: CSS selector to snapshot specific element
-- maxDepth: Limit DOM tree depth
-- includeHidden: Include hidden elements like modals/dropdowns
-- grep: Filter to lines matching text pattern (e.g., "button", "login")
+- "tree" (default) - Tree with @ref markers
+- "markdown" - Readable text
 
 ## Interaction Tools
 - browser_click(selector, {button?}) - Click with optional button (left/right/middle)

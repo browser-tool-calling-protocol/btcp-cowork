@@ -242,42 +242,20 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           mode: z
             .enum(['interaction', 'content', 'outline'])
             .optional()
-            .describe(
-              'Snapshot mode: "interaction" for clickable elements (default), "content" for text extraction, "outline" for page structure'
-            ),
-          format: z
-            .enum(['tree', 'markdown'])
-            .optional()
-            .describe('Output format: "tree" for @ref markers (default), "markdown" for readable text'),
-          selector: z.string().optional().describe('CSS selector to snapshot a specific element instead of full page'),
-          maxDepth: z.number().optional().describe('Maximum depth of DOM tree to traverse'),
-          includeHidden: z
-            .boolean()
-            .optional()
-            .describe('Include hidden elements like modals and dropdowns (default: false)'),
-          grep: z
-            .string()
-            .optional()
-            .describe('Filter snapshot to lines matching this text pattern (e.g., "button", "login")')
+            .describe('Snapshot mode: "interaction" (default), "content", or "outline"'),
+          format: z.enum(['tree', 'markdown']).optional().describe('Output format: "tree" (default) or "markdown"')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_snapshot', args, async () => {
             await ensureSession()
             const c = await getClient()
 
-            // Build snapshot options matching BrowserAgent API
-            const options: Record<string, unknown> = {
+            const options = {
               mode: args.mode || 'interaction',
-              format: args.format || 'tree',
-              compact: true // Always use compact for token efficiency
+              format: args.format || 'tree'
             }
 
-            if (args.selector) options.selector = args.selector
-            if (args.maxDepth !== undefined) options.maxDepth = args.maxDepth
-            if (args.includeHidden) options.includeHidden = true
-            if (args.grep) options.grep = args.grep
-
-            const snapshotStr = await c.snapshot(options as any)
+            const snapshotStr = await c.snapshot(options)
 
             // Verify snapshot is not empty
             if (!snapshotStr || snapshotStr.trim().length === 0) {
@@ -285,7 +263,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             }
 
             console.log(
-              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.grep ? ` (filtered by: ${args.grep})` : ''}`
+              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})`
             )
 
             if (snapshotStr.length > maxSnapshotSize) {
