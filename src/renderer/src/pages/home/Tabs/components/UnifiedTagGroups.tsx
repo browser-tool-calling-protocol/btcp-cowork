@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next'
 
 import type { UnifiedItem } from '../hooks/useUnifiedItems'
 import AgentItem from './AgentItem'
-import AgentPresetItem from './AgentPresetItem'
 import AssistantItem from './AssistantItem'
 import { TagGroup } from './TagGroup'
 
@@ -29,7 +28,6 @@ interface UnifiedTagGroupsProps {
   onAssistantDelete: (assistant: Assistant) => void
   onAgentDelete: (agentId: string) => void
   onAgentPress: (agentId: string) => void
-  onPresetInstall: (presetId: string) => void
   addPreset: (assistant: Assistant) => void
   copyAssistant: (assistant: Assistant) => void
   onCreateDefaultAssistant: () => void
@@ -53,7 +51,6 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
     onAssistantDelete,
     onAgentDelete,
     onAgentPress,
-    onPresetInstall,
     addPreset,
     copyAssistant,
     onCreateDefaultAssistant,
@@ -76,8 +73,6 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
             onPress={() => onAgentPress(item.data.id)}
           />
         )
-      } else if (item.type === 'preset') {
-        return <AgentPresetItem key={`preset-${item.data.id}`} preset={item.data} onInstall={onPresetInstall} />
       } else {
         return (
           <AssistantItem
@@ -105,7 +100,6 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
       onAssistantDelete,
       onAgentDelete,
       onAgentPress,
-      onPresetInstall,
       addPreset,
       copyAssistant,
       onCreateDefaultAssistant,

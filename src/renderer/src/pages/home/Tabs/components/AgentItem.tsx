@@ -1,4 +1,3 @@
-import { loggerService } from '@logger'
 import { DeleteIcon, EditIcon } from '@renderer/components/Icons'
 import { useSettings } from '@renderer/hooks/useSettings'
 import AgentSettingsPopup from '@renderer/pages/settings/AgentSettings/AgentSettingsPopup'
@@ -13,7 +12,7 @@ import type { FC } from 'react'
 import { memo, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const logger = loggerService.withContext('AgentItem')
+// const logger = loggerService.withContext('AgentItem')
 
 interface AgentItemProps {
   agent: AgentEntity
@@ -27,22 +26,14 @@ const AgentItem: FC<AgentItemProps> = ({ agent, isActive, onDelete, onPress }) =
   const { clickAssistantToShowTopic, topicPosition, assistantIconType } = useSettings()
 
   const handlePress = useCallback(() => {
-    logger.info('[AgentItem] Agent clicked', {
-      agentId: agent.id,
-      agentName: agent.name,
-      isActive
-    })
-
     // Show session sidebar if setting is enabled (reusing the assistant setting for consistency)
     if (clickAssistantToShowTopic) {
       if (topicPosition === 'left') {
         EventEmitter.emit(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR)
       }
     }
-
-    logger.info('[AgentItem] Calling onPress callback')
     onPress()
-  }, [clickAssistantToShowTopic, topicPosition, onPress, agent.id, agent.name, isActive])
+  }, [clickAssistantToShowTopic, topicPosition, onPress])
 
   const handleMoreClick = useCallback(
     (e: React.MouseEvent) => {

@@ -1,8 +1,5 @@
-import { loggerService } from '@logger'
 import Scrollbar from '@renderer/components/Scrollbar'
-import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
 import { useAgents } from '@renderer/hooks/agents/useAgents'
-import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
 import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useAssistantPresets } from '@renderer/hooks/useAssistantPresets'
@@ -11,11 +8,9 @@ import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import type { Assistant, AssistantsSortType, Topic } from '@renderer/types'
 import type { FC } from 'react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
-
-const logger = loggerService.withContext('AssistantsTab')
 
 import UnifiedAddButton from './components/UnifiedAddButton'
 import { UnifiedList } from './components/UnifiedList'
@@ -35,26 +30,13 @@ interface AssistantsTabProps {
 const AssistantsTab: FC<AssistantsTabProps> = (props) => {
   const { activeAssistant, setActiveAssistant, onCreateAssistant, onCreateDefaultAssistant } = props
   const containerRef = useRef<HTMLDivElement>(null)
-  const { apiServerConfig, apiServerRunning } = useApiServer()
+  const { apiServerConfig } = useApiServer()
   const apiServerEnabled = apiServerConfig.enabled
   const { chat } = useRuntime()
   const { t } = useTranslation()
 
-  // Agent related hooks - use local agents when API server is not running
-  const {
-    agents: agentsApi,
-    deleteAgent: deleteAgentApi,
-    isLoading: agentsLoadingApi,
-    error: agentsErrorApi
-  } = useAgents()
-  const { agents: agentsLocal, deleteAgent: deleteAgentLocal } = useLocalAgents()
-  const { presets, installPreset } = useAgentPresets()
-
-  const agents = apiServerRunning ? agentsApi : agentsLocal
-  const deleteAgent = apiServerRunning ? deleteAgentApi : deleteAgentLocal
-  const agentsLoading = apiServerRunning ? agentsLoadingApi : false
-  const agentsError = apiServerRunning ? agentsErrorApi : null
-
+  // Agent related hooks
+  const { agents, deleteAgent, isLoading: agentsLoading, error: agentsError } = useAgents()
   const { activeAgentId } = chat
   const { setActiveAgentId } = useActiveAgent()
 
@@ -65,15 +47,10 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
   const { assistantsTabSortType = 'list', setAssistantsTabSortType } = useAssistantsTabSortType()
   const [dragging, setDragging] = useState(false)
 
-  // Get list of installed agent names to filter presets
-  const installedAgentNames = useMemo(() => agents.map((a) => a.name), [agents])
-
   // Unified items management
   const { unifiedItems, handleUnifiedListReorder } = useUnifiedItems({
     agents,
     assistants,
-    presets,
-    installedAgentNames,
     apiServerEnabled,
     agentsLoading,
     agentsError,
@@ -123,12 +100,7 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
 
   const handleAgentPress = useCallback(
     (agentId: string) => {
-      logger.info('[handleAgentPress] Agent pressed', { agentId })
-
-      logger.info('[handleAgentPress] Calling setActiveAgentId')
       setActiveAgentId(agentId)
-
-      logger.info('[handleAgentPress] Calling setActiveAssistant with fake data')
       // TODO: should allow it to be null
       setActiveAssistant({
         id: 'fake',
@@ -146,18 +118,8 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
         ],
         type: 'chat'
       })
-
-      logger.info('[handleAgentPress] Completed')
     },
     [setActiveAgentId, setActiveAssistant]
-  )
-
-  const handlePresetInstall = useCallback(
-    (presetId: string) => {
-      installPreset(presetId)
-      window.toast.success(t('agent.preset.installed'))
-    },
-    [installPreset, t]
   )
 
   return (
@@ -183,7 +145,6 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
           onAssistantDelete={onDeleteAssistant}
           onAgentDelete={deleteAgent}
           onAgentPress={handleAgentPress}
-          onPresetInstall={handlePresetInstall}
           addPreset={addAssistantPreset}
           copyAssistant={copyAssistant}
           onCreateDefaultAssistant={onCreateDefaultAssistant}
@@ -204,7 +165,6 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
           onAssistantDelete={onDeleteAssistant}
           onAgentDelete={deleteAgent}
           onAgentPress={handleAgentPress}
-          onPresetInstall={handlePresetInstall}
           addPreset={addAssistantPreset}
           copyAssistant={copyAssistant}
           onCreateDefaultAssistant={onCreateDefaultAssistant}

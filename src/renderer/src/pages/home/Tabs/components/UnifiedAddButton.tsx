@@ -54,8 +54,7 @@ const UnifiedAddButton: FC<UnifiedAddButtonProps> = ({ onCreateAssistant, setAct
         }
 
         if (type === 'agent') {
-          // Don't try to start API server in extension mode (it doesn't exist)
-          // Local agents work without API server via Redux store
+          !apiServerRunning && startApiServer()
           AgentModalPopup.show({ afterSubmit: afterCreate })
         }
       }
