@@ -1,3 +1,4 @@
+import { loggerService } from '@logger'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
 import { useAgents } from '@renderer/hooks/agents/useAgents'
@@ -13,6 +14,8 @@ import type { FC } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
+
+const logger = loggerService.withContext('AssistantsTab')
 
 import UnifiedAddButton from './components/UnifiedAddButton'
 import { UnifiedList } from './components/UnifiedList'
@@ -120,7 +123,12 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
 
   const handleAgentPress = useCallback(
     (agentId: string) => {
+      logger.info('[handleAgentPress] Agent pressed', { agentId })
+
+      logger.info('[handleAgentPress] Calling setActiveAgentId')
       setActiveAgentId(agentId)
+
+      logger.info('[handleAgentPress] Calling setActiveAssistant with fake data')
       // TODO: should allow it to be null
       setActiveAssistant({
         id: 'fake',
@@ -138,6 +146,8 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
         ],
         type: 'chat'
       })
+
+      logger.info('[handleAgentPress] Completed')
     },
     [setActiveAgentId, setActiveAssistant]
   )
