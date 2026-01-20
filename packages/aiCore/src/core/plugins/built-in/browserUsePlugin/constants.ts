@@ -80,70 +80,38 @@ export const DEFAULT_CONFIG = {
  * Browser-aware system prompt hints for AI models
  */
 export const BROWSER_SYSTEM_PROMPT = `
-# Browser Tools (BTCP)
+# Browser Automation
 
-You can control the browser using these tools. Follow this workflow for reliable automation.
+You control the browser with 4 core tools. Follow this loop:
 
-## Core Workflow
-1. **Navigate**: \`browser_navigate({ url })\` to load a page
-2. **Observe**: \`browser_snapshot()\` to see page structure with element refs (@ref:N)
-3. **Act**: Use refs for interactions: \`browser_click({ selector: "@ref:5" })\`
-4. **Re-observe**: Call \`browser_snapshot()\` again after any action that changes the page
+**Navigate → Snapshot → Act → Snapshot again**
 
-## Element Targeting (Priority Order)
-1. **@ref:N** - Most reliable. Use refs from snapshot (e.g., "@ref:12")
-2. **CSS selectors** - Fallback when refs unavailable (e.g., "#submit-btn", ".login-form input")
+## Workflow
 
-## Tools Reference
+1. \`browser_navigate({ url })\` — go to a page
+2. \`browser_snapshot()\` — get element refs like @ref:1, @ref:2
+3. \`browser_click/fill/type({ selector: "@ref:N" })\` — act on refs
+4. \`browser_snapshot()\` — refresh refs after page changes
 
-| Tool | Purpose | Key Parameters |
-|------|---------|----------------|
-| \`browser_navigate\` | Go to URL | \`url\`: target URL |
-| \`browser_snapshot\` | Get page structure | \`format\`: "tree" (interactive) or "markdown" (content); \`grep\`: filter pattern; \`includeHidden\`: show modals/dropdowns |
-| \`browser_click\` | Click element | \`selector\`: @ref or CSS |
-| \`browser_fill\` | Set input value (instant) | \`selector\`, \`value\` |
-| \`browser_type\` | Type text (char-by-char) | \`selector\`, \`text\` |
-| \`browser_press\` | Press key | \`key\`: "Enter", "Tab", "Escape", etc. |
-| \`browser_scroll\` | Scroll page | \`direction\`: "up" or "down" |
-| \`browser_get_text\` | Extract element text | \`selector\`: @ref or CSS |
-| \`browser_screenshot\` | Capture visual | (no params) |
+## Snapshot Modes
 
-## Decision Guide
+Use \`format\` to control what you see:
 
-**To interact with elements**: snapshot → find ref → click/fill/type
-**To read page content**: \`browser_snapshot({ format: "markdown" })\`
-**To find specific elements**: \`browser_snapshot({ grep: "button" })\` or \`browser_snapshot({ grep: "login" })\`
-**To see hidden elements** (modals, dropdowns): \`browser_snapshot({ includeHidden: true })\`
-**For form submission**: \`browser_fill\` for each field → \`browser_click\` submit OR \`browser_press({ key: "Enter" })\`
-**For character-sensitive input** (search autocomplete): use \`browser_type\` instead of \`browser_fill\`
+- **"tree"** (default) — interactive elements with refs for clicking/filling
+- **"markdown"** — readable page content for extraction
 
-## Common Patterns
+Options: \`grep\` to filter, \`includeHidden\` for modals/dropdowns
 
-### Fill and Submit Form
-\`\`\`
-browser_snapshot() → find input refs
-browser_fill({ selector: "@ref:3", value: "user@example.com" })
-browser_fill({ selector: "@ref:5", value: "password123" })
-browser_click({ selector: "@ref:7" })  // submit button
-browser_snapshot()  // verify result
-\`\`\`
+## Core Tools
 
-### Navigate and Extract Data
-\`\`\`
-browser_navigate({ url: "https://example.com" })
-browser_snapshot({ format: "markdown" })  // get readable content
-\`\`\`
+**browser_navigate** — \`{ url }\`
+**browser_snapshot** — \`{ format?, grep?, includeHidden? }\`
+**browser_click** — \`{ selector }\` (use @ref from snapshot)
+**browser_fill** — \`{ selector, value }\` (set input instantly)
 
-### Handle Dynamic Content
-\`\`\`
-browser_click({ selector: "@ref:10" })  // open dropdown/modal
-browser_snapshot({ includeHidden: true })  // see newly visible elements
-browser_click({ selector: "@ref:15" })  // select option
-\`\`\`
+## Rules
 
-## Important Notes
-- Always snapshot after navigation or actions that modify the page
-- Refs are stable within a page state but change after page updates
-- Use \`grep\` parameter to reduce snapshot size on complex pages
-- If an action fails, re-snapshot to get fresh refs
+- Always use @ref from the most recent snapshot
+- Snapshot again after any action that changes the page
+- Use \`grep\` on complex pages: \`browser_snapshot({ grep: "login" })\`
 `.trim()
