@@ -3,7 +3,7 @@ import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { HelpTooltip } from '@renderer/components/TooltipIcons'
 import { TopView } from '@renderer/components/TopView'
 import { permissionModeCards } from '@renderer/config/agent'
-import { isWin } from '@renderer/config/constant'
+import { isExtension, isWin } from '@renderer/config/constant'
 import { useAgents } from '@renderer/hooks/agents/useAgents'
 import { useUpdateAgent } from '@renderer/hooks/agents/useUpdateAgent'
 import SelectAgentBaseModelButton from '@renderer/pages/home/components/SelectAgentBaseModelButton'
@@ -70,7 +70,8 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
   }, [agent, open])
 
   const checkGitBash = useCallback(async () => {
-    if (!isWin) return
+    // Git Bash check is only needed for Windows Electron mode
+    if (isExtension || !isWin) return
     try {
       const pathInfo = await window.api.system.getGitBashPathInfo()
       setGitBashPathInfo(pathInfo)
@@ -86,6 +87,8 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
   const selectedPermissionMode = form.configuration?.permission_mode ?? 'default'
 
   const handlePickGitBash = useCallback(async () => {
+    // Git Bash picker is only available in Electron mode
+    if (isExtension) return
     try {
       const selected = await window.api.file.select({
         title: t('agent.gitBash.pick.title', 'Select Git Bash executable'),
@@ -114,6 +117,8 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
   }, [checkGitBash, t])
 
   const handleResetGitBash = useCallback(async () => {
+    // Git Bash reset is only available in Electron mode
+    if (isExtension) return
     try {
       // Clear manual setting and re-run auto-discovery
       await window.api.system.setGitBashPath(null)
@@ -167,7 +172,32 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
     }))
   }, [])
 
+  // State for manual path input in extension mode
+  const [manualPathInput, setManualPathInput] = useState('')
+
   const addAccessiblePath = useCallback(async () => {
+    // In extension mode, use the manual path input
+    if (isExtension) {
+      if (!manualPathInput.trim()) {
+        window.toast.warning(t('agent.session.accessible_paths.empty_input', 'Please enter a path'))
+        return
+      }
+      const pathToAdd = manualPathInput.trim()
+      setForm((prev) => {
+        if (prev.accessible_paths.includes(pathToAdd)) {
+          window.toast.warning(t('agent.session.accessible_paths.duplicate'))
+          return prev
+        }
+        return {
+          ...prev,
+          accessible_paths: [...prev.accessible_paths, pathToAdd]
+        }
+      })
+      setManualPathInput('')
+      return
+    }
+
+    // Electron mode: use folder picker
     try {
       const selected = await window.api.file.selectFolder()
       if (!selected) {
@@ -187,7 +217,7 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
       logger.error('Failed to select accessible path:', error as Error)
       window.toast.error(t('agent.session.accessible_paths.select_failed'))
     }
-  }, [t])
+  }, [t, manualPathInput])
 
   const removeAccessiblePath = useCallback((path: string) => {
     setForm((prev) => ({
@@ -247,13 +277,15 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
         return
       }
 
-      if (form.accessible_paths.length === 0) {
+      // Accessible paths are required in Electron mode but optional in extension mode
+      if (!isExtension && form.accessible_paths.length === 0) {
         window.toast.error(t('agent.session.accessible_paths.error.at_least_one'))
         loadingRef.current = false
         return
       }
 
-      if (isWin && !gitBashPathInfo.path) {
+      // Git Bash is only required in Windows Electron mode
+      if (!isExtension && isWin && !gitBashPathInfo.path) {
         window.toast.error(t('agent.gitBash.error.required', 'Git Bash path is required on Windows'))
         loadingRef.current = false
         return
@@ -371,7 +403,7 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
               />
             </FormItem>
 
-            {isWin && (
+            {!isExtension && isWin && (
               <FormItem>
                 <div className="flex items-center gap-2">
                   <Label>
@@ -442,12 +474,35 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
             <FormItem>
               <LabelWithButton>
                 <Label>
-                  {t('agent.session.accessible_paths.label')} <RequiredMark>*</RequiredMark>
+                  {t('agent.session.accessible_paths.label')} {!isExtension && <RequiredMark>*</RequiredMark>}
                 </Label>
-                <Button size="small" onClick={addAccessiblePath}>
-                  {t('agent.session.accessible_paths.add')}
-                </Button>
+                {!isExtension && (
+                  <Button size="small" onClick={addAccessiblePath}>
+                    {t('agent.session.accessible_paths.add')}
+                  </Button>
+                )}
               </LabelWithButton>
+              {isExtension && (
+                <PathInputWrapper>
+                  <Input
+                    value={manualPathInput}
+                    onChange={(e) => setManualPathInput(e.target.value)}
+                    placeholder={t(
+                      'agent.session.accessible_paths.input_placeholder',
+                      'Enter path (e.g., /home/user/project)'
+                    )}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addAccessiblePath()
+                      }
+                    }}
+                  />
+                  <Button size="small" onClick={addAccessiblePath}>
+                    {t('agent.session.accessible_paths.add')}
+                  </Button>
+                </PathInputWrapper>
+              )}
               {form.accessible_paths.length > 0 ? (
                 <PathList>
                   {form.accessible_paths.map((path) => (
@@ -481,7 +536,7 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
               type="primary"
               htmlType="submit"
               loading={loadingRef.current}
-              disabled={isWin && !gitBashPathInfo.path}>
+              disabled={!isExtension && isWin && !gitBashPathInfo.path}>
               {isEditing(agent) ? t('common.confirm') : t('common.add')}
             </Button>
           </FormFooter>
@@ -587,6 +642,17 @@ const LabelWithButton = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+`
+
+const PathInputWrapper = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+
+  input {
+    flex: 1;
+  }
 `
 
 const PathList = styled.div`
