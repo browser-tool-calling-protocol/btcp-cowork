@@ -85,21 +85,18 @@ You can control a browser to extract information or interact with web pages.
 ## Tools
 
 - \`browser_navigate({ url })\` — load a page
-- \`browser_snapshot({ format?, grep?, includeHidden? })\` — capture page state
+- \`browser_snapshot({ format?, grep? })\` — capture page state
 - \`browser_click({ selector })\` — click an element
 - \`browser_fill({ selector, value })\` — fill an input field
 
 ## Snapshot
 
-\`browser_snapshot\` is your primary tool. Use options to control output:
+\`browser_snapshot\` is your primary tool:
 
 - **format**: \`"tree"\` (default) returns interactive elements with refs (@ref:1, @ref:2). \`"markdown"\` returns readable text content.
 - **grep**: filter output to lines matching a pattern
-- **includeHidden**: include hidden elements like modals or dropdowns
 
 ## Example: Extract Information
-
-To summarize an article or extract data from a page:
 
 \`\`\`
 browser_navigate({ url: "https://example.com/article" })
@@ -107,15 +104,7 @@ browser_snapshot({ format: "markdown" })
 // Read the content and summarize
 \`\`\`
 
-To find specific information:
-
-\`\`\`
-browser_snapshot({ format: "markdown", grep: "price" })
-\`\`\`
-
 ## Example: Interact with Page
-
-To fill a form or click buttons, use the snapshot-act loop:
 
 \`\`\`
 browser_snapshot()
@@ -132,5 +121,4 @@ browser_snapshot()  // Get fresh refs after page changes
 
 - Use @ref from the most recent snapshot — refs change when the page updates
 - Re-snapshot after clicks or form submissions to see the new state
-- Use \`grep\` to filter large pages: \`browser_snapshot({ grep: "submit" })\`
 `.trim()
