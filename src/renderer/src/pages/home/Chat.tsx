@@ -57,17 +57,6 @@ const Chat: FC<Props> = (props) => {
   const sessionAgentId = activeTopicOrSession === 'session' ? activeAgentId : null
   const { createDefaultSession } = useCreateDefaultSession(sessionAgentId)
 
-  // Debug logging for render conditions
-  React.useEffect(() => {
-    logger.info('[Chat] Render state', {
-      activeTopicOrSession,
-      activeAgentId,
-      activeSessionId,
-      sessionIdMap: activeSessionIdMap,
-      willRenderAgentInput: activeTopicOrSession === 'session' && !!activeAgentId && !!activeSessionId
-    })
-  }, [activeTopicOrSession, activeAgentId, activeSessionId, activeSessionIdMap])
-
   const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
   const [filterIncludeUser, setFilterIncludeUser] = useState(false)
@@ -239,7 +228,11 @@ const Chat: FC<Props> = (props) => {
                 {activeTopicOrSession === 'session' && activeAgentId && !activeSessionId && <SessionInvalid />}
                 {activeTopicOrSession === 'session' && activeAgentId && activeSessionId && (
                   <>
-                    <AgentSessionMessages agentId={activeAgentId} sessionId={activeSessionId} />
+                    {!apiServer.enabled ? (
+                      <Alert type="warning" message={t('agent.warning.enable_server')} style={{ margin: '5px 16px' }} />
+                    ) : (
+                      <AgentSessionMessages agentId={activeAgentId} sessionId={activeSessionId} />
+                    )}
                     {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
                     <AgentSessionInputbar agentId={activeAgentId} sessionId={activeSessionId} />
                   </>

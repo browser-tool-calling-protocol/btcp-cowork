@@ -1,8 +1,6 @@
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
 import { useCreateDefaultSession } from '@renderer/hooks/agents/useCreateDefaultSession'
-import { useLocalSessions } from '@renderer/hooks/agents/useLocalSessions'
 import { useSessions } from '@renderer/hooks/agents/useSessions'
-import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useAppDispatch } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
@@ -27,13 +25,7 @@ interface SessionsProps {
 
 const Sessions: React.FC<SessionsProps> = ({ agentId }) => {
   const { t } = useTranslation()
-  const { apiServerRunning } = useApiServer()
-
-  // Use local sessions when API server is not running (extension mode)
-  const sessionsApi = useSessions(apiServerRunning ? agentId : null)
-  const sessionsLocal = useLocalSessions(apiServerRunning ? null : agentId)
-
-  const { sessions, isLoading, error, deleteSession } = apiServerRunning ? sessionsApi : sessionsLocal
+  const { sessions, isLoading, error, deleteSession } = useSessions(agentId)
   const { chat } = useRuntime()
   const { activeSessionIdMap } = chat
   const dispatch = useAppDispatch()

@@ -5,9 +5,7 @@ import { TopView } from '@renderer/components/TopView'
 import { permissionModeCards } from '@renderer/config/agent'
 import { isWin } from '@renderer/config/constant'
 import { useAgents } from '@renderer/hooks/agents/useAgents'
-import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
 import { useUpdateAgent } from '@renderer/hooks/agents/useUpdateAgent'
-import { useApiServer } from '@renderer/hooks/useApiServer'
 import SelectAgentBaseModelButton from '@renderer/pages/home/components/SelectAgentBaseModelButton'
 import type {
   AddAgentForm,
@@ -58,16 +56,8 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
   const { t } = useTranslation()
   const [open, setOpen] = useState(true)
   const loadingRef = useRef(false)
-  const { isRunning: apiServerRunning } = useApiServer()
-
-  // Use local agents when API server is not running (extension mode)
-  const { addAgent: addAgentApi } = useAgents()
-  const { addAgent: addAgentLocal, updateAgent: updateAgentLocal } = useLocalAgents()
-  const { updateAgent: updateAgentApi } = useUpdateAgent()
-
-  const addAgent = apiServerRunning ? addAgentApi : addAgentLocal
-  const updateAgent = apiServerRunning ? updateAgentApi : updateAgentLocal
-
+  const { addAgent } = useAgents()
+  const { updateAgent } = useUpdateAgent()
   const isEditing = (agent?: AgentWithTools) => agent !== undefined
 
   const [form, setForm] = useState<BaseAgentForm>(() => buildAgentForm(agent))
@@ -253,6 +243,12 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
       }
       if (!form.model) {
         window.toast.error(t('error.model.not_exists'))
+        loadingRef.current = false
+        return
+      }
+
+      if (form.accessible_paths.length === 0) {
+        window.toast.error(t('agent.session.accessible_paths.error.at_least_one'))
         loadingRef.current = false
         return
       }
@@ -445,7 +441,9 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
 
             <FormItem>
               <LabelWithButton>
-                <Label>{t('agent.session.accessible_paths.label')}</Label>
+                <Label>
+                  {t('agent.session.accessible_paths.label')} <RequiredMark>*</RequiredMark>
+                </Label>
                 <Button size="small" onClick={addAccessiblePath}>
                   {t('agent.session.accessible_paths.add')}
                 </Button>
