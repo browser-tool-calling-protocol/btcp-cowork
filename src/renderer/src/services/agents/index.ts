@@ -37,3 +37,6 @@ export {
   useServiceSession,
   useServiceSessions
 } from './useAgentServiceHooks'
+
+// Global registry for non-React code
+export { getAgentService, hasAgentService, registerAgentService, requireAgentService } from './AgentServiceRegistry'

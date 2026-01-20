@@ -9,6 +9,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import type { FC, PropsWithChildren } from 'react'
 import { createContext, use, useEffect, useMemo, useRef, useState } from 'react'
 
+import { registerAgentService } from './AgentServiceRegistry'
 import type { AgentServiceMode, IAgentService } from './IAgentService'
 import { ServerAgentService } from './ServerAgentService'
 
@@ -155,6 +156,15 @@ export const AgentServiceProvider: FC<AgentServiceProviderProps> = ({ children, 
 
     initService()
   }, [apiServer.enabled, apiServer.host, apiServer.port, apiServer.apiKey, forceMode, mode, onReady, onError])
+
+  // Register service in global registry for non-React code (thunks)
+  useEffect(() => {
+    registerAgentService(service)
+    return () => {
+      // Unregister on unmount or when service changes
+      registerAgentService(null)
+    }
+  }, [service])
 
   const contextValue = useMemo<AgentServiceContextValue>(
     () => ({

@@ -18,6 +18,7 @@ import { loggerService } from '@logger'
 import { AiSdkToChunkAdapter } from '@renderer/aiCore/chunk/AiSdkToChunkAdapter'
 import { AgentApiClient } from '@renderer/api/agent'
 import db from '@renderer/databases'
+import { getAgentService } from '@renderer/services/agents'
 import { fetchMessagesSummary, transformMessagesAndFetch } from '@renderer/services/ApiService'
 import { dbService } from '@renderer/services/db'
 import { DbService } from '@renderer/services/db/DbService'
@@ -333,6 +334,21 @@ const createAgentMessageStream = async (
   content: string,
   signal: AbortSignal
 ): Promise<ReadableStream<TextStreamPart<Record<string, any>>>> => {
+  // Try to use the agent service abstraction first
+  const agentService = getAgentService()
+  if (agentService) {
+    logger.debug('Using agent service for message stream')
+    return agentService.createMessageStream({
+      agentId: agentSession.agentId,
+      sessionId: agentSession.sessionId,
+      content,
+      signal
+    })
+  }
+
+  // Fallback to direct API call if service not available
+  logger.debug('Agent service not available, using direct API call')
+
   if (!apiServer.enabled) {
     throw new Error('Agent API server is disabled')
   }
