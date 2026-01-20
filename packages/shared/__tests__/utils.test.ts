@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { isBase64ImageDataUrl, isDataUrl, parseDataUrl } from '../utils'
+import {
+  defaultAppHeaders,
+  getTrailingApiVersion,
+  isBase64ImageDataUrl,
+  isDataUrl,
+  parseDataUrl,
+  withoutTrailingApiVersion
+} from '../utils'
 
 describe('parseDataUrl', () => {
   it('parses a standard base64 image data URL', () => {
@@ -134,5 +141,160 @@ describe('isBase64ImageDataUrl', () => {
   it('returns false for malformed data URLs', () => {
     expect(isBase64ImageDataUrl('data:image/png')).toBe(false)
     expect(isBase64ImageDataUrl('')).toBe(false)
+  })
+})
+
+describe('getTrailingApiVersion', () => {
+  describe('Basic Version Extraction', () => {
+    it('extracts v1 from end of URL', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1')).toBe('v1')
+    })
+
+    it('extracts v2 from end of URL', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v2')).toBe('v2')
+    })
+
+    it('extracts version with trailing slash', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1/')).toBe('v1')
+    })
+
+    it('extracts higher version numbers', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v10')).toBe('v10')
+      expect(getTrailingApiVersion('https://api.example.com/v123')).toBe('v123')
+    })
+  })
+
+  describe('Alpha/Beta Versions', () => {
+    it('extracts v1alpha', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1alpha')).toBe('v1alpha')
+    })
+
+    it('extracts v1beta', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1beta')).toBe('v1beta')
+    })
+
+    it('extracts v2beta with trailing slash', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v2beta/')).toBe('v2beta')
+    })
+
+    it('handles case insensitivity', () => {
+      expect(getTrailingApiVersion('https://api.example.com/V1BETA')).toBe('V1BETA')
+      expect(getTrailingApiVersion('https://api.example.com/v1ALPHA')).toBe('v1ALPHA')
+    })
+  })
+
+  describe('Non-Trailing Versions', () => {
+    it('returns undefined when version is not at end', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1/chat')).toBeUndefined()
+    })
+
+    it('returns undefined when version is in middle of path', () => {
+      expect(getTrailingApiVersion('https://api.example.com/v1/completions/v2')).toBe('v2')
+    })
+
+    it('extracts last version from URL with multiple versions', () => {
+      expect(getTrailingApiVersion('https://gateway.ai.cloudflare.com/v1/xxx/v1beta')).toBe('v1beta')
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('returns undefined for URL without version', () => {
+      expect(getTrailingApiVersion('https://api.example.com')).toBeUndefined()
+    })
+
+    it('returns undefined for URL ending with resource', () => {
+      expect(getTrailingApiVersion('https://api.example.com/chat')).toBeUndefined()
+    })
+
+    it('handles URL with only domain', () => {
+      expect(getTrailingApiVersion('https://example.com')).toBeUndefined()
+    })
+
+    it('handles URL with query string', () => {
+      // Version followed by query string should not match
+      expect(getTrailingApiVersion('https://api.example.com/v1?key=value')).toBeUndefined()
+    })
+  })
+})
+
+describe('withoutTrailingApiVersion', () => {
+  describe('Version Removal', () => {
+    it('removes v1 from end of URL', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v1')).toBe('https://api.example.com')
+    })
+
+    it('removes v2 from end of URL', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v2')).toBe('https://api.example.com')
+    })
+
+    it('removes version with trailing slash', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v1/')).toBe('https://api.example.com')
+    })
+
+    it('removes beta version', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v2beta')).toBe('https://api.example.com')
+    })
+
+    it('removes alpha version', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v1alpha/')).toBe('https://api.example.com')
+    })
+  })
+
+  describe('Non-Trailing Versions', () => {
+    it('preserves URL when version is not at end', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v1/chat')).toBe('https://api.example.com/v1/chat')
+    })
+
+    it('only removes trailing version in multi-version URL', () => {
+      expect(withoutTrailingApiVersion('https://gateway.ai.cloudflare.com/v1/xxx/v1beta')).toBe(
+        'https://gateway.ai.cloudflare.com/v1/xxx'
+      )
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('returns original URL when no version present', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com')).toBe('https://api.example.com')
+    })
+
+    it('returns original URL when ending with resource', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/chat')).toBe('https://api.example.com/chat')
+    })
+
+    it('handles URL with only domain', () => {
+      expect(withoutTrailingApiVersion('https://example.com')).toBe('https://example.com')
+    })
+
+    it('preserves query strings (version not matched)', () => {
+      expect(withoutTrailingApiVersion('https://api.example.com/v1?key=value')).toBe(
+        'https://api.example.com/v1?key=value'
+      )
+    })
+  })
+})
+
+describe('defaultAppHeaders', () => {
+  it('returns correct HTTP-Referer header', () => {
+    const headers = defaultAppHeaders()
+    expect(headers['HTTP-Referer']).toBe('https://cherry-ai.com')
+  })
+
+  it('returns correct X-Title header', () => {
+    const headers = defaultAppHeaders()
+    expect(headers['X-Title']).toBe('Cherry Studio')
+  })
+
+  it('returns object with both headers', () => {
+    const headers = defaultAppHeaders()
+    expect(Object.keys(headers)).toHaveLength(2)
+    expect(headers).toHaveProperty('HTTP-Referer')
+    expect(headers).toHaveProperty('X-Title')
+  })
+
+  it('returns fresh object each call', () => {
+    const headers1 = defaultAppHeaders()
+    const headers2 = defaultAppHeaders()
+    expect(headers1).not.toBe(headers2)
+    expect(headers1).toEqual(headers2)
   })
 })
