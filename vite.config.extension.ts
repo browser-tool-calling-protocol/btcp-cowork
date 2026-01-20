@@ -91,7 +91,7 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    exclude: ['pyodide', 'btcp-browser-agent'],
+    exclude: ['pyodide'],
     esbuildOptions: {
       target: 'esnext'
     }
