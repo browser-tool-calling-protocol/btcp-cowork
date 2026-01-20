@@ -65,6 +65,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
   /**
    * Get the client from the service (throws if not configured)
+   * Casts to ExtensionClient to ensure type safety for tool implementations
    */
   const getClient = async (): Promise<ExtensionClient> => {
     if (!service) {
@@ -72,7 +73,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         'Browser service not configured. Pass service via browserUsePlugin({ service: browserAgentService })'
       )
     }
-    return service.getOrInit()
+    return service.getOrInit() as Promise<ExtensionClient>
   }
 
   /**
@@ -233,47 +234,46 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      // === Core Inspection ===
+      // === Core Inspection (matching BrowserAgent API) ===
       browser_snapshot: tool({
         description:
           'Get a snapshot of the page. Use format "tree" (default) for interactive elements with @ref markers, or "markdown" for readable page content extraction.',
-        inputSchema: z
-          .object({
-            format: z
-              .enum(['tree', 'markdown'])
-              .optional()
-              .describe('Output format: "tree" for interaction (default), "markdown" for content extraction'),
-            includeHidden: z
-              .boolean()
-              .optional()
-              .describe('Include hidden elements like modals and dropdowns (default: false)'),
-            grep: z
-              .string()
-              .optional()
-              .describe('Filter snapshot to lines matching this text pattern (e.g., "button", "login")')
-          })
-          .strict(),
+        inputSchema: z.object({
+          format: z
+            .enum(['tree', 'markdown'])
+            .optional()
+            .describe('Output format: "tree" for interaction (default), "markdown" for content extraction'),
+          selector: z.string().optional().describe('CSS selector to snapshot a specific element instead of full page'),
+          interactive: z.boolean().optional().describe('Only include interactive elements (default: true for tree)'),
+          maxDepth: z.number().optional().describe('Maximum depth of DOM tree to traverse'),
+          compact: z.boolean().optional().describe('Use compact output format (default: true)'),
+          includeHidden: z
+            .boolean()
+            .optional()
+            .describe('Include hidden elements like modals and dropdowns (default: false)'),
+          grep: z
+            .string()
+            .optional()
+            .describe('Filter snapshot to lines matching this text pattern (e.g., "button", "login")')
+        }),
         execute: async (args) =>
           executeWithCallbacks('browser_snapshot', args, async () => {
-            // Ensure session exists
             await ensureSession()
             const c = await getClient()
 
-            // Build snapshot options - keep it simple with smart defaults
-            const options: any = {
-              format: args.format || 'tree', // Default to tree for interaction
-              compact: true // Always use compact mode for token efficiency
+            // Build snapshot options matching BrowserAgent API
+            const options: Record<string, unknown> = {
+              format: args.format || 'tree',
+              compact: args.compact !== false // Default to compact for token efficiency
             }
 
-            if (args.includeHidden) {
-              options.includeHidden = true
-            }
+            if (args.selector) options.selector = args.selector
+            if (args.interactive !== undefined) options.interactive = args.interactive
+            if (args.maxDepth !== undefined) options.maxDepth = args.maxDepth
+            if (args.includeHidden) options.includeHidden = true
+            if (args.grep) options.grep = args.grep
 
-            if (args.grep) {
-              options.grep = args.grep
-            }
-
-            const snapshotStr = await c.snapshot(options)
+            const snapshotStr = await c.snapshot(options as any)
 
             // Verify snapshot is not empty
             if (!snapshotStr || snapshotStr.trim().length === 0) {
@@ -308,18 +308,18 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      // === Core Interaction ===
+      // === Core Interaction (matching BrowserAgent API) ===
       browser_click: tool({
         description: 'Click an element. Verifies session exists before clicking.',
         inputSchema: z.object({
-          selector: z.string().describe('CSS selector or element reference (@ref:N)')
+          selector: z.string().describe('CSS selector or element reference (@ref:N)'),
+          button: z.enum(['left', 'right', 'middle']).optional().describe('Mouse button to click (default: left)')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_click', args, async () => {
-            // Ensure session exists
             await ensureSession()
             const c = await getClient()
-            await c.click(args.selector)
+            await c.click(args.selector, args.button ? { button: args.button } : undefined)
             return { success: true, selector: args.selector, message: `Clicked element: ${args.selector}` }
           })
       }),
@@ -328,14 +328,16 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Type text character by character. Verifies session exists before typing.',
         inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference'),
-          text: z.string().describe('Text to type')
+          text: z.string().describe('Text to type'),
+          delay: z.number().optional().describe('Delay between keystrokes in milliseconds'),
+          clear: z.boolean().optional().describe('Clear existing text before typing')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_type', args, async () => {
-            // Ensure session exists
             await ensureSession()
             const c = await getClient()
-            await c.type(args.selector, args.text)
+            const options = args.delay || args.clear ? { delay: args.delay, clear: args.clear } : undefined
+            await c.type(args.selector, args.text, options)
             return {
               success: true,
               selector: args.selector,
@@ -353,7 +355,6 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_fill', args, async () => {
-            // Ensure session exists
             await ensureSession()
             const c = await getClient()
             await c.fill(args.selector, args.value)
@@ -366,42 +367,159 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           })
       }),
 
-      browser_press: tool({
-        description: 'Press a keyboard key (Enter, Tab, Escape, etc.)',
+      browser_hover: tool({
+        description: 'Hover over an element to trigger tooltips, dropdowns, or hover states.',
         inputSchema: z.object({
-          key: z.string().describe('Key to press')
+          selector: z.string().describe('CSS selector or element reference (@ref:N)')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_hover', args, async () => {
+            await ensureSession()
+            const c = await getClient()
+            await c.hover(args.selector)
+            return { success: true, selector: args.selector, message: `Hovered over: ${args.selector}` }
+          })
+      }),
+
+      browser_press: tool({
+        description: 'Press a keyboard key (Enter, Tab, Escape, etc.), optionally on a specific element.',
+        inputSchema: z.object({
+          key: z.string().describe('Key to press (e.g., Enter, Tab, Escape, ArrowDown)'),
+          selector: z.string().optional().describe('Optional selector to focus before pressing key')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_press', args, async () => {
+            await ensureSession()
             const c = await getClient()
-            await c.execute({ id: generateUniqueId(), action: 'press', key: args.key })
-            return { success: true }
+            await c.press(args.key, args.selector)
+            return { success: true, key: args.key, selector: args.selector }
           })
       }),
 
       browser_scroll: tool({
-        description: 'Scroll the page',
+        description: 'Scroll the page or a specific element.',
         inputSchema: z.object({
-          direction: z.enum(['up', 'down']).describe('Scroll direction')
+          direction: z.enum(['up', 'down', 'left', 'right']).optional().describe('Scroll direction'),
+          selector: z.string().optional().describe('Element to scroll (default: page)'),
+          amount: z.number().optional().describe('Scroll amount in pixels'),
+          x: z.number().optional().describe('Absolute x scroll position'),
+          y: z.number().optional().describe('Absolute y scroll position')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_scroll', args, async () => {
+            await ensureSession()
             const c = await getClient()
-            await c.execute({ id: generateUniqueId(), action: 'scroll', direction: args.direction })
-            return { success: true }
+            await c.scroll({
+              selector: args.selector,
+              direction: args.direction,
+              amount: args.amount,
+              x: args.x,
+              y: args.y
+            })
+            return { success: true, ...args }
           })
       }),
 
-      // === Visual ===
-      browser_screenshot: tool({
-        description: 'Take a screenshot of the page. Verifies session exists before taking screenshot.',
-        inputSchema: z.object({}).strict(),
-        execute: async () =>
-          executeWithCallbacks('browser_screenshot', {}, async () => {
-            // Ensure session exists
+      browser_wait: tool({
+        description: 'Wait for an element to appear or disappear.',
+        inputSchema: z.object({
+          selector: z.string().describe('CSS selector or element reference to wait for'),
+          timeout: z.number().optional().describe('Maximum wait time in milliseconds (default: 30000)'),
+          state: z.enum(['visible', 'hidden']).optional().describe('Wait for element to be visible or hidden')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_wait', args, async () => {
             await ensureSession()
             const c = await getClient()
-            const screenshotData = await c.screenshot()
+            const options = args.timeout || args.state ? { timeout: args.timeout, state: args.state } : undefined
+            await c.waitFor(args.selector, options)
+            return { success: true, selector: args.selector, state: args.state || 'visible' }
+          })
+      }),
+
+      // === Additional Inspection (matching BrowserAgent API) ===
+      browser_get_attribute: tool({
+        description: 'Get the value of an attribute from an element.',
+        inputSchema: z.object({
+          selector: z.string().describe('CSS selector or element reference (@ref:N)'),
+          attribute: z.string().describe('Attribute name to get (e.g., href, src, data-id)')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_get_attribute', args, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const value = await c.getAttribute(args.selector, args.attribute)
+            return { selector: args.selector, attribute: args.attribute, value }
+          })
+      }),
+
+      browser_is_visible: tool({
+        description: 'Check if an element is visible on the page.',
+        inputSchema: z.object({
+          selector: z.string().describe('CSS selector or element reference (@ref:N)')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_is_visible', args, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const visible = await c.isVisible(args.selector)
+            return { selector: args.selector, visible }
+          })
+      }),
+
+      browser_get_url: tool({
+        description: 'Get the current page URL.',
+        inputSchema: z.object({}).strict(),
+        execute: async () =>
+          executeWithCallbacks('browser_get_url', {}, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const url = await c.getUrl()
+            return { url }
+          })
+      }),
+
+      browser_get_title: tool({
+        description: 'Get the current page title.',
+        inputSchema: z.object({}).strict(),
+        execute: async () =>
+          executeWithCallbacks('browser_get_title', {}, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const title = await c.getTitle()
+            return { title }
+          })
+      }),
+
+      // === JavaScript Evaluation ===
+      browser_evaluate: tool({
+        description:
+          'Execute JavaScript code in the page context. Use for advanced automation when other tools are insufficient.',
+        inputSchema: z.object({
+          script: z.string().describe('JavaScript code to execute in the page context')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_evaluate', args, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const result = await c.evaluate(args.script)
+            return { result }
+          })
+      }),
+
+      // === Visual (matching BrowserAgent API) ===
+      browser_screenshot: tool({
+        description: 'Take a screenshot of the page. Verifies session exists before taking screenshot.',
+        inputSchema: z.object({
+          format: z.enum(['png', 'jpeg']).optional().describe('Image format (default: png)'),
+          quality: z.number().min(0).max(100).optional().describe('Image quality for JPEG format (0-100, default: 80)')
+        }),
+        execute: async (args) =>
+          executeWithCallbacks('browser_screenshot', args, async () => {
+            await ensureSession()
+            const c = await getClient()
+            const options = args.format || args.quality ? { format: args.format, quality: args.quality } : undefined
+            const screenshotData = await c.screenshot(options)
 
             // Verify screenshot data is not empty
             if (!screenshotData || screenshotData.length === 0) {
@@ -410,7 +528,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
             console.log(`[browser_screenshot] Captured screenshot (${screenshotData.length} chars)`)
 
-            return { image: screenshotData, format: 'png', verified: true } as ScreenshotResult
+            return { image: screenshotData, format: args.format || 'png', verified: true } as ScreenshotResult
           })
       })
     }
