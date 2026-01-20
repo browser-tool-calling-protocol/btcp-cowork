@@ -124,7 +124,9 @@ browser_screenshot()                        # Capture page
 
 ### Snapshot
 \`browser_snapshot({grep?, mode?, format?})\`
-- **grep**: Filter pattern (e.g., "button", "input", "nav") - ALWAYS USE THIS
+- **grep**: Filter pattern - ALWAYS USE THIS
+  - \`"*"\` - Match all elements
+  - \`"button"\`, \`"input"\`, \`"nav"\` - Match by keyword
 - **mode**: "interaction" (default) | "content" | "outline"
 - **format**: "tree" (default) | "markdown"
 
