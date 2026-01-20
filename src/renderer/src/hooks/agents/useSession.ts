@@ -1,28 +1,20 @@
+/**
+ * useSession Hook
+ *
+ * Manages a single session through the agent service abstraction.
+ * This hook delegates to the service layer for actual implementation.
+ */
+import { useServiceSession } from '@renderer/services/agents'
 import { useAppDispatch } from '@renderer/store'
 import { loadTopicMessagesThunk } from '@renderer/store/thunk/messageThunk'
 import { buildAgentSessionTopicId } from '@renderer/utils/agentSession'
 import { useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import useSWR from 'swr'
-
-import { useAgentClient } from './useAgentClient'
-import { useUpdateSession } from './useUpdateSession'
 
 export const useSession = (agentId: string | null, sessionId: string | null) => {
-  const { t } = useTranslation()
-  const client = useAgentClient()
-  const key = agentId && sessionId ? client.getSessionPaths(agentId).withId(sessionId) : null
   const dispatch = useAppDispatch()
   const sessionTopicId = useMemo(() => (sessionId ? buildAgentSessionTopicId(sessionId) : null), [sessionId])
-  const { updateSession } = useUpdateSession(agentId)
 
-  const fetcher = async () => {
-    if (!agentId) throw new Error(t('agent.get.error.null_id'))
-    if (!sessionId) throw new Error(t('agent.session.get.error.null_id'))
-    const data = await client.getSession(agentId, sessionId)
-    return data
-  }
-  const { data, error, isLoading, mutate } = useSWR(key, fetcher)
+  const { session, error, isLoading, isReady, updateSession, refresh } = useServiceSession(agentId, sessionId)
 
   // Use loadTopicMessagesThunk to load messages (with caching mechanism)
   // This ensures messages are preserved when switching between sessions/tabs
@@ -35,10 +27,11 @@ export const useSession = (agentId: string | null, sessionId: string | null) => 
   }, [dispatch, sessionId, sessionTopicId])
 
   return {
-    session: data,
+    session,
     error,
     isLoading,
+    isReady,
     updateSession,
-    mutate
+    mutate: refresh
   }
 }

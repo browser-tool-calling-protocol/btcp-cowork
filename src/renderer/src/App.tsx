@@ -13,6 +13,7 @@ import { NotificationProvider } from './context/NotificationProvider'
 import StyleSheetManager from './context/StyleSheetManager'
 import { ThemeProvider } from './context/ThemeProvider'
 import Router from './Router'
+import { AgentServiceProvider } from './services/agents'
 
 const logger = loggerService.withContext('App.tsx')
 
@@ -38,9 +39,11 @@ function App(): React.ReactElement {
               <NotificationProvider>
                 <CodeStyleProvider>
                   <PersistGate loading={null} persistor={persistor}>
-                    <TopViewContainer>
-                      <Router />
-                    </TopViewContainer>
+                    <AgentServiceProvider>
+                      <TopViewContainer>
+                        <Router />
+                      </TopViewContainer>
+                    </AgentServiceProvider>
                   </PersistGate>
                 </CodeStyleProvider>
               </NotificationProvider>
