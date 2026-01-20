@@ -236,21 +236,16 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       // === Core Inspection ===
       browser_snapshot: tool({
         description:
-          'Get a snapshot of the page. Use format "tree" (default) for interactive elements with @ref markers, or "markdown" for readable page content extraction.',
+          'Get a snapshot of the page. Use format "interactive" (default) for elements with @ref markers, "outline" for content structure, or "markdown" for full content extraction.',
         inputSchema: z
           .object({
             format: z
-              .enum(['tree', 'markdown'])
+              .enum(['interactive', 'outline', 'markdown'])
               .optional()
-              .describe('Output format: "tree" for interaction (default), "markdown" for content extraction'),
-            includeHidden: z
-              .boolean()
-              .optional()
-              .describe('Include hidden elements like modals and dropdowns (default: false)'),
-            grep: z
-              .string()
-              .optional()
-              .describe('Filter snapshot to lines matching this text pattern (e.g., "button", "login")')
+              .describe(
+                'Output format: "interactive" (default) for clickable elements with refs, "outline" for content structure, "markdown" for full content'
+              ),
+            grep: z.string().optional().describe('Filter output to lines matching this pattern')
           })
           .strict(),
         execute: async (args) =>
@@ -259,14 +254,17 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             await ensureSession()
             const c = await getClient()
 
-            // Build snapshot options - keep it simple with smart defaults
-            const options: any = {
-              format: args.format || 'tree', // Default to tree for interaction
-              compact: true // Always use compact mode for token efficiency
+            // Map format names to internal values
+            const formatMap: Record<string, string> = {
+              interactive: 'tree',
+              outline: 'outline',
+              markdown: 'markdown'
             }
 
-            if (args.includeHidden) {
-              options.includeHidden = true
+            // Build snapshot options
+            const options: any = {
+              format: formatMap[args.format || 'interactive'] || 'tree',
+              compact: true
             }
 
             if (args.grep) {

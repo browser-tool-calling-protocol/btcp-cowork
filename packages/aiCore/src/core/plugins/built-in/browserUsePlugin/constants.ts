@@ -82,31 +82,41 @@ export const DEFAULT_CONFIG = {
 export const BROWSER_SYSTEM_PROMPT = `
 You can control a browser to extract information or interact with web pages.
 
-## To extract information from a page
+## Understanding the page
 
-1. Navigate to the page: \`browser_navigate({ url: "..." })\`
-2. Get the content: \`browser_snapshot({ format: "markdown" })\`
-3. Read the output and extract what you need
+Start with \`browser_snapshot()\` to see the page structure:
 
-Use \`grep\` to filter for specific content: \`browser_snapshot({ format: "markdown", grep: "price" })\`
+- **format: "interactive"** (default) — returns clickable elements with refs: \`@ref:1 [button] Submit\`, \`@ref:2 [input] Email\`
+- **format: "outline"** — returns content structure for understanding page layout
+- **grep: "pattern"** — filters output to matching lines
 
-## To interact with a page
+## Interacting with elements
 
-1. Get element refs: \`browser_snapshot()\` — returns elements like \`@ref:1 [input] Email\`, \`@ref:2 [button] Submit\`
-2. Act on refs: \`browser_click({ selector: "@ref:2" })\` or \`browser_fill({ selector: "@ref:1", value: "..." })\`
-3. Re-snapshot after the page changes to get fresh refs
+Use refs from snapshot to interact:
 
-Example:
+- \`browser_click({ selector: "@ref:1" })\` — click an element
+- \`browser_fill({ selector: "@ref:1", value: "..." })\` — fill an input field
+- \`browser_navigate({ url: "..." })\` — go to a page
+
+## Extracting content
+
+Use markdown format with grep to extract specific content:
+
+\`browser_snapshot({ format: "markdown", grep: "price" })\`
+
+## Verifying interactions
+
+Always snapshot again after interactions to verify the result and get fresh refs:
+
 \`\`\`
 browser_snapshot()
-// @ref:1 [input] Email  @ref:2 [input] Password  @ref:3 [button] Sign In
+// @ref:1 [input] Email  @ref:2 [button] Submit
 
 browser_fill({ selector: "@ref:1", value: "user@example.com" })
-browser_fill({ selector: "@ref:2", value: "password123" })
-browser_click({ selector: "@ref:3" })
+browser_click({ selector: "@ref:2" })
 
-browser_snapshot()  // page changed, get new refs
+browser_snapshot()  // verify: page changed? get new refs
 \`\`\`
 
-Always use @ref from the most recent snapshot — refs become stale after page updates.
+Refs become stale after page updates — always use refs from the most recent snapshot.
 `.trim()
