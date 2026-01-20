@@ -95,47 +95,59 @@ export const DEFAULT_CONFIG = {
  * Matches the BrowserAgent public API
  */
 export const BROWSER_SYSTEM_PROMPT = `
-You have access to browser automation tools using the Browser Tool Calling Protocol (BTCP).
+# Browser Automation Tools (BTCP)
 
-## Workflow
-1. Call browser_snapshot FIRST to get the page structure with element references (@ref:N)
-2. Use @ref:N references for reliable element targeting (more stable than CSS selectors)
-3. After actions that change the page, call browser_snapshot again
-4. Use browser_wait to wait for elements to appear after navigation or interaction
+## Quick Start
+\`\`\`
+browser_navigate("https://example.com")     # Go to page
+browser_snapshot({ref: "button"})           # Get buttons with @ref markers
+browser_click("@ref:3")                     # Click element by ref
+browser_fill("@ref:5", "hello")             # Fill input by ref
+browser_screenshot()                        # Capture page
+\`\`\`
 
-## Element References
-Snapshots return refs like @ref:5, @ref:12 that remain stable across actions.
-Use these refs instead of CSS selectors when possible.
+## Core Workflow
 
-## Snapshot Options
-browser_snapshot({mode?, format?})
+**IMPORTANT: Always use ref parameter to filter snapshots, and @ref:N to interact**
 
-**Mode** (what to capture):
-- "interaction" (default) - Clickable elements (buttons, links, inputs)
-- "content" - Text content for reading
-- "outline" - Page structure
+1. Navigate: \`browser_navigate(url)\`
+2. Snapshot with filter: \`browser_snapshot({ref: "login"})\` → returns @ref:1, @ref:2...
+3. Interact using refs: \`browser_click("@ref:1")\` or \`browser_fill("@ref:2", "text")\`
+4. Re-snapshot after actions that change the page
 
-**Format** (how to output):
-- "tree" (default) - Tree with @ref markers
-- "markdown" - Readable text
+## Tools
 
-## Interaction Tools
-- browser_click(selector, {button?}) - Click with optional button (left/right/middle)
-- browser_type(selector, text, {delay?, clear?}) - Type character-by-character with optional delay
-- browser_fill(selector, value) - Fill input instantly (faster than type)
-- browser_hover(selector) - Hover over element to trigger tooltips/menus
-- browser_press(key, selector?) - Press keyboard key, optionally on specific element
-- browser_scroll({selector?, direction, amount?, x?, y?}) - Scroll page or element
-- browser_wait(selector, {timeout?, state?}) - Wait for element (visible/hidden)
+### Navigation
+- \`browser_navigate(url)\` - Go to URL
+- \`browser_back()\` / \`browser_forward()\` - History navigation
+- \`browser_reload()\` - Refresh page
 
-## Inspection Tools
-- browser_get_text(selector) - Get text content of element
-- browser_get_attribute(selector, attribute) - Get element attribute value
-- browser_is_visible(selector) - Check if element is visible
-- browser_get_url() - Get current page URL
-- browser_get_title() - Get page title
+### Snapshot
+\`browser_snapshot({ref?, mode?, format?})\`
+- **ref**: Filter pattern (e.g., "button", "input", "nav") - ALWAYS USE THIS
+- **mode**: "interaction" (default) | "content" | "outline"
+- **format**: "tree" (default) | "markdown"
 
-## Advanced
-- browser_evaluate(script) - Execute JavaScript in page context (full preset only)
-- browser_screenshot({format?, quality?}) - Take screenshot with format options
+### Interaction (use @ref:N from snapshot)
+- \`browser_click(selector)\` - Click element
+- \`browser_fill(selector, value)\` - Fill input instantly
+- \`browser_type(selector, text)\` - Type character-by-character
+- \`browser_hover(selector)\` - Hover over element
+- \`browser_press(key)\` - Press keyboard key (Enter, Tab, Escape)
+- \`browser_scroll({direction})\` - Scroll up/down/left/right
+
+### Wait
+- \`browser_wait(selector)\` - Wait for element to appear
+
+### Inspection
+- \`browser_get_text(selector)\` - Get element text
+- \`browser_get_attribute(selector, attr)\` - Get attribute value
+- \`browser_is_visible(selector)\` - Check visibility
+- \`browser_get_url()\` / \`browser_get_title()\` - Page info
+
+### Visual
+- \`browser_screenshot()\` - Capture page image
+
+### Advanced
+- \`browser_evaluate(script)\` - Run JavaScript
 `.trim()

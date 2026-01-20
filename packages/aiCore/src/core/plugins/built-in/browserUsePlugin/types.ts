@@ -26,7 +26,11 @@ export interface ExtensionClient {
   navigate(url: string): Promise<unknown>
 
   // DOM snapshot - matching BrowserAgent API
-  snapshot(options?: { mode?: 'interaction' | 'content' | 'outline'; format?: 'tree' | 'markdown' }): Promise<string>
+  snapshot(options?: {
+    ref?: string
+    mode?: 'interaction' | 'content' | 'outline'
+    format?: 'tree' | 'markdown'
+  }): Promise<string>
 
   // Interaction - matching BrowserAgent API
   click(selector: string, options?: { button?: 'left' | 'right' | 'middle' }): Promise<void>

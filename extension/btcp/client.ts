@@ -87,7 +87,9 @@ export function createClient() {
     },
 
     // DOM operations - matching BrowserAgent API
-    async snapshot(options: { mode?: 'interaction' | 'content' | 'outline'; format?: 'tree' | 'markdown' } = {}) {
+    async snapshot(
+      options: { ref?: string; mode?: 'interaction' | 'content' | 'outline'; format?: 'tree' | 'markdown' } = {}
+    ) {
       return execute({ action: 'snapshot', ...options })
     },
 

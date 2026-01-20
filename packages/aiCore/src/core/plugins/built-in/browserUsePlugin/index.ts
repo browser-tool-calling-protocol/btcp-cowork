@@ -237,25 +237,30 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       // === Core Inspection (matching BrowserAgent API) ===
       browser_snapshot: tool({
         description:
-          'Get a snapshot of the page. Use mode "interaction" (default) for clickable elements, "content" for text extraction, "outline" for page structure. Use format "tree" (default) for @ref markers, "markdown" for readable text.',
+          'Get page snapshot with element refs (@ref:N). Always use ref parameter to filter results. Use refs to interact with elements.',
         inputSchema: z.object({
+          ref: z
+            .string()
+            .optional()
+            .describe('Filter to elements matching this pattern (e.g., "button", "login", "nav")'),
           mode: z
             .enum(['interaction', 'content', 'outline'])
             .optional()
-            .describe('Snapshot mode: "interaction" (default), "content", or "outline"'),
-          format: z.enum(['tree', 'markdown']).optional().describe('Output format: "tree" (default) or "markdown"')
+            .describe('Mode: "interaction" (default), "content", or "outline"'),
+          format: z.enum(['tree', 'markdown']).optional().describe('Format: "tree" (default) or "markdown"')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_snapshot', args, async () => {
             await ensureSession()
             const c = await getClient()
 
-            const options = {
+            const options: Record<string, unknown> = {
               mode: args.mode || 'interaction',
               format: args.format || 'tree'
             }
+            if (args.ref) options.ref = args.ref
 
-            const snapshotStr = await c.snapshot(options)
+            const snapshotStr = await c.snapshot(options as any)
 
             // Verify snapshot is not empty
             if (!snapshotStr || snapshotStr.trim().length === 0) {
@@ -263,7 +268,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             }
 
             console.log(
-              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})`
+              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.ref ? ` (ref: ${args.ref})` : ''}`
             )
 
             if (snapshotStr.length > maxSnapshotSize) {
