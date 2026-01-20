@@ -10,7 +10,7 @@ import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import type { Assistant, AssistantsSortType, Topic } from '@renderer/types'
 import type { FC } from 'react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -45,7 +45,7 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
     error: agentsErrorApi
   } = useAgents()
   const { agents: agentsLocal, deleteAgent: deleteAgentLocal } = useLocalAgents()
-  const { presets } = useAgentPresets()
+  const { presets, installPreset } = useAgentPresets()
 
   const agents = apiServerRunning ? agentsApi : agentsLocal
   const deleteAgent = apiServerRunning ? deleteAgentApi : deleteAgentLocal
@@ -62,10 +62,15 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
   const { assistantsTabSortType = 'list', setAssistantsTabSortType } = useAssistantsTabSortType()
   const [dragging, setDragging] = useState(false)
 
+  // Get list of installed agent names to filter presets
+  const installedAgentNames = useMemo(() => agents.map((a) => a.name), [agents])
+
   // Unified items management
   const { unifiedItems, handleUnifiedListReorder } = useUnifiedItems({
     agents,
     assistants,
+    presets,
+    installedAgentNames,
     apiServerEnabled,
     agentsLoading,
     agentsError,
@@ -137,6 +142,14 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
     [setActiveAgentId, setActiveAssistant]
   )
 
+  const handlePresetInstall = useCallback(
+    (presetId: string) => {
+      installPreset(presetId)
+      window.toast.success(t('agent.preset.installed'))
+    },
+    [installPreset, t]
+  )
+
   return (
     <Container className="assistants-tab" ref={containerRef}>
       <UnifiedAddButton
@@ -160,6 +173,7 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
           onAssistantDelete={onDeleteAssistant}
           onAgentDelete={deleteAgent}
           onAgentPress={handleAgentPress}
+          onPresetInstall={handlePresetInstall}
           addPreset={addAssistantPreset}
           copyAssistant={copyAssistant}
           onCreateDefaultAssistant={onCreateDefaultAssistant}
@@ -180,6 +194,7 @@ const AssistantsTab: FC<AssistantsTabProps> = (props) => {
           onAssistantDelete={onDeleteAssistant}
           onAgentDelete={deleteAgent}
           onAgentPress={handleAgentPress}
+          onPresetInstall={handlePresetInstall}
           addPreset={addAssistantPreset}
           copyAssistant={copyAssistant}
           onCreateDefaultAssistant={onCreateDefaultAssistant}
