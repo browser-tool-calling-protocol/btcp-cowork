@@ -239,10 +239,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description:
           'Get page snapshot with element refs (@ref:N). Always use grep to filter results. Use @ref:N to interact with elements.',
         inputSchema: z.object({
-          grep: z
-            .string()
-            .optional()
-            .describe('Filter to elements matching this pattern (e.g., "button", "login", "nav")'),
+          grep: z.string().optional().describe('Regex pattern to filter (e.g., "button|input", "login", ".*" for all)'),
           mode: z
             .enum(['interaction', 'content', 'outline'])
             .optional()
