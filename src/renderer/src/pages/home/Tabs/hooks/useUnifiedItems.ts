@@ -27,7 +27,8 @@ export const useUnifiedItems = (options: UseUnifiedItemsOptions) => {
     const availableAgents = new Map<string, AgentEntity>()
     const availableAssistants = new Map<string, Assistant>()
 
-    if (apiServerEnabled && !agentsLoading && !agentsError) {
+    // Show agents if API server is enabled OR if there are local agents (extension mode)
+    if ((apiServerEnabled && !agentsLoading && !agentsError) || (!apiServerEnabled && agents.length > 0)) {
       agents.forEach((agent) => availableAgents.set(agent.id, agent))
     }
     assistants.forEach((assistant) => availableAssistants.set(assistant.id, assistant))

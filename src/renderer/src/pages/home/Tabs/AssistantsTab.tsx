@@ -1,5 +1,7 @@
 import Scrollbar from '@renderer/components/Scrollbar'
+import { useAgentPresets } from '@renderer/hooks/agents/useAgentPresets'
 import { useAgents } from '@renderer/hooks/agents/useAgents'
+import { useLocalAgents } from '@renderer/hooks/agents/useLocalAgents'
 import { useApiServer } from '@renderer/hooks/useApiServer'
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useAssistantPresets } from '@renderer/hooks/useAssistantPresets'
@@ -30,13 +32,26 @@ interface AssistantsTabProps {
 const AssistantsTab: FC<AssistantsTabProps> = (props) => {
   const { activeAssistant, setActiveAssistant, onCreateAssistant, onCreateDefaultAssistant } = props
   const containerRef = useRef<HTMLDivElement>(null)
-  const { apiServerConfig } = useApiServer()
+  const { apiServerConfig, isRunning: apiServerRunning } = useApiServer()
   const apiServerEnabled = apiServerConfig.enabled
   const { chat } = useRuntime()
   const { t } = useTranslation()
 
-  // Agent related hooks
-  const { agents, deleteAgent, isLoading: agentsLoading, error: agentsError } = useAgents()
+  // Agent related hooks - use local agents when API server is not running
+  const {
+    agents: agentsApi,
+    deleteAgent: deleteAgentApi,
+    isLoading: agentsLoadingApi,
+    error: agentsErrorApi
+  } = useAgents()
+  const { agents: agentsLocal, deleteAgent: deleteAgentLocal } = useLocalAgents()
+  const { presets } = useAgentPresets()
+
+  const agents = apiServerRunning ? agentsApi : agentsLocal
+  const deleteAgent = apiServerRunning ? deleteAgentApi : deleteAgentLocal
+  const agentsLoading = apiServerRunning ? agentsLoadingApi : false
+  const agentsError = apiServerRunning ? agentsErrorApi : null
+
   const { activeAgentId } = chat
   const { setActiveAgentId } = useActiveAgent()
 

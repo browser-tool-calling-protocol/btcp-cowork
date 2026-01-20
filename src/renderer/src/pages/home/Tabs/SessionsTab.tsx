@@ -1,5 +1,4 @@
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { useSettings } from '@renderer/hooks/useSettings'
 import { cn } from '@renderer/utils'
 import { Alert } from 'antd'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -15,12 +14,8 @@ const SessionsTab: FC<SessionsTabProps> = () => {
   const { chat } = useRuntime()
   const { activeAgentId } = chat
   const { t } = useTranslation()
-  const { apiServer } = useSettings()
 
-  if (!apiServer.enabled) {
-    return <Alert type="warning" message={t('agent.warning.enable_server')} style={{ margin: 10 }} />
-  }
-
+  // Local agents work without API server in extension mode
   if (!activeAgentId) {
     return <Alert type="warning" message={'Select an agent'} style={{ margin: 10 }} />
   }

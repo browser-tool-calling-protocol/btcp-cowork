@@ -228,11 +228,7 @@ const Chat: FC<Props> = (props) => {
                 {activeTopicOrSession === 'session' && activeAgentId && !activeSessionId && <SessionInvalid />}
                 {activeTopicOrSession === 'session' && activeAgentId && activeSessionId && (
                   <>
-                    {!apiServer.enabled ? (
-                      <Alert type="warning" message={t('agent.warning.enable_server')} style={{ margin: '5px 16px' }} />
-                    ) : (
-                      <AgentSessionMessages agentId={activeAgentId} sessionId={activeSessionId} />
-                    )}
+                    <AgentSessionMessages agentId={activeAgentId} sessionId={activeSessionId} />
                     {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
                     <AgentSessionInputbar agentId={activeAgentId} sessionId={activeSessionId} />
                   </>
