@@ -82,36 +82,41 @@ export const DEFAULT_CONFIG = {
 export const BROWSER_SYSTEM_PROMPT = `
 # Browser Automation
 
-You control the browser with 4 core tools. Follow this loop:
+You have 2 goals: **get information** or **interact with pages**.
 
-**Navigate → Snapshot → Act → Snapshot again**
+## Getting Information
 
-## Workflow
+Use \`browser_snapshot\` with format and grep:
 
-1. \`browser_navigate({ url })\` — go to a page
-2. \`browser_snapshot()\` — get element refs like @ref:1, @ref:2
-3. \`browser_click/fill/type({ selector: "@ref:N" })\` — act on refs
-4. \`browser_snapshot()\` — refresh refs after page changes
+- \`browser_snapshot({ format: "markdown" })\` — extract readable content
+- \`browser_snapshot({ format: "markdown", grep: "price" })\` — find specific content
+- \`browser_snapshot({ grep: "button" })\` — find elements by text
 
-## Snapshot Modes
+## Interacting with Pages
 
-Use \`format\` to control what you see:
+Follow this loop: **Snapshot → Act → Snapshot**
 
-- **"tree"** (default) — interactive elements with refs for clicking/filling
-- **"markdown"** — readable page content for extraction
+1. \`browser_snapshot()\` — get element refs (@ref:1, @ref:2, ...)
+2. \`browser_click({ selector: "@ref:N" })\` or \`browser_fill({ selector: "@ref:N", value: "..." })\`
+3. \`browser_snapshot()\` — refresh refs after page changes
 
-Options: \`grep\` to filter, \`includeHidden\` for modals/dropdowns
+## Tools
 
-## Core Tools
+| Tool | Use |
+|------|-----|
+| \`browser_navigate({ url })\` | Go to a page |
+| \`browser_snapshot({ format?, grep?, includeHidden? })\` | See the page |
+| \`browser_click({ selector })\` | Click an element |
+| \`browser_fill({ selector, value })\` | Fill an input |
 
-**browser_navigate** — \`{ url }\`
-**browser_snapshot** — \`{ format?, grep?, includeHidden? }\`
-**browser_click** — \`{ selector }\` (use @ref from snapshot)
-**browser_fill** — \`{ selector, value }\` (set input instantly)
+## Snapshot Options
+
+- **format**: \`"tree"\` (default) for refs to interact, \`"markdown"\` for content to read
+- **grep**: filter to specific text (e.g., \`"login"\`, \`"submit"\`, \`"error"\`)
+- **includeHidden**: show modals, dropdowns, hidden elements
 
 ## Rules
 
 - Always use @ref from the most recent snapshot
-- Snapshot again after any action that changes the page
-- Use \`grep\` on complex pages: \`browser_snapshot({ grep: "login" })\`
+- Re-snapshot after any action that changes the page
 `.trim()
