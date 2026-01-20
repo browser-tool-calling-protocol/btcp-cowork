@@ -1,11 +1,9 @@
 import { loggerService } from '@logger'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
-  type BrowserUseToolset,
   clearBrowserUseForAssistant,
   setBrowserUseEnabled,
   setBrowserUseForAssistant,
-  setBrowserUseToolset,
   setEnableScreencast,
   setEnableTracking,
   setInjectSystemPrompt,
@@ -22,7 +20,6 @@ export function useBrowserUseSettings() {
   return {
     ...settings,
     setEnabled: useCallback((v: boolean) => dispatch(setBrowserUseEnabled(v)), [dispatch]),
-    setToolset: useCallback((v: BrowserUseToolset) => dispatch(setBrowserUseToolset(v)), [dispatch]),
     setMaxSnapshotSize: useCallback((v: number) => dispatch(setMaxSnapshotSize(v)), [dispatch]),
     setEnableScreencast: useCallback((v: boolean) => dispatch(setEnableScreencast(v)), [dispatch]),
     setEnableTracking: useCallback((v: boolean) => dispatch(setEnableTracking(v)), [dispatch]),
@@ -36,28 +33,21 @@ export function useBrowserUseForAssistant(assistantId: string) {
   const assistantSettings = useAppSelector((state) => state.browserUse.byAssistant[assistantId])
 
   const isEnabled = assistantSettings?.enabled ?? false
-  const toolset = assistantSettings?.toolset ?? globalSettings.toolset
 
   const setEnabled = useCallback(
-    (enabled: boolean, customToolset?: BrowserUseToolset) => {
+    (enabled: boolean) => {
       logger.info('🔘 Browser Use Button Clicked', {
         assistantId,
         enabled,
-        customToolset,
         currentState: assistantSettings
       })
 
       if (enabled) {
-        const finalToolset = customToolset ?? globalSettings.toolset
-        logger.info('✅ Enabling Browser Use', {
-          assistantId,
-          toolset: finalToolset
-        })
+        logger.info('✅ Enabling Browser Use', { assistantId })
         dispatch(
           setBrowserUseForAssistant({
             assistantId,
-            enabled: true,
-            toolset: finalToolset
+            enabled: true
           })
         )
       } else {
@@ -65,20 +55,7 @@ export function useBrowserUseForAssistant(assistantId: string) {
         dispatch(clearBrowserUseForAssistant({ assistantId }))
       }
     },
-    [dispatch, assistantId, globalSettings.toolset, assistantSettings]
-  )
-
-  const setToolset = useCallback(
-    (newToolset: BrowserUseToolset) => {
-      dispatch(
-        setBrowserUseForAssistant({
-          assistantId,
-          enabled: true,
-          toolset: newToolset
-        })
-      )
-    },
-    [dispatch, assistantId]
+    [dispatch, assistantId, assistantSettings]
   )
 
   const disable = useCallback(() => {
@@ -87,10 +64,8 @@ export function useBrowserUseForAssistant(assistantId: string) {
 
   return {
     isEnabled,
-    toolset,
     globalEnabled: globalSettings.enabled,
     setEnabled,
-    setToolset,
     disable
   }
 }

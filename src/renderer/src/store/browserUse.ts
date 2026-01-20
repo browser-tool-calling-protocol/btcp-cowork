@@ -1,11 +1,8 @@
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
 
-export type BrowserUseToolset = 'minimal' | 'standard' | 'full'
-
 export interface BrowserUseSettings {
   enabled: boolean
-  toolset: BrowserUseToolset
   maxSnapshotSize: number
   enableScreencast: boolean
   enableTracking: boolean
@@ -14,7 +11,6 @@ export interface BrowserUseSettings {
 
 export interface BrowserUseAssistantState {
   enabled: boolean
-  toolset: BrowserUseToolset
 }
 
 export interface BrowserUseState {
@@ -25,7 +21,6 @@ export interface BrowserUseState {
 export const initialState: BrowserUseState = {
   globalSettings: {
     enabled: true,
-    toolset: 'standard',
     maxSnapshotSize: 50000,
     enableScreencast: false,
     enableTracking: false,
@@ -44,9 +39,6 @@ const browserUseSlice = createSlice({
     setBrowserUseEnabled: (state, action: PayloadAction<boolean>) => {
       state.globalSettings.enabled = action.payload
     },
-    setBrowserUseToolset: (state, action: PayloadAction<BrowserUseToolset>) => {
-      state.globalSettings.toolset = action.payload
-    },
     setMaxSnapshotSize: (state, action: PayloadAction<number>) => {
       state.globalSettings.maxSnapshotSize = action.payload
     },
@@ -59,12 +51,9 @@ const browserUseSlice = createSlice({
     setInjectSystemPrompt: (state, action: PayloadAction<boolean>) => {
       state.globalSettings.injectSystemPrompt = action.payload
     },
-    setBrowserUseForAssistant: (
-      state,
-      action: PayloadAction<{ assistantId: string; enabled: boolean; toolset: BrowserUseToolset }>
-    ) => {
-      const { assistantId, enabled, toolset } = action.payload
-      state.byAssistant[assistantId] = { enabled, toolset }
+    setBrowserUseForAssistant: (state, action: PayloadAction<{ assistantId: string; enabled: boolean }>) => {
+      const { assistantId, enabled } = action.payload
+      state.byAssistant[assistantId] = { enabled }
     },
     clearBrowserUseForAssistant: (state, action: PayloadAction<{ assistantId: string }>) => {
       delete state.byAssistant[action.payload.assistantId]
@@ -75,7 +64,6 @@ const browserUseSlice = createSlice({
 export const {
   setGlobalSettings,
   setBrowserUseEnabled,
-  setBrowserUseToolset,
   setMaxSnapshotSize,
   setEnableScreencast,
   setEnableTracking,

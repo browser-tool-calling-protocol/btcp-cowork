@@ -1,8 +1,7 @@
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { type DemoStep, useBrowserDemo } from '@renderer/hooks/useBrowserDemo'
 import { useBrowserUseSettings } from '@renderer/hooks/useBrowserUseSettings'
-import type { BrowserUseToolset } from '@renderer/store/browserUse'
-import { Button, InputNumber, Modal, Progress, Radio, Switch, Tag } from 'antd'
+import { Button, InputNumber, Modal, Progress, Switch, Tag } from 'antd'
 import { CheckCircle, Circle, Github, Loader2, Play, Square, XCircle } from 'lucide-react'
 import { type FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -33,8 +32,6 @@ const BrowserUseGeneralSettings: FC = () => {
   const {
     enabled,
     setEnabled,
-    toolset,
-    setToolset,
     maxSnapshotSize,
     setMaxSnapshotSize,
     enableScreencast,
@@ -53,29 +50,6 @@ const BrowserUseGeneralSettings: FC = () => {
           <Switch checked={enabled} onChange={setEnabled} />
         </SettingRow>
         <SettingDescription>{t('settings.tool.browser_use.enabled.description')}</SettingDescription>
-      </SettingGroup>
-
-      <SettingDivider />
-
-      <SettingGroup theme={theme}>
-        <SettingRow>
-          <SettingRowTitle>{t('settings.tool.browser_use.toolset.label')}</SettingRowTitle>
-        </SettingRow>
-        <SettingDescription>{t('settings.tool.browser_use.toolset.description')}</SettingDescription>
-        <RadioGroup value={toolset} onChange={(e) => setToolset(e.target.value as BrowserUseToolset)}>
-          <RadioOption value="minimal">
-            <RadioLabel>{t('settings.tool.browser_use.toolset.minimal.label')}</RadioLabel>
-            <RadioDescription>{t('settings.tool.browser_use.toolset.minimal.description')}</RadioDescription>
-          </RadioOption>
-          <RadioOption value="standard">
-            <RadioLabel>{t('settings.tool.browser_use.toolset.standard.label')}</RadioLabel>
-            <RadioDescription>{t('settings.tool.browser_use.toolset.standard.description')}</RadioDescription>
-          </RadioOption>
-          <RadioOption value="full">
-            <RadioLabel>{t('settings.tool.browser_use.toolset.full.label')}</RadioLabel>
-            <RadioDescription>{t('settings.tool.browser_use.toolset.full.description')}</RadioDescription>
-          </RadioOption>
-        </RadioGroup>
       </SettingGroup>
 
       <SettingDivider />
@@ -208,35 +182,6 @@ const SettingDescription = styled.div`
   color: var(--color-text-3);
   font-size: 12px;
   margin-top: 4px;
-`
-
-const RadioGroup = styled(Radio.Group)`
-  display: flex;
-  flex-direction: column;
-  margin-top: 12px;
-`
-
-const RadioOption = styled(Radio)`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  padding: 8px 0;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`
-
-const RadioLabel = styled.span`
-  font-weight: 500;
-`
-
-const RadioDescription = styled.span`
-  color: var(--color-text-3);
-  font-size: 12px;
-  margin-top: 2px;
-  margin-left: 24px;
 `
 
 const DemoButtonContainer = styled.div`
