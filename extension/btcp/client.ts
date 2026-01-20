@@ -59,7 +59,7 @@ export function createClient() {
     })
   }
 
-  // High-level API methods
+  // High-level API methods matching BrowserAgent public API
   return {
     execute,
 
@@ -86,30 +86,86 @@ export function createClient() {
       return execute({ action: 'navigate', url })
     },
 
-    // DOM operations
-    async snapshot(options: { format?: string } = {}) {
+    // DOM operations - matching BrowserAgent API
+    async snapshot(
+      options: { grep?: string; mode?: 'interaction' | 'content' | 'outline'; format?: 'tree' | 'markdown' } = {}
+    ) {
       return execute({ action: 'snapshot', ...options })
     },
 
-    async click(selector: string) {
-      return execute({ action: 'click', selector })
+    async click(selector: string, options?: { button?: 'left' | 'right' | 'middle' }) {
+      return execute({ action: 'click', selector, ...options })
     },
 
-    async type(selector: string, text: string) {
-      return execute({ action: 'type', selector, text })
+    async type(selector: string, text: string, options?: { delay?: number; clear?: boolean }) {
+      return execute({ action: 'type', selector, text, ...options })
     },
 
     async fill(selector: string, value: string) {
       return execute({ action: 'fill', selector, value })
     },
 
-    async press(key: string) {
-      return execute({ action: 'press', key })
+    async hover(selector: string) {
+      return execute({ action: 'hover', selector })
     },
 
-    // Screenshot
-    async screenshot() {
-      return execute({ action: 'screenshot' })
+    async press(key: string, selector?: string) {
+      return execute({ action: 'press', key, selector })
+    },
+
+    async waitFor(selector: string, options?: { timeout?: number; state?: 'visible' | 'hidden' }) {
+      return execute({ action: 'waitFor', selector, ...options })
+    },
+
+    async scroll(options: {
+      selector?: string
+      direction?: 'up' | 'down' | 'left' | 'right'
+      amount?: number
+      x?: number
+      y?: number
+    }) {
+      return execute({ action: 'scroll', ...options })
+    },
+
+    // JavaScript evaluation
+    async evaluate<T = unknown>(script: string): Promise<T> {
+      const result = await execute({ action: 'evaluate', script })
+      return result as T
+    },
+
+    // Element inspection - matching BrowserAgent API
+    async getText(selector: string): Promise<string | null> {
+      const result = await execute({ action: 'getText', selector })
+      return result?.text ?? null
+    },
+
+    async getAttribute(selector: string, attribute: string): Promise<string | null> {
+      const result = await execute({ action: 'getAttribute', selector, attribute })
+      return result?.value ?? null
+    },
+
+    async isVisible(selector: string): Promise<boolean> {
+      const result = await execute({ action: 'isVisible', selector })
+      return result?.visible ?? false
+    },
+
+    // Page information - matching BrowserAgent API
+    async getUrl(): Promise<string> {
+      const result = await execute({ action: 'getUrl' })
+      return result?.url ?? ''
+    },
+
+    async getTitle(): Promise<string> {
+      const result = await execute({ action: 'getTitle' })
+      return result?.title ?? ''
+    },
+
+    // Screenshot - matching BrowserAgent API
+    async screenshot(options?: { format?: 'png' | 'jpeg'; quality?: number }) {
+      return execute({ action: 'screenshot', ...options })
     }
   }
 }
+
+/** Client type for external usage */
+export type Client = ReturnType<typeof createClient>
