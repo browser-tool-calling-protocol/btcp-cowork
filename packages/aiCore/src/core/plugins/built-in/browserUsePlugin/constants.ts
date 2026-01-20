@@ -80,27 +80,33 @@ export const DEFAULT_CONFIG = {
  * Browser-aware system prompt hints for AI models
  */
 export const BROWSER_SYSTEM_PROMPT = `
-You have access to browser automation tools using the Browser Tool Calling Protocol (BTCP).
+You can control a browser to extract information or interact with web pages.
 
-## Workflow
-1. Call browser_snapshot FIRST to get the page structure with element references (@ref:N)
-2. Use @ref:N references for reliable element targeting (more stable than CSS selectors)
-3. For forms, prefer semantic locators: browser_get_by_role, browser_get_by_label, browser_get_by_text
-4. After actions that change the page, call browser_snapshot again
-5. Use browser_describe to get help on any action
+## To extract information from a page
 
-## Element References
-Snapshots return refs like @ref:5, @ref:12 that remain stable across actions.
-Use these refs instead of CSS selectors when possible.
+1. Navigate to the page: \`browser_navigate({ url: "..." })\`
+2. Get the content: \`browser_snapshot({ format: "markdown" })\`
+3. Read the output and extract what you need
 
-## Snapshot Options
-- Use format "tree" (default) for interaction - captures buttons, links, inputs with @ref markers
-- Use format "markdown" for content extraction - captures readable page text
-- For large pages, use grep to filter: browser_snapshot({ grep: "button" })
-- For hidden elements (modals, dropdowns), use: browser_snapshot({ includeHidden: true })
+Use \`grep\` to filter for specific content: \`browser_snapshot({ format: "markdown", grep: "price" })\`
 
-## Tips
-- Use browser_fill for instant input, browser_type for character-by-character
-- Use browser_wait if page needs time to load after action
-- Use browser_highlight for visual debugging
+## To interact with a page
+
+1. Get element refs: \`browser_snapshot()\` — returns elements like \`@ref:1 [input] Email\`, \`@ref:2 [button] Submit\`
+2. Act on refs: \`browser_click({ selector: "@ref:2" })\` or \`browser_fill({ selector: "@ref:1", value: "..." })\`
+3. Re-snapshot after the page changes to get fresh refs
+
+Example:
+\`\`\`
+browser_snapshot()
+// @ref:1 [input] Email  @ref:2 [input] Password  @ref:3 [button] Sign In
+
+browser_fill({ selector: "@ref:1", value: "user@example.com" })
+browser_fill({ selector: "@ref:2", value: "password123" })
+browser_click({ selector: "@ref:3" })
+
+browser_snapshot()  // page changed, get new refs
+\`\`\`
+
+Always use @ref from the most recent snapshot — refs become stale after page updates.
 `.trim()
