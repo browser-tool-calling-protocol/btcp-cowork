@@ -100,7 +100,7 @@ export const BROWSER_SYSTEM_PROMPT = `
 ## Quick Start
 \`\`\`
 browser_navigate("https://example.com")     # Go to page
-browser_snapshot({ref: "button"})           # Get buttons with @ref markers
+browser_snapshot({grep: "button"})          # Get buttons with @ref markers
 browser_click("@ref:3")                     # Click element by ref
 browser_fill("@ref:5", "hello")             # Fill input by ref
 browser_screenshot()                        # Capture page
@@ -108,10 +108,10 @@ browser_screenshot()                        # Capture page
 
 ## Core Workflow
 
-**IMPORTANT: Always use ref parameter to filter snapshots, and @ref:N to interact**
+**IMPORTANT: Always use grep to filter snapshots, and @ref:N to interact**
 
 1. Navigate: \`browser_navigate(url)\`
-2. Snapshot with filter: \`browser_snapshot({ref: "login"})\` → returns @ref:1, @ref:2...
+2. Snapshot with filter: \`browser_snapshot({grep: "login"})\` → returns @ref:1, @ref:2...
 3. Interact using refs: \`browser_click("@ref:1")\` or \`browser_fill("@ref:2", "text")\`
 4. Re-snapshot after actions that change the page
 
@@ -123,8 +123,8 @@ browser_screenshot()                        # Capture page
 - \`browser_reload()\` - Refresh page
 
 ### Snapshot
-\`browser_snapshot({ref?, mode?, format?})\`
-- **ref**: Filter pattern (e.g., "button", "input", "nav") - ALWAYS USE THIS
+\`browser_snapshot({grep?, mode?, format?})\`
+- **grep**: Filter pattern (e.g., "button", "input", "nav") - ALWAYS USE THIS
 - **mode**: "interaction" (default) | "content" | "outline"
 - **format**: "tree" (default) | "markdown"
 

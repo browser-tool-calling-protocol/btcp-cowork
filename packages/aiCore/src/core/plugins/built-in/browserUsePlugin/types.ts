@@ -27,7 +27,7 @@ export interface ExtensionClient {
 
   // DOM snapshot - matching BrowserAgent API
   snapshot(options?: {
-    ref?: string
+    grep?: string
     mode?: 'interaction' | 'content' | 'outline'
     format?: 'tree' | 'markdown'
   }): Promise<string>

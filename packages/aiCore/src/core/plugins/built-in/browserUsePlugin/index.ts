@@ -237,9 +237,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       // === Core Inspection (matching BrowserAgent API) ===
       browser_snapshot: tool({
         description:
-          'Get page snapshot with element refs (@ref:N). Always use ref parameter to filter results. Use refs to interact with elements.',
+          'Get page snapshot with element refs (@ref:N). Always use grep to filter results. Use @ref:N to interact with elements.',
         inputSchema: z.object({
-          ref: z
+          grep: z
             .string()
             .optional()
             .describe('Filter to elements matching this pattern (e.g., "button", "login", "nav")'),
@@ -258,7 +258,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
               mode: args.mode || 'interaction',
               format: args.format || 'tree'
             }
-            if (args.ref) options.ref = args.ref
+            if (args.grep) options.grep = args.grep
 
             const snapshotStr = await c.snapshot(options as any)
 
@@ -268,7 +268,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             }
 
             console.log(
-              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.ref ? ` (ref: ${args.ref})` : ''}`
+              `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.grep ? ` (grep: ${args.grep})` : ''}`
             )
 
             if (snapshotStr.length > maxSnapshotSize) {
