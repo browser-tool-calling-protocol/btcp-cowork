@@ -92,10 +92,14 @@ export const useAgentPresets = () => {
   const agents = useAppSelector(selectAllAgents)
   const presetsInitialized = useAppSelector((state) => state.agents?.presetsInitialized ?? false)
 
-  // Initialize presets on first load
+  // Initialize presets as agents on first load
   useEffect(() => {
     if (!presetsInitialized) {
       dispatch(setPresets(BUILT_IN_PRESETS))
+      // Auto-install all presets as agents
+      BUILT_IN_PRESETS.forEach((preset) => {
+        dispatch(installPresetAction(preset.id))
+      })
     }
   }, [dispatch, presetsInitialized])
 
