@@ -227,7 +227,7 @@
     "async-mutex": "^0.5.0",
     "axios": "^1.7.3",
     "browser-image-compression": "^2.0.2",
-    "btcp-browser-agent": "^0.1.16",
+    "btcp-browser-agent": "file:../btcp-browser-agent",
     "chalk": "4.1.2",
     "chardet": "^2.1.0",
     "cheerio": "^1.1.2",
@@ -373,7 +373,7 @@
   },
   "pnpm": {
     "overrides": {
-      "btcp-browser-agent": "^0.1.16",
+      "btcp-browser-agent": "file:../btcp-browser-agent",
       "@smithy/types": "4.7.1",
       "@codemirror/language": "6.11.3",
       "@codemirror/lint": "6.8.5",

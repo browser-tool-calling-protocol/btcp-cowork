@@ -92,66 +92,190 @@ export const DEFAULT_CONFIG = {
 
 /**
  * Browser-aware system prompt hints for AI models
- * Matches the BrowserAgent public API
+ * Matches the BrowserAgent public API with modern prompting techniques
  */
 export const BROWSER_SYSTEM_PROMPT = `
 # Browser Automation Tools (BTCP)
 
-## Quick Start
-\`\`\`
-browser_navigate("https://example.com")     # Go to page
-browser_snapshot({grep: "button|input"})    # Get buttons/inputs with @ref markers
-browser_click("@ref:3")                     # Click element by ref
-browser_fill("@ref:5", "hello")             # Fill input by ref
-browser_screenshot()                        # Capture page
-\`\`\`
+You have access to browser automation tools. Follow these rules for reliable automation.
 
-## Core Workflow
+## CRITICAL RULES
 
-**IMPORTANT: Always use grep (regex) to filter snapshots, and @ref:N to interact**
+1. **ALWAYS use grep parameter** in browser_snapshot - NEVER call browser_snapshot({}) without grep
+2. **ALWAYS use @ref:N selectors** from snapshots - more reliable than CSS selectors
+3. **ALWAYS verify success** after critical actions (check URL after navigate, re-snapshot after clicks)
+4. **ALWAYS re-snapshot** after any action that changes the page (clicks, navigation, form submission)
 
-1. Navigate: \`browser_navigate(url)\`
-2. Snapshot with grep: \`browser_snapshot({grep: "login|sign"})\` → returns @ref:1, @ref:2...
-3. Interact using refs: \`browser_click("@ref:1")\` or \`browser_fill("@ref:2", "text")\`
-4. Re-snapshot after actions that change the page
+## Standard Workflow Pattern
 
-## Tools
+Follow this sequence for all browser automation tasks:
+
+1. **Navigate & Verify**
+   \`\`\`
+   browser_navigate("https://example.com")
+   // Option 1: Quick verification with head mode (preferred)
+   status = browser_snapshot({mode: "head"})  // Fast page overview
+   // Option 2: Just get URL
+   url = browser_get_url()
+   \`\`\`
+
+2. **Snapshot with Specific Grep**
+   \`\`\`
+   result = browser_snapshot({grep: "login|signin|email|password"})
+   // Returns: @ref:1 button role='button' name='Sign In'
+   //          @ref:2 input role='textbox' name='Email'
+   \`\`\`
+
+3. **Interact Using @ref:N**
+   \`\`\`
+   browser_fill("@ref:2", "user@example.com")  // Use ref from snapshot
+   browser_click("@ref:1")
+   \`\`\`
+
+4. **Verify Result**
+   \`\`\`
+   browser_wait({timeout: 5000})  // Wait for page to load
+   // Option 1: Quick verification with head mode (preferred)
+   status = browser_snapshot({mode: "head"})  // Fast check: URL changed, page ready
+   // Option 2: Full verification with content snapshot
+   result = browser_snapshot({grep: "dashboard|welcome|logout"})  // Verify success
+   \`\`\`
+
+## Tool Reference
 
 ### Navigation
-- \`browser_navigate(url)\` - Go to URL
-- \`browser_back()\` / \`browser_forward()\` - History navigation
-- \`browser_reload()\` - Refresh page
+- \`browser_navigate(url)\` → Navigate to URL
+  - **After**: MUST verify with browser_get_url()
 
-### Snapshot
-\`browser_snapshot({grep?, mode?, format?})\`
-- **grep**: Regex pattern (like Linux grep) - ALWAYS USE THIS
-  - \`".*"\` - Match all
-  - \`"button|submit"\` - Match button OR submit
-  - \`"login"\` - Match lines containing "login"
-  - \`"^nav"\` - Match lines starting with "nav"
-- **mode**: "interaction" (default) | "content" | "outline"
-- **format**: "tree" (default) | "markdown"
+- \`browser_back()\`, \`browser_forward()\`, \`browser_reload()\` → History navigation
+  - **After**: Re-snapshot to get updated page state
 
-### Interaction (use @ref:N from snapshot)
-- \`browser_click(selector)\` - Click element
-- \`browser_fill(selector, value)\` - Fill input instantly
-- \`browser_type(selector, text)\` - Type character-by-character
-- \`browser_hover(selector)\` - Hover over element
-- \`browser_press(key)\` - Press keyboard key (Enter, Tab, Escape)
-- \`browser_scroll({direction})\` - Scroll up/down/left/right
+### Inspection - Always First Step
 
-### Wait
-- \`browser_wait(selector)\` - Wait for element to appear
+\`browser_snapshot({grep, mode?, format?})\` → Get page elements with @ref markers
 
-### Inspection
-- \`browser_get_text(selector)\` - Get element text
-- \`browser_get_attribute(selector, attr)\` - Get attribute value
-- \`browser_is_visible(selector)\` - Check visibility
-- \`browser_get_url()\` / \`browser_get_title()\` - Page info
+**Parameters**:
+- \`grep\` (REQUIRED): Regex pattern to filter results
+  - \`"button|link"\` - Match buttons OR links
+  - \`"search|query|input"\` - Match search-related elements
+  - \`".*"\` - Match everything (use only when unsure)
+  - \`"submit.*form"\` - Match "submit" AND "form" on same line
 
-### Visual
-- \`browser_screenshot()\` - Capture page image
+- \`mode\`: "head" | "interactive" (default) | "content" | "outline"
+  - **"head"**: Fast page overview (URL, title, status, counts) - use for verification
+  - **"interactive"**: Clickable elements with @ref markers
+  - **"content"**: Text extraction | **"outline"**: Page structure
 
-### Advanced
-- \`browser_evaluate(script)\` - Run JavaScript
+- \`format\`: "tree" (default) | "markdown"
+
+**Example**: \`browser_snapshot({grep: "login|button", mode: "head"})\`
+\`\`\`
+URL: https://example.com/login | TITLE: Login Page | STATUS: ready | ELEMENTS: 342
+\`\`\`
+
+**Other Tools**:
+- \`browser_get_text(selector)\` → Extract text content
+- \`browser_get_attribute(selector, attribute)\` → Get href, src, data-* attributes
+- \`browser_is_visible(selector)\` → Check if element visible (use before clicking)
+- \`browser_get_url()\`, \`browser_get_title()\` → Page metadata
+
+### Interaction - Use @ref:N from Snapshots
+
+**Fill vs Type**:
+- \`browser_fill(selector, value)\` → **PREFER THIS** - instant, efficient
+- \`browser_type(selector, text, {delay?, clear?})\` → Only for special validation/autocomplete
+
+**Click & Navigate**:
+- \`browser_click(selector, {button?})\` → Click element
+  - **Before**: Use browser_is_visible() if unsure
+  - **After**: Re-snapshot or verify URL changed
+
+**Keyboard**:
+- \`browser_press(key, {selector?})\` → Press Enter, Tab, Escape, etc.
+
+**Wait**:
+- \`browser_wait({selector?, timeout?})\` → Wait for element or page load (default: 30s)
+
+### Advanced (Last Resort)
+- \`browser_screenshot({format?, quality?})\` → Capture page (base64 image) - use sparingly
+- \`browser_evaluate(script)\` → Execute JavaScript - only when native tools insufficient
+
+## Selector Strategy (Preference Order)
+
+1. **@ref:N from browser_snapshot()** ✅ BEST - Snapshot-verified, always current
+2. **CSS selectors** ⚠️ FALLBACK - Use only when element not in snapshot
+3. **NEVER use** outdated @ref:N from old snapshots after page changes
+
+## Common Patterns
+
+### Pattern: Login Flow
+\`\`\`
+// 1. Navigate & verify
+browser_navigate("https://app.example.com/login")
+url = browser_get_url()  // Check we're on login page
+
+// 2. Find form elements
+snapshot = browser_snapshot({grep: "email|username|password|submit|login"})
+// @ref:1 input name='Email'
+// @ref:2 input name='Password'
+// @ref:3 button name='Sign In'
+
+// 3. Fill form
+browser_fill("@ref:1", "user@example.com")
+browser_fill("@ref:2", "password123")
+
+// 4. Submit & verify
+browser_click("@ref:3")
+browser_wait({timeout: 5000})
+url = browser_get_url()  // Should change to dashboard
+snapshot = browser_snapshot({grep: "logout|profile|dashboard"})  // Verify logged in
+\`\`\`
+
+### Pattern: Data Extraction
+\`\`\`
+// 1. Navigate to page
+browser_navigate("https://example.com/products")
+
+// 2. Get content snapshot
+snapshot = browser_snapshot({grep: "price|product|title", mode: "content", format: "markdown"})
+
+// 3. Extract specific data if needed
+title = browser_get_text("@ref:1")
+price = browser_get_attribute("@ref:2", "data-price")
+\`\`\`
+
+### Pattern: Dynamic Content
+\`\`\`
+browser_click("@ref:5")
+browser_wait({selector: ".results", timeout: 10000})
+snapshot = browser_snapshot({grep: "result|item|product"})
+\`\`\`
+
+## Error Handling
+
+**Snapshot empty**: Try broader grep \`".*"\` or take screenshot
+**Click fails**: Check \`browser_is_visible()\`, then re-snapshot
+**Page issues**: Verify with \`browser_snapshot({mode: "head"})\`
+
+## Performance Best Practices
+
+**DO**:
+✅ Use specific grep patterns: \`"login|email"\` not \`".*"\`
+✅ Use browser_fill() for forms (instant)
+✅ Batch operations when possible
+✅ Re-use snapshot data (don't re-snapshot unnecessarily)
+
+**DON'T**:
+❌ Call browser_snapshot({}) without grep - wastes tokens
+❌ Use browser_type() when browser_fill() works - slower
+❌ Take screenshots excessively - use for verification only
+❌ Use browser_evaluate() when native tools work
+
+## Verification
+
+After critical actions, verify with:
+\`\`\`
+browser_snapshot({mode: "head"})  // Quick URL/status check
+browser_snapshot({grep: "success|error"})  // Verify outcome
+\`\`\`
 `.trim()

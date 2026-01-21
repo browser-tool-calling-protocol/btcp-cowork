@@ -51,6 +51,13 @@ function generateUniqueId(): string {
  * ```
  */
 export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
+  console.log('[browserUsePlugin] 🚀 Initializing plugin with config:', {
+    enabled: config.enabled ?? DEFAULT_CONFIG.enabled,
+    hasService: !!config.service,
+    toolset: config.toolset ?? DEFAULT_CONFIG.toolset,
+    injectSystemPrompt: config.injectSystemPrompt ?? DEFAULT_CONFIG.injectSystemPrompt
+  })
+
   const {
     enabled = DEFAULT_CONFIG.enabled,
     service,
@@ -68,22 +75,34 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
    * Casts to ExtensionClient to ensure type safety for tool implementations
    */
   const getClient = async (): Promise<ExtensionClient> => {
+    console.log('[browserUsePlugin] Getting client from service...')
     if (!service) {
-      throw new Error(
+      const error =
         'Browser service not configured. Pass service via browserUsePlugin({ service: browserAgentService })'
-      )
+      console.error('[browserUsePlugin] ERROR:', error)
+      throw new Error(error)
     }
-    return service.getOrInit() as Promise<ExtensionClient>
+    try {
+      const client = await service.getOrInit()
+      console.log('[browserUsePlugin] Client obtained successfully')
+      return client as Promise<ExtensionClient>
+    } catch (error) {
+      console.error('[browserUsePlugin] Failed to get client:', error)
+      throw error
+    }
   }
 
   // Execution wrapper with callbacks
   const executeWithCallbacks = async <T>(toolName: string, args: unknown, executor: () => Promise<T>): Promise<T> => {
+    console.log(`[browserUsePlugin] 🔧 Tool called: ${toolName}`, args)
     onToolCall?.(toolName, args)
     try {
       const result = await executor()
+      console.log(`[browserUsePlugin] ✅ Tool succeeded: ${toolName}`, result)
       onToolResult?.(toolName, result)
       return result
     } catch (error) {
+      console.error(`[browserUsePlugin] ❌ Tool failed: ${toolName}`, error)
       onError?.(toolName, error as Error)
       throw error
     }
@@ -124,44 +143,18 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
       // === Navigation ===
       browser_navigate: tool({
-        description: 'Navigate to a URL and verify the URL was loaded successfully.',
+        description: 'Navigate to a URL. Returns success/failure from the browser.',
         inputSchema: z.object({
           url: z.string().describe('URL to navigate to')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_navigate', args, async () => {
-            console.log('[browser_navigate] Navigating to:', args.url)
+            console.log('[browser_navigate] Starting navigation to:', args.url)
             const c = await getClient()
-            await c.navigate(args.url)
-
-            // Verify navigation succeeded by checking current URL
-            console.log('[browser_navigate] Verifying navigation...')
-            const actualUrl = await c.getUrl()
-            console.log('[browser_navigate] Current URL:', actualUrl)
-
-            // Check if navigation was successful (URL should match or be a redirect)
-            const navigatedSuccessfully =
-              actualUrl &&
-              (actualUrl === args.url ||
-                actualUrl.startsWith(args.url) ||
-                new URL(actualUrl).hostname === new URL(args.url).hostname)
-
-            if (!navigatedSuccessfully) {
-              console.warn('[browser_navigate] URL mismatch - navigation may have failed', {
-                requested: args.url,
-                actual: actualUrl
-              })
-            }
-
-            return {
-              success: true,
-              requestedUrl: args.url,
-              actualUrl,
-              verified: navigatedSuccessfully,
-              message: navigatedSuccessfully
-                ? `Successfully navigated to ${actualUrl}`
-                : `Navigation completed but URL differs: requested ${args.url}, got ${actualUrl}`
-            }
+            console.log('[browser_navigate] Client ready, calling navigate()')
+            const response = await c.navigate(args.url)
+            console.log('[browser_navigate] Navigate response:', response)
+            return response
           })
       }),
 
@@ -171,8 +164,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async () =>
           executeWithCallbacks('browser_back', {}, async () => {
             const c = await getClient()
-            await c.execute({ id: generateUniqueId(), action: 'back' })
-            return { success: true }
+            return c.back()
           })
       }),
 
@@ -182,8 +174,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async () =>
           executeWithCallbacks('browser_forward', {}, async () => {
             const c = await getClient()
-            await c.execute({ id: generateUniqueId(), action: 'forward' })
-            return { success: true }
+            return c.forward()
           })
       }),
 
@@ -193,8 +184,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async () =>
           executeWithCallbacks('browser_reload', {}, async () => {
             const c = await getClient()
-            await c.execute({ id: generateUniqueId(), action: 'reload' })
-            return { success: true }
+            return c.reload()
           })
       }),
 
@@ -265,8 +255,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async (args) =>
           executeWithCallbacks('browser_click', args, async () => {
             const c = await getClient()
-            await c.click(args.selector, args.button ? { button: args.button } : undefined)
-            return { success: true, selector: args.selector, message: `Clicked element: ${args.selector}` }
+            return c.click(args.selector, args.button ? { button: args.button } : undefined)
           })
       }),
 
@@ -282,13 +271,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           executeWithCallbacks('browser_type', args, async () => {
             const c = await getClient()
             const options = args.delay || args.clear ? { delay: args.delay, clear: args.clear } : undefined
-            await c.type(args.selector, args.text, options)
-            return {
-              success: true,
-              selector: args.selector,
-              text: args.text,
-              message: `Typed text into ${args.selector}`
-            }
+            return c.type(args.selector, args.text, options)
           })
       }),
 
@@ -301,13 +284,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async (args) =>
           executeWithCallbacks('browser_fill', args, async () => {
             const c = await getClient()
-            await c.fill(args.selector, args.value)
-            return {
-              success: true,
-              selector: args.selector,
-              value: args.value,
-              message: `Filled ${args.selector} with value`
-            }
+            return c.fill(args.selector, args.value)
           })
       }),
 
@@ -319,8 +296,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async (args) =>
           executeWithCallbacks('browser_hover', args, async () => {
             const c = await getClient()
-            await c.hover(args.selector)
-            return { success: true, selector: args.selector, message: `Hovered over: ${args.selector}` }
+            const result = await c.hover(args.selector)
+            // If void return, create success response
+            return result !== undefined ? result : { success: true, selector: args.selector }
           })
       }),
 
@@ -333,8 +311,8 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async (args) =>
           executeWithCallbacks('browser_press', args, async () => {
             const c = await getClient()
-            await c.press(args.key, args.selector)
-            return { success: true, key: args.key, selector: args.selector }
+            const result = await c.press(args.key, args.selector)
+            return result !== undefined ? result : { success: true, key: args.key }
           })
       }),
 
@@ -350,30 +328,28 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         execute: async (args) =>
           executeWithCallbacks('browser_scroll', args, async () => {
             const c = await getClient()
-            await c.scroll({
+            const result = await c.scroll({
               selector: args.selector,
               direction: args.direction,
               amount: args.amount,
               x: args.x,
               y: args.y
             })
-            return { success: true, ...args }
+            return result !== undefined ? result : { success: true }
           })
       }),
 
       browser_wait: tool({
-        description: 'Wait for an element to appear or disappear.',
+        description: 'Wait for an element to appear.',
         inputSchema: z.object({
-          selector: z.string().describe('CSS selector or element reference to wait for'),
-          timeout: z.number().optional().describe('Maximum wait time in milliseconds (default: 30000)'),
-          state: z.enum(['visible', 'hidden']).optional().describe('Wait for element to be visible or hidden')
+          selector: z.string().optional().describe('CSS selector or element reference to wait for'),
+          timeout: z.number().optional().describe('Maximum wait time in milliseconds (default: 30000)')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_wait', args, async () => {
             const c = await getClient()
-            const options = args.timeout || args.state ? { timeout: args.timeout, state: args.state } : undefined
-            await c.waitFor(args.selector, options)
-            return { success: true, selector: args.selector, state: args.state || 'visible' }
+            const result = await c.wait({ selector: args.selector, timeout: args.timeout })
+            return result
           })
       }),
 

@@ -140,6 +140,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       tabId: sender.tab?.id,
       frameId: sender.frameId
     })
+    return false // Message handled, don't continue to handleMessage
   }
 
   // Skip btcp:command messages - they're handled by setupMessageListener()
