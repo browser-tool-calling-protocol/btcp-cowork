@@ -11,6 +11,7 @@ import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import MessageTools from '../Tools/MessageTools'
+import ToolParamsPreview from './ToolParamsPreview'
 
 interface Props {
   blockIds: string[]
@@ -129,15 +130,19 @@ const ToolGroupBlock: React.FC<Props> = ({ blockIds }) => {
   const collapseItems: CollapseProps['items'] = blocks.map((block) => {
     const status = getToolStatus(block)
     const toolName = getToolName(block)
+    const isExpanded = activeKeys.includes(block.id)
 
     return {
       key: block.id,
       label: (
         <ToolItemHeader>
-          <ToolItemStatus>
-            <StatusIcon status={status} />
-            <ToolItemName>{toolName}</ToolItemName>
-          </ToolItemStatus>
+          <ToolItemContent>
+            <ToolItemStatus>
+              <StatusIcon status={status} />
+              <ToolItemName>{toolName}</ToolItemName>
+            </ToolItemStatus>
+            {!isExpanded && <ToolParamsPreview block={block} compact />}
+          </ToolItemContent>
           {status === 'executing' && <ElapsedTimeCounter />}
         </ToolItemHeader>
       ),
@@ -349,6 +354,15 @@ const ToolItemHeader = styled.div`
   justify-content: space-between;
   width: 100%;
   gap: 8px;
+`
+
+const ToolItemContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 `
 
 const ToolItemStatus = styled.div`
