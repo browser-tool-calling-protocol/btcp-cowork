@@ -11,13 +11,14 @@ import type { BTCPToolName, BTCPToolPreset } from './types'
 
 /**
  * Tool presets organized by capability level
+ * Matches the BrowserAgent public API
  */
 export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
   /**
    * Minimal: Safe read-only operations
    * Best for information extraction and page analysis
    */
-  minimal: ['browser_snapshot', 'browser_get_text'],
+  minimal: ['browser_snapshot', 'browser_get_text', 'browser_get_url', 'browser_get_title', 'browser_is_visible'],
 
   /**
    * Standard: Common automation tasks
@@ -27,21 +28,27 @@ export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
   standard: [
     // Navigation
     'browser_navigate',
-    // Inspection
+    // Inspection (matching BrowserAgent API)
     'browser_snapshot',
     'browser_get_text',
-    // Interaction
+    'browser_get_attribute',
+    'browser_is_visible',
+    'browser_get_url',
+    'browser_get_title',
+    // Interaction (matching BrowserAgent API)
     'browser_click',
     'browser_type',
     'browser_fill',
+    'browser_hover',
     'browser_press',
     'browser_scroll',
+    'browser_wait',
     // Visual
     'browser_screenshot'
   ],
 
   /**
-   * Full: All capabilities
+   * Full: All capabilities including JavaScript evaluation
    * Note: browser_launch/browser_close excluded - browser auto-launches on first use
    */
   full: [
@@ -50,15 +57,22 @@ export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
     'browser_back',
     'browser_forward',
     'browser_reload',
-    // Inspection
+    // Inspection (matching BrowserAgent API)
     'browser_snapshot',
     'browser_get_text',
-    // Interaction
+    'browser_get_attribute',
+    'browser_is_visible',
+    'browser_get_url',
+    'browser_get_title',
+    // Interaction (matching BrowserAgent API)
     'browser_click',
     'browser_type',
     'browser_fill',
+    'browser_hover',
     'browser_press',
     'browser_scroll',
+    'browser_wait',
+    'browser_evaluate',
     // Visual
     'browser_screenshot'
   ]
@@ -78,29 +92,66 @@ export const DEFAULT_CONFIG = {
 
 /**
  * Browser-aware system prompt hints for AI models
+ * Matches the BrowserAgent public API
  */
 export const BROWSER_SYSTEM_PROMPT = `
-You have access to browser automation tools using the Browser Tool Calling Protocol (BTCP).
+# Browser Automation Tools (BTCP)
 
-## Workflow
-1. Call browser_snapshot FIRST to get the page structure with element references (@ref:N)
-2. Use @ref:N references for reliable element targeting (more stable than CSS selectors)
-3. For forms, prefer semantic locators: browser_get_by_role, browser_get_by_label, browser_get_by_text
-4. After actions that change the page, call browser_snapshot again
-5. Use browser_describe to get help on any action
+## Quick Start
+\`\`\`
+browser_navigate("https://example.com")     # Go to page
+browser_snapshot({grep: "button|input"})    # Get buttons/inputs with @ref markers
+browser_click("@ref:3")                     # Click element by ref
+browser_fill("@ref:5", "hello")             # Fill input by ref
+browser_screenshot()                        # Capture page
+\`\`\`
 
-## Element References
-Snapshots return refs like @ref:5, @ref:12 that remain stable across actions.
-Use these refs instead of CSS selectors when possible.
+## Core Workflow
 
-## Snapshot Options
-- Use format "tree" (default) for interaction - captures buttons, links, inputs with @ref markers
-- Use format "markdown" for content extraction - captures readable page text
-- For large pages, use grep to filter: browser_snapshot({ grep: "button" })
-- For hidden elements (modals, dropdowns), use: browser_snapshot({ includeHidden: true })
+**IMPORTANT: Always use grep (regex) to filter snapshots, and @ref:N to interact**
 
-## Tips
-- Use browser_fill for instant input, browser_type for character-by-character
-- Use browser_wait if page needs time to load after action
-- Use browser_highlight for visual debugging
+1. Navigate: \`browser_navigate(url)\`
+2. Snapshot with grep: \`browser_snapshot({grep: "login|sign"})\` → returns @ref:1, @ref:2...
+3. Interact using refs: \`browser_click("@ref:1")\` or \`browser_fill("@ref:2", "text")\`
+4. Re-snapshot after actions that change the page
+
+## Tools
+
+### Navigation
+- \`browser_navigate(url)\` - Go to URL
+- \`browser_back()\` / \`browser_forward()\` - History navigation
+- \`browser_reload()\` - Refresh page
+
+### Snapshot
+\`browser_snapshot({grep?, mode?, format?})\`
+- **grep**: Regex pattern (like Linux grep) - ALWAYS USE THIS
+  - \`".*"\` - Match all
+  - \`"button|submit"\` - Match button OR submit
+  - \`"login"\` - Match lines containing "login"
+  - \`"^nav"\` - Match lines starting with "nav"
+- **mode**: "interaction" (default) | "content" | "outline"
+- **format**: "tree" (default) | "markdown"
+
+### Interaction (use @ref:N from snapshot)
+- \`browser_click(selector)\` - Click element
+- \`browser_fill(selector, value)\` - Fill input instantly
+- \`browser_type(selector, text)\` - Type character-by-character
+- \`browser_hover(selector)\` - Hover over element
+- \`browser_press(key)\` - Press keyboard key (Enter, Tab, Escape)
+- \`browser_scroll({direction})\` - Scroll up/down/left/right
+
+### Wait
+- \`browser_wait(selector)\` - Wait for element to appear
+
+### Inspection
+- \`browser_get_text(selector)\` - Get element text
+- \`browser_get_attribute(selector, attr)\` - Get attribute value
+- \`browser_is_visible(selector)\` - Check visibility
+- \`browser_get_url()\` / \`browser_get_title()\` - Page info
+
+### Visual
+- \`browser_screenshot()\` - Capture page image
+
+### Advanced
+- \`browser_evaluate(script)\` - Run JavaScript
 `.trim()

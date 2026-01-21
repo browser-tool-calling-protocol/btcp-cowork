@@ -18,6 +18,7 @@ import MainTextBlock from './MainTextBlock'
 import PlaceholderBlock from './PlaceholderBlock'
 import ThinkingBlock from './ThinkingBlock'
 import ToolBlock from './ToolBlock'
+import ToolGroupBlock from './ToolGroupBlock'
 import TranslationBlock from './TranslationBlock'
 import VideoBlock from './VideoBlock'
 
@@ -94,6 +95,14 @@ const groupSimilarBlocks = (blocks: MessageBlock[]): (MessageBlock[] | MessageBl
       } else {
         acc.push([currentBlock])
       }
+    } else if (currentBlock.type === MessageBlockType.TOOL) {
+      // Group consecutive TOOL blocks together
+      const prevGroup = acc[acc.length - 1]
+      if (Array.isArray(prevGroup) && prevGroup[0].type === MessageBlockType.TOOL) {
+        prevGroup.push(currentBlock)
+      } else {
+        acc.push([currentBlock])
+      }
     } else {
       acc.push(currentBlock)
     }
@@ -145,6 +154,14 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, message }) => {
             return (
               <AnimatedBlockWrapper key={groupKey} enableAnimation={message.status.includes('ing')}>
                 <VideoBlock key={firstVideoBlock.id} block={firstVideoBlock} />
+              </AnimatedBlockWrapper>
+            )
+          } else if (block[0].type === MessageBlockType.TOOL) {
+            // Render grouped tool blocks using ToolGroupBlock
+            const blockIds = block.map((b) => b.id)
+            return (
+              <AnimatedBlockWrapper key={groupKey} enableAnimation={message.status.includes('ing')}>
+                <ToolGroupBlock blockIds={blockIds} />
               </AnimatedBlockWrapper>
             )
           }

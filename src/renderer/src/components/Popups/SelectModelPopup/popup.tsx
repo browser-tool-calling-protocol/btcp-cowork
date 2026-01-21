@@ -12,7 +12,7 @@ import type { Model, ModelType, Provider } from '@renderer/types'
 import { objectEntries } from '@renderer/types'
 import { classNames, filterModelsByKeywords, getFancyProviderName } from '@renderer/utils'
 import { getModelTags } from '@renderer/utils/model'
-import { Avatar, Divider, Empty, Modal, Tooltip } from 'antd'
+import { Avatar, Button, Divider, Empty, Modal, Tooltip } from 'antd'
 import { first, sortBy } from 'lodash'
 import { Settings2 } from 'lucide-react'
 import React, {
@@ -453,6 +453,19 @@ const PopupContainer: React.FC<Props> = ({ model, filter: baseFilter, showTagFil
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
         </EmptyState>
       )}
+      <Divider style={{ margin: '8px 0 0 0', borderBlockStartWidth: 0.5 }} />
+      <FooterContainer>
+        <Button
+          type="text"
+          icon={<Settings2 size={14} />}
+          onClick={() => {
+            setOpen(false)
+            resolve(undefined)
+            window.navigate('/settings/model')
+          }}>
+          {t('navigate.model_settings')}
+        </Button>
+      </FooterContainer>
     </Modal>
   )
 }
@@ -586,6 +599,12 @@ const PinIconWrapper = styled.div.attrs({ className: 'pin-icon' })<{ $isPinned?:
     opacity: 1 !important;
     color: ${(props) => (props.$isPinned ? 'var(--color-primary)' : 'inherit')};
   }
+`
+
+const FooterContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px 0;
 `
 
 const TopViewKey = 'SelectModelPopup'

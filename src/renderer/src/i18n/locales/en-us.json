@@ -2025,7 +2025,9 @@
       "invoking": "Invoking",
       "pending": "Pending",
       "preview": "Preview",
-      "raw": "Raw"
+      "raw": "Raw",
+      "toolsCompleted": "{{count}} tools completed",
+      "toolsRunning": "Running tools ({{completed}}/{{total}})"
     },
     "topic": {
       "added": "New topic added"
@@ -2212,6 +2214,7 @@
     }
   },
   "navigate": {
+    "model_settings": "Manage Models",
     "provider_settings": "Go to provider settings"
   },
   "notes": {

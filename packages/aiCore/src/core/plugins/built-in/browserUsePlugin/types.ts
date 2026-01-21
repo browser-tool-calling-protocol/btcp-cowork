@@ -6,16 +6,66 @@
  * The Client self-discovers the agent - we only work with the Client directly.
  */
 
-import type { Client } from 'btcp-browser-agent/extension'
-
 /**
- * Re-export the Client type from btcp-browser-agent/extension
- * This is the actual Client interface used for browser automation
+ * Extension Client interface matching the BrowserAgent public API
+ * This defines the full set of methods available for browser automation
  */
-export type ExtensionClient = Client
+export interface ExtensionClient {
+  // Low-level command execution
+  execute(command: { id?: string; action: string; [key: string]: unknown }): Promise<unknown>
+
+  // Session management
+  sessionGetCurrent(): Promise<{ session?: { groupId: number } }>
+  groupCreate(): Promise<{ group: { id: number } }>
+
+  // Tab operations
+  tabNew(options?: { url?: string; active?: boolean }): Promise<unknown>
+  tabSwitch(tabId: number): Promise<unknown>
+
+  // Navigation
+  navigate(url: string): Promise<unknown>
+
+  // DOM snapshot - matching BrowserAgent API
+  snapshot(options?: {
+    grep?: string
+    mode?: 'interaction' | 'content' | 'outline'
+    format?: 'tree' | 'markdown'
+  }): Promise<string>
+
+  // Interaction - matching BrowserAgent API
+  click(selector: string, options?: { button?: 'left' | 'right' | 'middle' }): Promise<void>
+  type(selector: string, text: string, options?: { delay?: number; clear?: boolean }): Promise<void>
+  fill(selector: string, value: string): Promise<void>
+  hover(selector: string): Promise<void>
+  press(key: string, selector?: string): Promise<void>
+  waitFor(selector: string, options?: { timeout?: number; state?: 'visible' | 'hidden' }): Promise<void>
+  scroll(options: {
+    selector?: string
+    direction?: 'up' | 'down' | 'left' | 'right'
+    amount?: number
+    x?: number
+    y?: number
+  }): Promise<void>
+
+  // JavaScript evaluation - matching BrowserAgent API
+  evaluate<T = unknown>(script: string): Promise<T>
+
+  // Element inspection - matching BrowserAgent API
+  getText(selector: string): Promise<string | null>
+  getAttribute(selector: string, attribute: string): Promise<string | null>
+  isVisible(selector: string): Promise<boolean>
+
+  // Page information - matching BrowserAgent API
+  getUrl(): Promise<string>
+  getTitle(): Promise<string>
+
+  // Screenshot - matching BrowserAgent API
+  screenshot(options?: { format?: 'png' | 'jpeg'; quality?: number }): Promise<string>
+}
 
 /**
  * Tool names available in the BTCP Browser Plugin
+ * Matches the BrowserAgent public API
  */
 export type BTCPToolName =
   // Session Management
@@ -26,15 +76,22 @@ export type BTCPToolName =
   | 'browser_back'
   | 'browser_forward'
   | 'browser_reload'
-  // Core Inspection
+  // Inspection (matching BrowserAgent API)
   | 'browser_snapshot'
   | 'browser_get_text'
-  // Core Interaction
+  | 'browser_get_attribute'
+  | 'browser_is_visible'
+  | 'browser_get_url'
+  | 'browser_get_title'
+  // Interaction (matching BrowserAgent API)
   | 'browser_click'
   | 'browser_type'
   | 'browser_fill'
+  | 'browser_hover'
   | 'browser_press'
   | 'browser_scroll'
+  | 'browser_wait'
+  | 'browser_evaluate'
   // Visual
   | 'browser_screenshot'
 
@@ -50,7 +107,7 @@ export type BTCPToolPreset = 'minimal' | 'standard' | 'full'
 export interface BrowserAgentService {
   /**
    * Get or initialize the browser client
-   * @returns Promise resolving to the browser client
+   * @returns Promise resolving to the browser client (ExtensionClient compatible)
    */
   getOrInit(): Promise<ExtensionClient>
 }

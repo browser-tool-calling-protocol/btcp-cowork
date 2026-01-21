@@ -2024,7 +2024,9 @@
       "invoking": "调用中",
       "pending": "等待中",
       "preview": "预览",
-      "raw": "原始"
+      "raw": "原始",
+      "toolsCompleted": "{{count}} 个工具已完成",
+      "toolsRunning": "正在运行工具 ({{completed}}/{{total}})"
     },
     "topic": {
       "added": "话题添加成功"
