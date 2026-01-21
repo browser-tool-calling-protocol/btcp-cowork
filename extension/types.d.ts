@@ -1,7 +1,5 @@
 /// <reference types="chrome" />
 
-declare const chrome: typeof chrome
-
 // Extend chrome types for extension-specific APIs
 declare namespace chrome {
   export namespace sidePanel {

@@ -1,13 +1,13 @@
 /**
  * Local Agent Service
  *
- * Implements IAgentService using local Redux store and direct AI SDK calls.
+ * Implements IAgentService using local Redux store and AgentExecutor abstraction.
  * Designed for Chrome extension environment where no backend server is available.
  *
  * Features:
  * - Agent/Session CRUD via Redux store
- * - Message streaming via AI SDK (browser-compatible)
- * - Limited tool support (web search, MCP HTTP tools)
+ * - Message streaming via AgentExecutor abstraction
+ * - Supports multiple agent types with appropriate executors
  */
 import { loggerService } from '@logger'
 import store from '@renderer/store'
@@ -45,6 +45,9 @@ import type {
 } from '@renderer/types'
 import type { TextStreamPart } from 'ai'
 
+import type { IAgentExecutor } from './AgentExecutor'
+import { canRunInBrowser } from './AgentToolProvider'
+import { createLocalAgentExecutor, getAgentExecutorRegistry } from './executors'
 import type { AgentMessageStreamConfig, ServiceResult } from './IAgentService'
 import { BaseAgentService } from './IAgentService'
 
@@ -54,13 +57,23 @@ const logger = loggerService.withContext('LocalAgentService')
  * Local Agent Service
  *
  * Provides agent functionality without requiring a backend server.
- * Uses Redux for persistence and AI SDK for LLM calls.
+ * Uses Redux for persistence and AgentExecutors for LLM calls.
  */
 export class LocalAgentService extends BaseAgentService {
   readonly mode = 'local' as const
 
+  private localExecutor: IAgentExecutor
+
   constructor() {
     super()
+
+    // Initialize the local executor
+    this.localExecutor = createLocalAgentExecutor()
+
+    // Register with the global executor registry
+    const registry = getAgentExecutorRegistry()
+    registry.register(this.localExecutor)
+
     logger.info('LocalAgentService initialized')
   }
 
@@ -109,6 +122,17 @@ export class LocalAgentService extends BaseAgentService {
 
   async createAgent(form: AddAgentForm): Promise<ServiceResult<CreateAgentResponse>> {
     try {
+      // Validate agent type is browser compatible
+      if (!canRunInBrowser(form.type)) {
+        return {
+          success: false,
+          error: new Error(
+            `Agent type '${form.type}' is not supported in browser mode. ` +
+              `Only browser-compatible agent types (skill-creator) can be created locally.`
+          )
+        }
+      }
+
       const agent = createAgentEntity({
         type: form.type,
         name: form.name,
@@ -138,9 +162,8 @@ export class LocalAgentService extends BaseAgentService {
 
       store.dispatch(addSession(session))
 
-      logger.info('Agent created locally', { id: agent.id, name: agent.name })
+      logger.info('Agent created locally', { id: agent.id, name: agent.name, type: agent.type })
 
-      // Return just the agent (CreateAgentResponse = AgentEntity)
       return {
         success: true,
         data: agent
@@ -346,11 +369,11 @@ export class LocalAgentService extends BaseAgentService {
   async createMessageStream(
     config: AgentMessageStreamConfig
   ): Promise<ReadableStream<TextStreamPart<Record<string, any>>>> {
-    const { agentId, sessionId, signal } = config
+    const { agentId, sessionId, content, signal } = config
 
-    logger.info('Creating local message stream', { agentId, sessionId, contentLength: config.content.length })
+    logger.info('Creating local message stream', { agentId, sessionId, contentLength: content.length })
 
-    // Get session to retrieve model configuration
+    // Get session to retrieve configuration
     const state = store.getState()
     const session = selectSessionById(state, sessionId)
 
@@ -358,48 +381,36 @@ export class LocalAgentService extends BaseAgentService {
       throw new Error(`Session not found: ${sessionId}`)
     }
 
-    // For local mode, we need to resolve the model and make direct AI SDK calls
-    // This is a simplified implementation - full implementation would need
-    // provider configuration and proper model resolution
-    const modelId = session.model
-
-    if (!modelId) {
-      throw new Error('Session has no model configured')
+    // Validate agent type can run locally
+    if (!canRunInBrowser(session.agent_type)) {
+      throw new Error(
+        `Agent type '${session.agent_type}' cannot run in browser mode. ` +
+          `Only browser-compatible agent types are supported locally.`
+      )
     }
 
-    // Create a ReadableStream that wraps the AI SDK stream
-    return this.createLocalStream(session, signal)
-  }
+    // Find appropriate executor
+    const registry = getAgentExecutorRegistry()
+    const executor = registry.findExecutor(session.agent_type)
 
-  /**
-   * Create a local stream using AI SDK
-   * This is a simplified implementation for browser-compatible execution
-   */
-  private createLocalStream(
-    _session: AgentSessionEntity,
-    signal?: AbortSignal
-  ): ReadableStream<TextStreamPart<Record<string, any>>> {
-    // For now, return an error stream indicating local execution is not fully implemented
-    // Full implementation would require:
-    // 1. Model resolution from provider registry
-    // 2. API key configuration
-    // 3. Tool definitions for browser-compatible tools
-    return new ReadableStream<TextStreamPart<Record<string, any>>>({
-      start(controller) {
-        // Emit an error indicating local execution needs configuration
-        controller.enqueue({
-          type: 'error',
-          error: new Error(
-            'Local agent execution requires model configuration. ' +
-              'Please configure an API provider in settings to use local agent mode.'
-          )
-        } as TextStreamPart<Record<string, any>>)
-        controller.close()
-      },
-      cancel() {
-        signal?.dispatchEvent(new Event('abort'))
-      }
+    if (!executor) {
+      throw new Error(`No executor found for agent type: ${session.agent_type}`)
+    }
+
+    // Check executor availability
+    const isAvailable = await executor.isAvailable()
+    if (!isAvailable) {
+      throw new Error(`Executor for agent type '${session.agent_type}' is not available`)
+    }
+
+    // Execute using the executor
+    const result = await executor.execute({
+      session,
+      content,
+      signal
     })
+
+    return result.stream
   }
 
   // ============ Model Operations ============
@@ -413,6 +424,15 @@ export class LocalAgentService extends BaseAgentService {
       object: 'list',
       data: []
     }
+  }
+
+  // ============ Executor Access ============
+
+  /**
+   * Get the local executor instance
+   */
+  getExecutor(): IAgentExecutor {
+    return this.localExecutor
   }
 }
 
