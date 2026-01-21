@@ -17,6 +17,37 @@ export {
   type ServiceResult
 } from './IAgentService'
 
+// Executor abstractions
+export {
+  type AgentExecutionConfig,
+  type AgentExecutionResult,
+  type AgentToolDefinition,
+  type ExecutionMode,
+  type IAgentExecutor,
+  type IAgentExecutorRegistry,
+  type IAgentToolProvider
+} from './AgentExecutor'
+
+// Tool provider
+export {
+  AgentToolProvider,
+  canRunInBrowser,
+  getAgentToolProvider,
+  getDefaultToolsForAgentType
+} from './AgentToolProvider'
+
+// Executors
+export {
+  AgentExecutorRegistry,
+  createLocalAgentExecutor,
+  createServerAgentExecutor,
+  getAgentExecutorRegistry,
+  LocalAgentExecutor,
+  resetAgentExecutorRegistry,
+  ServerAgentExecutor,
+  type ServerAgentExecutorConfig
+} from './executors'
+
 // Server implementation
 export { createServerAgentService, ServerAgentService, type ServerAgentServiceConfig } from './ServerAgentService'
 
