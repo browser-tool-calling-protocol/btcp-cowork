@@ -10,13 +10,14 @@ import SelectAgentBaseModelButton from '@renderer/pages/home/components/SelectAg
 import type {
   AddAgentForm,
   AgentEntity,
+  AgentType,
   ApiModel,
   BaseAgentForm,
   PermissionMode,
   Tool,
   UpdateAgentForm
 } from '@renderer/types'
-import { AgentConfigurationSchema, isAgentType } from '@renderer/types'
+import { AgentConfigurationSchema, isAgentType, isBrowserCompatibleAgentType } from '@renderer/types'
 import type { GitBashPathInfo } from '@shared/config/constant'
 import { Button, Input, Modal, Select } from 'antd'
 import { AlertTriangleIcon } from 'lucide-react'
@@ -31,8 +32,31 @@ const logger = loggerService.withContext('AddAgentPopup')
 
 type AgentWithTools = AgentEntity & { tools?: Tool[] }
 
+// Get default agent type based on environment
+// In extension mode, only skill-creator is supported (browser-compatible)
+const getDefaultAgentType = (): AgentType => (isExtension ? 'skill-creator' : 'claude-code')
+
+// Agent type options for the selector
+const AGENT_TYPE_OPTIONS: { value: AgentType; label: string; description: string; browserOnly?: boolean }[] = [
+  {
+    value: 'skill-creator',
+    label: 'Skill Creator',
+    description: 'Create skills for browser automation',
+    browserOnly: true
+  },
+  {
+    value: 'claude-code',
+    label: 'Claude Code',
+    description: 'Full coding agent with file and shell access'
+  }
+]
+
+// Get available agent types based on environment
+const getAvailableAgentTypes = () =>
+  isExtension ? AGENT_TYPE_OPTIONS.filter((opt) => isBrowserCompatibleAgentType(opt.value)) : AGENT_TYPE_OPTIONS
+
 const buildAgentForm = (existing?: AgentWithTools): BaseAgentForm => ({
-  type: existing?.type ?? 'claude-code',
+  type: existing?.type ?? getDefaultAgentType(),
   name: existing?.name ?? 'Agent',
   description: existing?.description,
   instructions: existing?.instructions,
@@ -155,6 +179,13 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
     setForm((prev) => ({
       ...prev,
       name: e.target.value
+    }))
+  }, [])
+
+  const onTypeChange = useCallback((value: AgentType) => {
+    setForm((prev) => ({
+      ...prev,
+      type: value
     }))
   }, [])
 
@@ -378,6 +409,37 @@ const PopupContainer: React.FC<Props> = ({ agent, afterSubmit, resolve }) => {
                 <Input value={form.name} onChange={onNameChange} required />
               </FormItem>
             </FormRow>
+
+            {/* Agent type selector - hidden when editing (type cannot be changed) */}
+            {!isEditing(agent) && (
+              <FormItem>
+                <div className="flex items-center gap-2">
+                  <Label>
+                    {t('agent.add.type', 'Agent Type')} <RequiredMark>*</RequiredMark>
+                  </Label>
+                  <HelpTooltip
+                    title={t(
+                      'agent.add.type.tooltip',
+                      'Choose the type of agent. Skill Creator works in the browser, Claude Code requires a backend server.'
+                    )}
+                  />
+                </div>
+                <Select
+                  value={form.type}
+                  onChange={onTypeChange}
+                  style={{ width: '100%' }}
+                  disabled={getAvailableAgentTypes().length <= 1}>
+                  {getAvailableAgentTypes().map((opt) => (
+                    <Select.Option key={opt.value} value={opt.value}>
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{opt.label}</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{opt.description}</div>
+                      </div>
+                    </Select.Option>
+                  ))}
+                </Select>
+              </FormItem>
+            )}
 
             <FormItem>
               <div className="flex items-center gap-2">
