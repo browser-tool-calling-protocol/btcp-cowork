@@ -2,16 +2,10 @@
  * Browser Demo Hook
  *
  * Demonstrates the BTCP browser tools by controlling the browser through
- * the btcp-browser-agent extension API with session management.
+ * the btcp-browser-agent extension API.
  *
- * Uses the BrowserAgentService singleton for shared sessions between
+ * Uses the BrowserAgentService singleton for shared client between
  * demo UI and AI agent tools.
- *
- * Session Lifecycle:
- * 1. BrowserAgentService.getOrInit() - get or initialize the client
- * 2. ensureSession() before demo - create/get session group
- * 3. Execute browser operations within session context
- * 4. closeSession() on cleanup - clean up session and all tabs
  */
 
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
@@ -124,11 +118,6 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
 
       return null
     }
-
-    // Use BrowserAgentService for session management
-    console.log('[Demo] Ensuring session via BrowserAgentService...')
-    const groupId = await browserAgentService.ensureSession()
-    console.log('[Demo] Session ready:', groupId)
 
     // Navigate to Google
     console.log('[Demo] Navigating to Google...')
@@ -281,19 +270,8 @@ export function useBrowserDemo(): UseBrowserDemoReturn {
     }
   }, [executeStep, updateStep])
 
-  const stopDemo = useCallback(async () => {
+  const stopDemo = useCallback(() => {
     abortRef.current = true
-    // Clean up session via BrowserAgentService
-    const groupId = browserAgentService.getSessionGroupId()
-    if (groupId) {
-      try {
-        console.log('[Demo] Closing session via BrowserAgentService:', groupId)
-        await browserAgentService.closeSession()
-        console.log('[Demo] Session closed')
-      } catch (err) {
-        console.error('[Demo] Failed to close session:', err)
-      }
-    }
   }, [])
 
   const resetDemo = useCallback(() => {

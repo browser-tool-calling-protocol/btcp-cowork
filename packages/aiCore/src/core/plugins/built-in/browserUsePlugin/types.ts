@@ -45,7 +45,7 @@ export type BTCPToolPreset = 'minimal' | 'standard' | 'full'
 
 /**
  * Browser Agent Service interface
- * The service that manages browser client lifecycle and sessions
+ * The service that manages browser client lifecycle
  */
 export interface BrowserAgentService {
   /**
@@ -53,12 +53,6 @@ export interface BrowserAgentService {
    * @returns Promise resolving to the browser client
    */
   getOrInit(): Promise<ExtensionClient>
-
-  /**
-   * Ensure a browser session exists (creates one if needed)
-   * @returns Promise resolving to the session group ID
-   */
-  ensureSession(): Promise<number>
 }
 
 /**
@@ -73,7 +67,7 @@ export interface BTCPBrowserPluginConfig {
 
   /**
    * Browser agent service instance
-   * The plugin will call service.getOrInit() and service.ensureSession() internally
+   * The plugin will call service.getOrInit() internally
    * Example: browserAgentService
    */
   service?: BrowserAgentService

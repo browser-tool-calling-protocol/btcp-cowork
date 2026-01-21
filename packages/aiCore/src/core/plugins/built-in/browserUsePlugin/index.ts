@@ -75,18 +75,6 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     return service.getOrInit()
   }
 
-  /**
-   * Ensure a browser session exists (creates one if needed)
-   * This is critical for browser operations to work - without a session,
-   * operations like navigate, click, etc. will fail silently
-   */
-  const ensureSession = async (): Promise<number> => {
-    if (!service) {
-      throw new Error('Browser service not configured. Cannot ensure session without service.')
-    }
-    return service.ensureSession()
-  }
-
   // Execution wrapper with callbacks
   const executeWithCallbacks = async <T>(toolName: string, args: unknown, executor: () => Promise<T>): Promise<T> => {
     onToolCall?.(toolName, args)
@@ -106,34 +94,18 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     return {
       // === Session Management ===
       browser_launch: tool({
-        description:
-          'Launch the browser agent to start automation. Creates a new browser session with tabs ready for automation.',
+        description: 'Launch the browser agent to start automation. Initializes the browser client for automation.',
         inputSchema: z.object({}).describe('No parameters required'),
         execute: async () =>
           executeWithCallbacks('browser_launch', {}, async () => {
             console.log('[browser_launch] Initializing browser client...')
             // Get client from service (initializes if needed)
             await getClient()
-            console.log('[browser_launch] Client initialized, creating session...')
-
-            // CRITICAL: Ensure session exists - this creates the actual browser tab group
-            const sessionId = await ensureSession()
-            console.log('[browser_launch] Session created successfully:', { sessionId })
-
-            // Verify session was created
-            const client = await getClient()
-            const { session } = await client.sessionGetCurrent()
-
-            if (!session || session.groupId !== sessionId) {
-              throw new Error(
-                `Session verification failed. Expected session ${sessionId} but got ${session?.groupId || 'none'}`
-              )
-            }
+            console.log('[browser_launch] Client initialized successfully')
 
             return {
               success: true,
-              sessionId,
-              message: `Browser session ${sessionId} created and verified successfully`
+              message: 'Browser client initialized successfully'
             }
           })
       }),
@@ -145,25 +117,18 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         }),
         execute: async () =>
           executeWithCallbacks('browser_close', {}, async () => {
-            // Session cleanup is handled by BrowserAgentService
             return { success: true }
           })
       }),
 
       // === Navigation ===
       browser_navigate: tool({
-        description:
-          'Navigate to a URL. Ensures a browser session exists before navigation and verifies the URL was loaded successfully.',
+        description: 'Navigate to a URL and verify the URL was loaded successfully.',
         inputSchema: z.object({
           url: z.string().describe('URL to navigate to')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_navigate', args, async () => {
-            console.log('[browser_navigate] Ensuring session exists...')
-            // CRITICAL: Ensure session exists before navigation
-            const sessionId = await ensureSession()
-            console.log('[browser_navigate] Session verified:', { sessionId })
-
             console.log('[browser_navigate] Navigating to:', args.url)
             const c = await getClient()
             await c.navigate(args.url)
@@ -191,7 +156,6 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
               success: true,
               requestedUrl: args.url,
               actualUrl,
-              sessionId,
               verified: navigatedSuccessfully,
               message: navigatedSuccessfully
                 ? `Successfully navigated to ${actualUrl}`
@@ -255,8 +219,6 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           .strict(),
         execute: async (args) =>
           executeWithCallbacks('browser_snapshot', args, async () => {
-            // Ensure session exists
-            await ensureSession()
             const c = await getClient()
 
             // Build snapshot options - keep it simple with smart defaults
@@ -277,7 +239,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
             // Verify snapshot is not empty
             if (!snapshotStr || snapshotStr.trim().length === 0) {
-              throw new Error('Snapshot is empty - page may not be loaded or session may be invalid')
+              throw new Error('Snapshot is empty - page may not be loaded')
             }
 
             console.log(
@@ -310,14 +272,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
       // === Core Interaction ===
       browser_click: tool({
-        description: 'Click an element. Verifies session exists before clicking.',
+        description: 'Click an element.',
         inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_click', args, async () => {
-            // Ensure session exists
-            await ensureSession()
             const c = await getClient()
             await c.click(args.selector)
             return { success: true, selector: args.selector, message: `Clicked element: ${args.selector}` }
@@ -325,15 +285,13 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       browser_type: tool({
-        description: 'Type text character by character. Verifies session exists before typing.',
+        description: 'Type text character by character.',
         inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference'),
           text: z.string().describe('Text to type')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_type', args, async () => {
-            // Ensure session exists
-            await ensureSession()
             const c = await getClient()
             await c.type(args.selector, args.text)
             return {
@@ -346,15 +304,13 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       }),
 
       browser_fill: tool({
-        description: 'Fill an input field instantly. Verifies session exists before filling.',
+        description: 'Fill an input field instantly.',
         inputSchema: z.object({
           selector: z.string().describe('CSS selector or element reference'),
           value: z.string().describe('Value to fill')
         }),
         execute: async (args) =>
           executeWithCallbacks('browser_fill', args, async () => {
-            // Ensure session exists
-            await ensureSession()
             const c = await getClient()
             await c.fill(args.selector, args.value)
             return {
@@ -394,18 +350,16 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
 
       // === Visual ===
       browser_screenshot: tool({
-        description: 'Take a screenshot of the page. Verifies session exists before taking screenshot.',
+        description: 'Take a screenshot of the page.',
         inputSchema: z.object({}).strict(),
         execute: async () =>
           executeWithCallbacks('browser_screenshot', {}, async () => {
-            // Ensure session exists
-            await ensureSession()
             const c = await getClient()
             const screenshotData = await c.screenshot()
 
             // Verify screenshot data is not empty
             if (!screenshotData || screenshotData.length === 0) {
-              throw new Error('Screenshot data is empty - page may not be loaded or session may be invalid')
+              throw new Error('Screenshot data is empty - page may not be loaded')
             }
 
             console.log(`[browser_screenshot] Captured screenshot (${screenshotData.length} chars)`)
@@ -492,7 +446,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     onRequestEnd: async () => {
       // Cleanup tracking if enabled
       if (enableTracking) {
-        // Session cleanup is handled by BrowserAgentService
+        // Tracking cleanup logic here
       }
     }
   }

@@ -9,8 +9,6 @@
  *
  * Usage:
  * - getOrInit() - Get the singleton client, initializing if needed (primary method)
- * - ensureSession() - Create or get the active session group
- * - closeSession() - Clean up the session when done
  */
 
 import { loggerService } from '@logger'
@@ -22,7 +20,6 @@ class BrowserAgentService {
   private static instance: BrowserAgentService | null = null
   private client: Client | null = null
   private initialized = false
-  private sessionGroupId: number | null = null
   private initPromise: Promise<Client> | null = null
 
   private constructor() {
@@ -66,8 +63,8 @@ class BrowserAgentService {
   private async _doInitialize(): Promise<Client> {
     try {
       logger.info('Initializing browser client')
+      // createClient() handles session reconnection internally via popupInitialize
       this.client = createClient()
-      await this.client.popupInitialize()
       this.initialized = true
       logger.info('Browser client initialized successfully')
       return this.client
@@ -95,71 +92,11 @@ class BrowserAgentService {
   }
 
   /**
-   * Ensure a session exists, creating one if needed
-   * @returns The session group ID
-   */
-  public async ensureSession(): Promise<number> {
-    const client = await this.getOrInit()
-
-    // Check for existing session
-    const { session: existingSession } = await client.sessionGetCurrent()
-    if (existingSession) {
-      this.sessionGroupId = existingSession.groupId
-      logger.info('Using existing session', { groupId: this.sessionGroupId })
-      return this.sessionGroupId
-    }
-
-    // Create new session
-    logger.info('Creating new browser session')
-    const { group } = await client.groupCreate()
-    this.sessionGroupId = group.id
-    logger.info('Browser session created', { groupId: this.sessionGroupId })
-
-    // Get tabs in the session and switch to the first one
-    const tabs = await client.tabList()
-    if (tabs.length > 0) {
-      await client.tabSwitch(tabs[0].id)
-      logger.debug('Switched to session tab', { tabId: tabs[0].id })
-    }
-
-    return this.sessionGroupId
-  }
-
-  /**
-   * Get the current session group ID (if any)
-   */
-  public getSessionGroupId(): number | null {
-    return this.sessionGroupId
-  }
-
-  /**
-   * Close the current session
-   */
-  public async closeSession(): Promise<void> {
-    if (!this.sessionGroupId || !this.client) {
-      return
-    }
-
-    try {
-      logger.info('Closing browser session', { groupId: this.sessionGroupId })
-      await this.client.groupDelete(this.sessionGroupId)
-      this.sessionGroupId = null
-      logger.info('Browser session closed')
-    } catch (error) {
-      logger.error('Failed to close browser session', error as Error)
-      // Reset session ID even on error to avoid stale state
-      this.sessionGroupId = null
-      throw error
-    }
-  }
-
-  /**
    * Reset the service (for testing or cleanup)
    */
   public reset(): void {
     this.client = null
     this.initialized = false
-    this.sessionGroupId = null
     this.initPromise = null
     logger.debug('BrowserAgentService reset')
   }
