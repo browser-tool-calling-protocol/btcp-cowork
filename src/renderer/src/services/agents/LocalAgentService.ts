@@ -7,9 +7,14 @@
  * Features:
  * - Agent/Session CRUD via Redux store
  * - Message streaming via AI SDK (browser-compatible)
- * - Limited tool support (web search, MCP HTTP tools)
+ * - Limited tool support (addSkill, think built-in tools)
  */
+import { createExecutor } from '@cherrystudio/ai-core'
 import { loggerService } from '@logger'
+import { createAiSdkProvider } from '@renderer/aiCore/provider/factory'
+import { providerToAiSdkConfig } from '@renderer/aiCore/provider/providerConfig'
+import { getModel } from '@renderer/hooks/useModel'
+import { getProviderByModel } from '@renderer/services/AssistantService'
 import store from '@renderer/store'
 import {
   addAgent,
@@ -25,6 +30,8 @@ import {
   updateAgent as updateAgentAction,
   updateSession as updateSessionAction
 } from '@renderer/store/agents'
+import { addSkill as addSkillAction } from '@renderer/store/skill'
+import { BUILT_IN_TOOLS, validateSkillInput } from '@renderer/tools'
 import type {
   AddAgentForm,
   AgentEntity,
@@ -43,7 +50,10 @@ import type {
   UpdateAgentResponse,
   UpdateSessionForm
 } from '@renderer/types'
-import type { TextStreamPart } from 'ai'
+import type { Skill } from '@renderer/types/skill'
+import { type TextStreamPart, tool, type ToolSet } from 'ai'
+import { v4 as uuid } from 'uuid'
+import * as z from 'zod'
 
 import type { AgentMessageStreamConfig, ServiceResult } from './IAgentService'
 import { BaseAgentService } from './IAgentService'
@@ -346,9 +356,9 @@ export class LocalAgentService extends BaseAgentService {
   async createMessageStream(
     config: AgentMessageStreamConfig
   ): Promise<ReadableStream<TextStreamPart<Record<string, any>>>> {
-    const { agentId, sessionId, signal } = config
+    const { agentId, sessionId, content, signal } = config
 
-    logger.info('Creating local message stream', { agentId, sessionId, contentLength: config.content.length })
+    logger.info('Creating local message stream', { agentId, sessionId, contentLength: content.length })
 
     // Get session to retrieve model configuration
     const state = store.getState()
@@ -358,46 +368,223 @@ export class LocalAgentService extends BaseAgentService {
       throw new Error(`Session not found: ${sessionId}`)
     }
 
-    // For local mode, we need to resolve the model and make direct AI SDK calls
-    // This is a simplified implementation - full implementation would need
-    // provider configuration and proper model resolution
-    const modelId = session.model
+    const modelString = session.model
 
-    if (!modelId) {
+    if (!modelString) {
       throw new Error('Session has no model configured')
     }
 
-    // Create a ReadableStream that wraps the AI SDK stream
-    return this.createLocalStream(session, signal)
+    // Parse model string (format: "provider:modelId")
+    const [providerId, modelId] = modelString.split(':')
+    if (!providerId || !modelId) {
+      throw new Error(`Invalid model format: ${modelString}. Expected "provider:modelId"`)
+    }
+
+    // Get the model from the store
+    const model = getModel(modelId, providerId)
+    if (!model) {
+      throw new Error(`Model not found: ${modelId} from provider ${providerId}`)
+    }
+
+    // Get the provider configuration
+    const provider = getProviderByModel(model)
+    if (!provider) {
+      throw new Error(`Provider not found for model: ${modelId}`)
+    }
+
+    if (!provider.apiKey) {
+      throw new Error(`API key not configured for provider: ${provider.name}`)
+    }
+
+    // Create the stream
+    return this.createLocalStream(session, content, model, provider, signal)
+  }
+
+  /**
+   * Build AI SDK tools from built-in tools and allowed tools list
+   */
+  private buildLocalTools(allowedTools?: string[]): ToolSet {
+    const tools: ToolSet = {}
+
+    // Get allowed tools from the session configuration
+    const allowedToolNames = allowedTools ?? []
+
+    // addSkill tool
+    if (allowedToolNames.length === 0 || allowedToolNames.includes('addSkill')) {
+      const addSkillBuiltIn = BUILT_IN_TOOLS.find((t) => t.name === 'addSkill')
+      tools.addSkill = tool({
+        description:
+          addSkillBuiltIn?.description ||
+          'Create and save a new skill to the skill library. Skills are configurations that instruct AI agents how to interact with websites or perform specific tasks.',
+        inputSchema: z.object({
+          name: z.string().describe('Name of the skill'),
+          description: z.string().optional().describe('Brief description of what the skill does'),
+          prompt: z.string().describe('The main instruction prompt that tells the AI how to perform this skill'),
+          domainPattern: z
+            .string()
+            .optional()
+            .describe('Optional regex pattern to match URLs where this skill should be active'),
+          contentScript: z.string().optional().describe('Optional JavaScript code to run in the page context'),
+          pageScript: z.string().optional().describe('Optional JavaScript code to run in an isolated context'),
+          toolSchema: z.string().optional().describe('Optional JSON string defining custom AI tool capabilities'),
+          enabled: z.boolean().optional().describe('Whether the skill should be enabled immediately (default: true)')
+        }),
+        execute: async (params) => {
+          // Validate input
+          const validation = validateSkillInput(params)
+          if (!validation.valid) {
+            return { success: false, error: validation.error }
+          }
+
+          // Create the skill
+          const skill: Skill = {
+            id: uuid(),
+            name: params.name.trim(),
+            description: params.description?.trim(),
+            prompt: params.prompt.trim(),
+            domainPattern: params.domainPattern?.trim(),
+            contentScript: params.contentScript?.trim(),
+            pageScript: params.pageScript?.trim(),
+            toolSchema: params.toolSchema?.trim(),
+            enabled: params.enabled ?? true,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }
+
+          // Save to store
+          store.dispatch(addSkillAction(skill))
+
+          logger.info('Skill created via agent tool', { id: skill.id, name: skill.name })
+
+          return {
+            success: true,
+            skill: {
+              id: skill.id,
+              name: skill.name,
+              description: skill.description,
+              enabled: skill.enabled
+            }
+          }
+        }
+      })
+    }
+
+    // think tool
+    if (allowedToolNames.length === 0 || allowedToolNames.includes('think')) {
+      const thinkBuiltIn = BUILT_IN_TOOLS.find((t) => t.name === 'think')
+      tools.think = tool({
+        description:
+          thinkBuiltIn?.description ||
+          'Use the tool to think about something. It will not obtain new information or make any changes, but just log the thought.',
+        inputSchema: z.object({
+          thought: z.string().describe('Your thoughts.')
+        }),
+        execute: async (params) => {
+          // The think tool just logs the thought and returns it
+          logger.debug('Agent thinking', { thought: params.thought })
+          return { thought: params.thought }
+        }
+      })
+    }
+
+    return tools
   }
 
   /**
    * Create a local stream using AI SDK
-   * This is a simplified implementation for browser-compatible execution
+   * Implements browser-compatible agent execution
    */
   private createLocalStream(
-    _session: AgentSessionEntity,
+    session: AgentSessionEntity,
+    content: string,
+    model: any,
+    provider: any,
     signal?: AbortSignal
   ): ReadableStream<TextStreamPart<Record<string, any>>> {
-    // For now, return an error stream indicating local execution is not fully implemented
-    // Full implementation would require:
-    // 1. Model resolution from provider registry
-    // 2. API key configuration
-    // 3. Tool definitions for browser-compatible tools
+    // Build tools before creating the stream (capture in closure)
+    const tools = this.buildLocalTools(session.allowed_tools)
+
     return new ReadableStream<TextStreamPart<Record<string, any>>>({
-      start(controller) {
-        // Emit an error indicating local execution needs configuration
-        controller.enqueue({
-          type: 'error',
-          error: new Error(
-            'Local agent execution requires model configuration. ' +
-              'Please configure an API provider in settings to use local agent mode.'
-          )
-        } as TextStreamPart<Record<string, any>>)
-        controller.close()
+      start: async (controller) => {
+        try {
+          // Build AI SDK configuration
+          const aiSdkConfig = providerToAiSdkConfig(provider, model)
+
+          // Create AI SDK provider (async)
+          const aiSdkProvider = await createAiSdkProvider(aiSdkConfig)
+
+          if (!aiSdkProvider) {
+            throw new Error(`Failed to create AI SDK provider for: ${aiSdkConfig.providerId}`)
+          }
+
+          // Get the language model
+          const languageModel = aiSdkProvider.languageModel(model.id)
+
+          // Create executor
+          const executor = createExecutor(aiSdkConfig.providerId, aiSdkConfig.options, [])
+
+          // Build messages
+          const messages: any[] = []
+
+          // Add system message if instructions are present
+          if (session.instructions) {
+            messages.push({
+              role: 'system',
+              content: session.instructions
+            })
+          }
+
+          // Add user message
+          messages.push({
+            role: 'user',
+            content
+          })
+
+          logger.info('Starting local agent stream', {
+            modelId: model.id,
+            providerId: provider.id,
+            toolCount: Object.keys(tools).length,
+            hasInstructions: !!session.instructions
+          })
+
+          // Stream the response
+          const streamResult = await executor.streamText({
+            model: languageModel,
+            messages,
+            tools: Object.keys(tools).length > 0 ? tools : undefined,
+            abortSignal: signal
+          })
+
+          // Process the stream
+          const reader = streamResult.fullStream.getReader()
+
+          while (true) {
+            const { done, value } = await reader.read()
+
+            if (done) {
+              break
+            }
+
+            // Forward the chunk to the controller
+            controller.enqueue(value as TextStreamPart<Record<string, any>>)
+          }
+
+          controller.close()
+        } catch (error) {
+          logger.error('Local agent stream error', error as Error)
+
+          // Emit error event
+          controller.enqueue({
+            type: 'error',
+            error: error instanceof Error ? error : new Error(String(error))
+          } as TextStreamPart<Record<string, any>>)
+
+          controller.close()
+        }
       },
-      cancel() {
-        signal?.dispatchEvent(new Event('abort'))
+      cancel: () => {
+        // Signal is already handled by the executor
+        logger.debug('Local agent stream cancelled')
       }
     })
   }

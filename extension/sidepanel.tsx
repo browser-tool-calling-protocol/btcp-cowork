@@ -25,6 +25,7 @@ import { CodeStyleProvider } from '@renderer/context/CodeStyleProvider'
 import { NotificationProvider } from '@renderer/context/NotificationProvider'
 import StyleSheetManager from '@renderer/context/StyleSheetManager'
 import { ThemeProvider } from '@renderer/context/ThemeProvider'
+import { AgentServiceProvider } from '@renderer/services/agents'
 import { startAutoSync } from '@renderer/services/BackupService'
 import { startNutstoreAutoSync } from '@renderer/services/NutstoreService'
 import storeSyncService from '@renderer/services/StoreSyncService'
@@ -107,13 +108,15 @@ function SidepanelApp() {
               <NotificationProvider>
                 <CodeStyleProvider>
                   <PersistGate loading={<LoadingScreen />} persistor={persistor}>
-                    <TopViewContainer>
-                      <MemoryRouter>
-                        <QuickPanelProvider>
-                          <MinimalChat />
-                        </QuickPanelProvider>
-                      </MemoryRouter>
-                    </TopViewContainer>
+                    <AgentServiceProvider>
+                      <TopViewContainer>
+                        <MemoryRouter>
+                          <QuickPanelProvider>
+                            <MinimalChat />
+                          </QuickPanelProvider>
+                        </MemoryRouter>
+                      </TopViewContainer>
+                    </AgentServiceProvider>
                   </PersistGate>
                 </CodeStyleProvider>
               </NotificationProvider>
