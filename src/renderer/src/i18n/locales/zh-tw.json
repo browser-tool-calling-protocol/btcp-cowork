@@ -716,10 +716,24 @@
       },
       "auto_resize": "自動調整高度",
       "browser_use": {
-        "disable": "[to be translated]:Disable Browser Use",
-        "enabled_tooltip": "[to be translated]:Browser tools enabled",
-        "label": "[to be translated]:Browser Use",
-        "menu_description": "[to be translated]:Enable browser automation tools"
+        "disable": "停用瀏覽器控制",
+        "enabled_tooltip": "瀏覽器工具已啟用",
+        "label": "瀏覽器控制",
+        "menu_description": "啟用瀏覽器自動化工具",
+        "panel": {
+          "title": "瀏覽器會話",
+          "connect": "連接瀏覽器",
+          "connect_desc": "初始化瀏覽器會話以進行自動化",
+          "connect_error": "連接瀏覽器失敗",
+          "connecting": "連接中...",
+          "connecting_desc": "正在建立瀏覽器連接",
+          "disconnect": "斷開連接",
+          "disconnect_desc": "結束當前瀏覽器會話",
+          "enable_tools": "啟用瀏覽器工具",
+          "enable_tools_desc": "允許 AI 使用瀏覽器自動化",
+          "disable_tools": "停用瀏覽器工具",
+          "disable_tools_desc": "阻止 AI 使用瀏覽器自動化"
+        }
       },
       "clear": {
         "content": "您想要清除目前話題的所有訊息嗎？",
