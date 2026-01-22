@@ -71,25 +71,20 @@ export interface ExtensionClient {
 
 /**
  * Tool names available in the BTCP Browser Plugin
- * Matches the BrowserAgent public API
  */
 export type BTCPToolName =
-  // Session Management
   | 'browser_launch'
   | 'browser_close'
-  // Navigation
   | 'browser_navigate'
   | 'browser_back'
   | 'browser_forward'
   | 'browser_reload'
-  // Inspection (matching BrowserAgent API)
   | 'browser_snapshot'
   | 'browser_get_text'
   | 'browser_get_attribute'
   | 'browser_is_visible'
   | 'browser_get_url'
   | 'browser_get_title'
-  // Interaction (matching BrowserAgent API)
   | 'browser_click'
   | 'browser_type'
   | 'browser_fill'
@@ -98,7 +93,6 @@ export type BTCPToolName =
   | 'browser_scroll'
   | 'browser_wait'
   | 'browser_evaluate'
-  // Visual
   | 'browser_screenshot'
 
 /**
@@ -113,27 +107,46 @@ export type BTCPToolPreset = 'minimal' | 'standard' | 'full'
 export interface BrowserAgentService {
   /**
    * Get or initialize the browser client
-   * @returns Promise resolving to the browser client (ExtensionClient compatible)
    */
   getOrInit(): Promise<ExtensionClient>
 }
 
 /**
- * Configuration options for the BTCP Browser Plugin
+ * AI Service interface for snapshot summarization
+ * Simple function that takes a prompt and returns a response string
+ */
+export interface AiService {
+  /**
+   * Generate text from a prompt
+   * @param prompt - The prompt to send to the AI
+   * @returns Promise resolving to the AI response string
+   */
+  generateText(prompt: string): Promise<string>
+}
+
+/**
+ * Simplified configuration for the BTCP Browser Plugin
+ *
+ * @example
+ * ```typescript
+ * browserUsePlugin({
+ *   browserAgentService,
+ *   aiService
+ * })
+ * ```
  */
 export interface BTCPBrowserPluginConfig {
   /**
-   * Enable/disable the plugin
-   * @default true
+   * Browser agent service instance (required)
+   * Provides browser automation capabilities
    */
-  enabled?: boolean
+  browserAgentService: BrowserAgentService
 
   /**
-   * Browser agent service instance
-   * The plugin will call service.getOrInit() internally
-   * Example: browserAgentService
+   * AI service for snapshot summarization (optional)
+   * When provided, enables background snapshot tracking with AI summaries
    */
-  service?: BrowserAgentService
+  aiService?: AiService
 
   /**
    * Which tool categories to expose
@@ -142,50 +155,9 @@ export interface BTCPBrowserPluginConfig {
   toolset?: BTCPToolPreset | BTCPToolName[]
 
   /**
-   * Maximum snapshot size (characters) to prevent token overflow
-   * @default 50000
+   * Callback when a snapshot summary is generated
    */
-  maxSnapshotSize?: number
-
-  /**
-   * Enable screencast for vision models
-   * @default false
-   */
-  enableScreencast?: boolean
-
-  /**
-   * Enable request/console tracking
-   * @default false
-   */
-  enableTracking?: boolean
-
-  /**
-   * Callback for tool execution events
-   */
-  onToolCall?: (toolName: string, args: unknown) => void
-
-  /**
-   * Callback for tool results
-   */
-  onToolResult?: (toolName: string, result: unknown) => void
-
-  /**
-   * Callback for tool errors
-   */
-  onError?: (toolName: string, error: Error) => void
-
-  /**
-   * Whether to inject browser-aware system prompt hints
-   * @default true
-   */
-  injectSystemPrompt?: boolean
-
-  /**
-   * Configuration for the background snapshot manager
-   * When provided with enabled: true, enables background snapshot capture
-   * for tracking page state changes over time
-   */
-  snapshotManager?: SnapshotManagerConfig
+  onSnapshotSummary?: (summary: string) => void
 }
 
 /**
