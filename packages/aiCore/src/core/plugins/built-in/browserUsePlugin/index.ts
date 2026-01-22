@@ -17,7 +17,7 @@ import { tool } from 'ai'
 import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
-import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
+import { ABOUT_BLANK_MESSAGE, BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
 import { BrowserSessionSnapshotManager, createAISummarizationService } from './snapshotManager'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, SnapshotResult } from './types'
 
@@ -38,15 +38,54 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
     toolset
   })
 
-  // Store latest summary for injection into system prompt
+  // Store latest summary for injection into system prompt (unified: snapshot → summary → inject)
   let latestSummary: string | null = null
+
+  // Store previous snapshot for diff comparison
+  let previousSnapshot: { url: string; content: string; timestamp: number } | null = null
+
+  // Threshold for significant change (0.1 = 10% change required to regenerate summary)
+  const DIFF_THRESHOLD = 0.1
+
+  /**
+   * Calculate content change ratio between two snapshots
+   */
+  const calculateDiff = (oldContent: string, newContent: string): number => {
+    const oldLines = new Set(
+      oldContent
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+    )
+    const newLines = new Set(
+      newContent
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+    )
+
+    let changed = 0
+    for (const line of newLines) {
+      if (!oldLines.has(line)) changed++
+    }
+    for (const line of oldLines) {
+      if (!newLines.has(line)) changed++
+    }
+
+    const total = Math.max(oldLines.size, newLines.size, 1)
+    return changed / total
+  }
+
+  // Create summarization service for on-demand summarization
+  const summarizationService = aiCall ? createAISummarizationService(aiCall) : null
+  console.log('[browserUsePlugin] Summarization service:', {
+    hasAiCall: !!aiCall,
+    hasSummarizationService: !!summarizationService
+  })
 
   // Initialize snapshot manager if aiCall is provided
   let snapshotManager: BrowserSessionSnapshotManager | null = null
-  if (aiCall) {
-    // Create length-aware summarization service
-    const summarizationService = createAISummarizationService(aiCall)
-
+  if (aiCall && summarizationService) {
     snapshotManager = new BrowserSessionSnapshotManager({
       enabled: true,
       snapshotMode: 'all', // Use 'all' for full page structure
@@ -64,22 +103,147 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
    * Get the browser client
    */
   const getClient = async (): Promise<ExtensionClient> => {
-    const client = await browserAgentService.getOrInit()
-    return client as ExtensionClient
+    console.log('[browserUsePlugin] getClient() called, requesting client from browserAgentService...')
+    try {
+      const client = await browserAgentService.getOrInit()
+      console.log('[browserUsePlugin] getClient() succeeded, client received:', !!client)
+      return client as ExtensionClient
+    } catch (error) {
+      console.error('[browserUsePlugin] getClient() failed:', error)
+      throw error
+    }
   }
 
   /**
-   * Execute tool with snapshot notification
+   * Capture snapshot and generate summary (unified flow: snapshot → summary)
+   * Used by both beforeToolCall and afterToolCall hooks
+   */
+  const captureAndSummarize = async (trigger: 'before' | 'after', toolName?: string): Promise<void> => {
+    try {
+      const client = await getClient()
+      const url = await client.getUrl()
+
+      if (!url || url === 'about:blank') {
+        latestSummary = ABOUT_BLANK_MESSAGE
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] Page is about:blank`)
+        return
+      }
+
+      // Capture snapshot with all page content
+      const snapshotContent = await client.snapshot({ mode: 'all', format: 'tree' })
+      const title = await client.getTitle()
+      const now = Date.now()
+
+      console.log(`[browserUsePlugin] [${trigger}ToolCall] Captured snapshot:`, {
+        toolName,
+        url,
+        contentLength: snapshotContent.length
+      })
+
+      // Check if we need to regenerate summary (diff detection)
+      const urlChanged = !previousSnapshot || previousSnapshot.url !== url
+      const diffRatio = previousSnapshot && !urlChanged ? calculateDiff(previousSnapshot.content, snapshotContent) : 1.0 // Force regeneration if no previous or URL changed
+
+      console.log(`[browserUsePlugin] [${trigger}ToolCall] Diff check:`, {
+        urlChanged,
+        diffRatio: (diffRatio * 100).toFixed(1) + '%',
+        threshold: (DIFF_THRESHOLD * 100).toFixed(1) + '%',
+        willRegenerate: diffRatio >= DIFF_THRESHOLD
+      })
+
+      // Skip summary regeneration if diff is below threshold and we have a summary
+      if (diffRatio < DIFF_THRESHOLD && latestSummary) {
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] Skipping summary regeneration (diff below threshold)`)
+        // Update snapshot for next comparison
+        previousSnapshot = { url, content: snapshotContent, timestamp: now }
+        return
+      }
+
+      // Debug: log first 500 chars of snapshot
+      console.log(`[browserUsePlugin] [${trigger}ToolCall] Snapshot preview:`, snapshotContent.substring(0, 500))
+
+      // Generate summary if summarization service is available
+      if (summarizationService) {
+        const summary = await summarizationService.summarize({
+          snapshot: {
+            id: `snap_${now}`,
+            timestamp: now,
+            url,
+            title: title || '',
+            content: snapshotContent,
+            trigger: 'action'
+          }
+        })
+        latestSummary = typeof summary === 'string' ? summary : JSON.stringify(summary)
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] Generated summary:`, {
+          summaryLength: latestSummary.length
+        })
+        // Debug: log full summary
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] Summary content:`, latestSummary)
+      } else {
+        // Fallback: truncate raw snapshot if no summarization service
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] No summarization service, using fallback`)
+        const truncated =
+          snapshotContent.length > 5000 ? snapshotContent.substring(0, 5000) + '\n...[truncated]' : snapshotContent
+        latestSummary = `**Page**: ${title}\n**URL**: ${url}\n\n${truncated}`
+        console.log(`[browserUsePlugin] [${trigger}ToolCall] Fallback summary length:`, latestSummary.length)
+      }
+
+      // Update previous snapshot for next comparison
+      previousSnapshot = { url, content: snapshotContent, timestamp: now }
+
+      // Notify callback
+      if (latestSummary) {
+        onSnapshotSummary?.(latestSummary)
+      }
+    } catch (e) {
+      console.warn(`[browserUsePlugin] [${trigger}ToolCall] Failed to capture/summarize:`, e)
+      latestSummary = '[Page Context: Unable to capture - browser may not be connected]'
+    }
+  }
+
+  /**
+   * Hook: Before tool call - capture current page state
+   */
+  const beforeToolCall = async (toolName: string): Promise<void> => {
+    await captureAndSummarize('before', toolName)
+  }
+
+  /**
+   * Hook: After tool call - capture new page state (if page changed)
+   */
+  const afterToolCall = async (toolName: string, _args: unknown): Promise<void> => {
+    // Only run afterToolCall summary for actions that likely change the page
+    const pageChangingTools = [
+      'browser_navigate',
+      'browser_click',
+      'browser_fill',
+      'browser_type',
+      'browser_press',
+      'browser_back',
+      'browser_forward',
+      'browser_reload'
+    ]
+
+    if (pageChangingTools.includes(toolName)) {
+      // Small delay to let page settle after action
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await captureAndSummarize('after', toolName)
+    }
+  }
+
+  /**
+   * Execute tool with beforeToolCall and afterToolCall hooks
    */
   const execute = async <T>(toolName: string, args: unknown, fn: () => Promise<T>): Promise<T> => {
+    // Hook: before tool call
+    await beforeToolCall(toolName)
+
+    // Execute the tool
     const result = await fn()
 
-    // Notify snapshot manager of action
-    if (snapshotManager) {
-      setTimeout(() => {
-        snapshotManager?.notifyAction(toolName, args).catch(() => {})
-      }, 0)
-    }
+    // Hook: after tool call
+    await afterToolCall(toolName, args)
 
     return result
   }
@@ -460,10 +624,21 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
         systemPrompt = systemPrompt ? `${systemPrompt}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
       }
 
-      // Inject latest page summary if available
+      // Inject latest page summary if available (unified: snapshot → summary → inject)
       if (latestSummary && !systemPrompt.includes(latestSummary)) {
         systemPrompt = `${systemPrompt}\n\n## Current Page Context\n${latestSummary}`
+        // Debug: log injected summary
+        console.log('[browserUsePlugin] [transformParams] Injected page context:', {
+          summaryLength: latestSummary.length,
+          summary: latestSummary
+        })
       }
+
+      // Debug: log final system prompt length
+      console.log('[browserUsePlugin] [transformParams] System prompt ready:', {
+        totalLength: systemPrompt.length,
+        hasPageContext: systemPrompt.includes('## Current Page Context')
+      })
 
       p.system = systemPrompt
       return params

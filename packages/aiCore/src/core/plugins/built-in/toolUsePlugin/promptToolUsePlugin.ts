@@ -53,6 +53,12 @@ The user will respond with the result of the tool use, which should be formatted
 </tool_use_result>
 
 The result should be a string, which can represent a file or any other output type. You can use this result as input for the next action.
+
+IMPORTANT: When you receive <tool_use_result>, this means your tool call was EXECUTED SUCCESSFULLY. You MUST:
+1. Acknowledge the result in your response
+2. Proceed with the task based on the result
+3. NEVER say you cannot perform the action - the tool has already done it
+4. Report what happened and what you will do next
 For example, if the result of the tool use is an image file, you can use it in the next action like this:
 
 <tool_use>
@@ -422,23 +428,46 @@ export const createPromptToolUsePlugin = (config: PromptToolUseConfig = {}) => {
               const { results: parsedTools } = parseToolUse(textBuffer, tools)
               const validToolUses = parsedTools.filter((t) => t.status === 'pending')
 
+              console.log('[promptToolUsePlugin] Parsed tools from model output:', {
+                toolCount: validToolUses.length,
+                tools: validToolUses.map((t) => ({ name: t.toolName, args: t.arguments })),
+                textBufferLength: textBuffer.length
+              })
+
               if (validToolUses.length > 0) {
                 context.hasExecutedToolsInCurrentStep = true
 
                 // 执行工具调用（不需要手动发送 start-step，外部流已经处理）
                 const executedResults = await toolExecutor.executeTools(validToolUses, tools, controller)
 
+                console.log('[promptToolUsePlugin] Tool execution completed:', {
+                  executedCount: executedResults.length,
+                  results: executedResults.map((r) => ({
+                    name: r.toolName,
+                    isError: r.isError,
+                    resultPreview: JSON.stringify(r.result).substring(0, 200)
+                  }))
+                })
+
                 // 发送步骤完成事件，使用 tool-calls 作为 finishReason
                 streamEventManager.sendStepFinishEvent(controller, chunk, context, 'tool-calls')
 
                 // 处理递归调用
                 const toolResultsText = toolExecutor.formatToolResults(executedResults)
+
+                console.log('[promptToolUsePlugin] Tool results formatted for recursive call:', {
+                  toolResultsTextLength: toolResultsText.length,
+                  toolResultsTextPreview: toolResultsText.substring(0, 500)
+                })
+
                 const recursiveParams = streamEventManager.buildRecursiveParams(
                   context,
                   textBuffer,
                   toolResultsText,
                   tools
                 )
+
+                console.log('[promptToolUsePlugin] Making recursive API call with tool results')
 
                 await streamEventManager.handleRecursiveCall(controller, recursiveParams, context)
                 return

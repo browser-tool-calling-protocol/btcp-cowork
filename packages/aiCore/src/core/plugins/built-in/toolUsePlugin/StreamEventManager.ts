@@ -55,20 +55,27 @@ export class StreamEventManager {
     recursiveParams: any,
     context: AiRequestContext
   ): Promise<void> {
-    // try {
+    console.log('[StreamEventManager] handleRecursiveCall invoked:', {
+      hasRecursiveCall: !!context.recursiveCall,
+      messageCount: recursiveParams.messages?.length,
+      hasTools: !!recursiveParams.tools
+    })
+
     // 重置工具执行状态，准备处理新的步骤
     context.hasExecutedToolsInCurrentStep = false
 
     const recursiveResult = await context.recursiveCall(recursiveParams)
+
+    console.log('[StreamEventManager] Recursive call completed:', {
+      hasResult: !!recursiveResult,
+      hasFullStream: !!(recursiveResult && recursiveResult.fullStream)
+    })
 
     if (recursiveResult && recursiveResult.fullStream) {
       await this.pipeRecursiveStream(controller, recursiveResult.fullStream)
     } else {
       console.warn('[MCP Prompt] No fullstream found in recursive result:', recursiveResult)
     }
-    // } catch (error) {
-    //   this.handleRecursiveCallError(controller, error, stepId)
-    // }
   }
 
   /**
@@ -134,6 +141,23 @@ export class StreamEventManager {
         content: toolResultsText
       }
     ]
+
+    console.log('[StreamEventManager] Building recursive params:', {
+      originalMessageCount: context.originalParams.messages?.length || 0,
+      newMessageCount: newMessages.length,
+      hasAssistantMessage: !!textBuffer,
+      assistantTextLength: textBuffer?.length || 0,
+      toolResultsLength: toolResultsText.length
+    })
+
+    // Log the last few messages for debugging
+    const lastMessages = newMessages.slice(-3)
+    console.log('[StreamEventManager] Last 3 messages in recursive call:', {
+      messages: lastMessages.map((m) => ({
+        role: m.role,
+        contentPreview: typeof m.content === 'string' ? m.content.substring(0, 300) : '[non-string content]'
+      }))
+    })
 
     // 递归调用，继续对话，重新传递 tools
     const recursiveParams = {

@@ -94,6 +94,13 @@ export const DEFAULT_CONFIG = {
  * Browser-aware system prompt hints for AI models
  * Matches the BrowserAgent public API with modern prompting techniques
  */
+/**
+ * Default message when browser is on about:blank page
+ */
+export const ABOUT_BLANK_MESSAGE =
+  'The browser is currently on a blank page (about:blank). ' +
+  'You need to navigate to a URL first using the browser_navigate tool.'
+
 export const BROWSER_SYSTEM_PROMPT = `
 # Browser Automation Tools (BTCP)
 

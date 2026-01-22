@@ -41,20 +41,31 @@ class BrowserAgentService {
    * This is the primary method to access the browser client.
    */
   public async getOrInit(): Promise<Client> {
+    console.log('[BrowserAgentService] getOrInit() called', {
+      initialized: this.initialized,
+      hasClient: !!this.client,
+      hasInitPromise: !!this.initPromise
+    })
+
     // Return existing client if initialized
     if (this.initialized && this.client) {
+      console.log('[BrowserAgentService] Returning existing client')
       return this.client
     }
 
     // Return existing promise if initialization is in progress
     if (this.initPromise) {
+      console.log('[BrowserAgentService] Initialization in progress, waiting...')
       return this.initPromise
     }
 
     // Initialize the client
+    console.log('[BrowserAgentService] Starting new initialization...')
     this.initPromise = this._doInitialize()
     try {
-      return await this.initPromise
+      const client = await this.initPromise
+      console.log('[BrowserAgentService] Initialization completed successfully')
+      return client
     } finally {
       this.initPromise = null
     }
@@ -62,13 +73,16 @@ class BrowserAgentService {
 
   private async _doInitialize(): Promise<Client> {
     try {
+      console.log('[BrowserAgentService] _doInitialize() starting, calling createClient()...')
       logger.info('Initializing browser client')
       // createClient() handles session reconnection internally via popupInitialize
       this.client = createClient()
+      console.log('[BrowserAgentService] createClient() returned:', !!this.client)
       this.initialized = true
       logger.info('Browser client initialized successfully')
       return this.client
     } catch (error) {
+      console.error('[BrowserAgentService] _doInitialize() failed:', error)
       logger.error('Failed to initialize browser client', error as Error)
       this.client = null
       this.initialized = false
