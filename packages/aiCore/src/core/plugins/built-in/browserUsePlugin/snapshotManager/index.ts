@@ -2,24 +2,27 @@
  * Browser Session Snapshot Manager
  *
  * Background mechanism for capturing page snapshots at intervals or after actions,
- * computing diffs to track changes, and running indexing/summarization (placeholder).
+ * computing diffs to track changes, and running AI-powered summarization.
  *
  * Features:
  * - Interval-based snapshot capture
  * - Action-triggered snapshot capture (with debouncing)
  * - Simple diff computation to track content changes
- * - Placeholder indexing/summarization processor
+ * - AI-powered summarization via pluggable service
  *
  * Usage:
  * ```typescript
- * import { BrowserSessionSnapshotManager } from './snapshotManager'
+ * import { BrowserSessionSnapshotManager, DefaultSummarizationService } from './snapshotManager'
  *
  * const manager = new BrowserSessionSnapshotManager({
  *   enabled: true,
  *   intervalMs: 30000,
  *   captureAfterActions: true,
+ *   summarizationService: new DefaultSummarizationService(),
+ *   summarizeOn: 'significant',
  *   onSnapshot: (snapshot) => console.log('Snapshot captured:', snapshot.id),
- *   onDiff: (diff) => console.log('Change detected:', diff.contentChangeRatio)
+ *   onDiff: (diff) => console.log('Change detected:', diff.contentChangeRatio),
+ *   onSummary: (snapshot, summary) => console.log('Summary:', summary.pageDescription)
  * })
  *
  * // Provide the client getter
@@ -37,12 +40,14 @@
  */
 
 import type { ExtensionClient } from '../types'
+import { DefaultSummarizationService } from './summarizationService'
 import {
   type BrowserSnapshot,
   type SnapshotDiff,
-  type SnapshotIndexResult,
   type SnapshotManagerConfig,
   type SnapshotManagerState,
+  type SnapshotSummary,
+  type SnapshotSummarizationService,
   type SnapshotTrigger,
   DEFAULT_SNAPSHOT_CONFIG
 } from './types'
@@ -99,11 +104,12 @@ function computeContentDiff(
  * Manages background snapshot capture for browser sessions
  */
 export class BrowserSessionSnapshotManager {
-  private config: Required<Omit<SnapshotManagerConfig, 'onSnapshot' | 'onDiff' | 'onIndexComplete'>> &
-    Pick<SnapshotManagerConfig, 'onSnapshot' | 'onDiff' | 'onIndexComplete'>
+  private config: Required<Omit<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>> &
+    Pick<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>
   private state: SnapshotManagerState
   private intervalHandle: ReturnType<typeof setInterval> | null = null
   private getClient: (() => Promise<ExtensionClient>) | null = null
+  private summarizationService: SnapshotSummarizationService
 
   constructor(config: SnapshotManagerConfig = {}) {
     this.config = {
@@ -117,8 +123,11 @@ export class BrowserSessionSnapshotManager {
       diffs: [],
       lastSnapshotTime: null,
       lastActionTime: null,
-      pendingIndexing: []
+      pendingSummarization: []
     }
+
+    // Use provided service or default
+    this.summarizationService = config.summarizationService || new DefaultSummarizationService()
   }
 
   /**
@@ -127,6 +136,13 @@ export class BrowserSessionSnapshotManager {
    */
   setClientGetter(getter: () => Promise<ExtensionClient>): void {
     this.getClient = getter
+  }
+
+  /**
+   * Set or update the summarization service
+   */
+  setSummarizationService(service: SnapshotSummarizationService): void {
+    this.summarizationService = service
   }
 
   /**
@@ -151,7 +167,9 @@ export class BrowserSessionSnapshotManager {
 
     console.log('[SnapshotManager] Starting snapshot manager', {
       intervalMs: this.config.intervalMs,
-      captureAfterActions: this.config.captureAfterActions
+      captureAfterActions: this.config.captureAfterActions,
+      summarizeOn: this.config.summarizeOn,
+      hasSummarizationService: this.summarizationService.isAvailable()
     })
 
     this.state.isRunning = true
@@ -220,6 +238,23 @@ export class BrowserSessionSnapshotManager {
   }
 
   /**
+   * Manually trigger summarization for a specific snapshot
+   */
+  async summarizeSnapshot(snapshotId: string): Promise<SnapshotSummary | null> {
+    const snapshot = this.state.snapshots.find((s) => s.id === snapshotId)
+    if (!snapshot) {
+      console.warn(`[SnapshotManager] Snapshot not found: ${snapshotId}`)
+      return null
+    }
+
+    const index = this.state.snapshots.indexOf(snapshot)
+    const previousSnapshot = index > 0 ? this.state.snapshots[index - 1] : undefined
+    const diff = this.state.diffs.find((d) => d.currentSnapshotId === snapshotId)
+
+    return this.processSummarization(snapshot, previousSnapshot, diff)
+  }
+
+  /**
    * Capture a snapshot
    */
   private async captureSnapshot(trigger: SnapshotTrigger, triggerAction?: string): Promise<BrowserSnapshot | null> {
@@ -263,10 +298,14 @@ export class BrowserSessionSnapshotManager {
         this.state.snapshots.shift()
       }
 
+      // Get previous snapshot for diff
+      const prevSnapshot =
+        this.state.snapshots.length >= 2 ? this.state.snapshots[this.state.snapshots.length - 2] : undefined
+
       // Compute diff with previous snapshot
-      if (this.state.snapshots.length >= 2) {
-        const prevSnapshot = this.state.snapshots[this.state.snapshots.length - 2]
-        const diff = this.computeDiff(prevSnapshot, snapshot)
+      let diff: SnapshotDiff | undefined
+      if (prevSnapshot) {
+        diff = this.computeDiff(prevSnapshot, snapshot)
         this.state.diffs.push(diff)
 
         // Trim diffs history
@@ -274,21 +313,102 @@ export class BrowserSessionSnapshotManager {
           this.state.diffs.shift()
         }
 
-        // Notify callback
+        // Notify diff callback
         this.config.onDiff?.(diff)
-
-        // Trigger indexing if significant change
-        if (this.config.enableIndexing && diff.isSignificant) {
-          this.queueIndexing(snapshot)
-        }
       }
 
-      // Notify callback
+      // Notify snapshot callback
       this.config.onSnapshot?.(snapshot)
+
+      // Trigger summarization based on config
+      if (this.shouldSummarize(trigger, diff)) {
+        this.queueSummarization(snapshot, prevSnapshot, diff)
+      }
 
       return snapshot
     } catch (error) {
       console.error('[SnapshotManager] Failed to capture snapshot', error)
+      return null
+    }
+  }
+
+  /**
+   * Determine if we should summarize this snapshot
+   */
+  private shouldSummarize(trigger: SnapshotTrigger, diff?: SnapshotDiff): boolean {
+    if (!this.summarizationService.isAvailable()) {
+      return false
+    }
+
+    switch (this.config.summarizeOn) {
+      case 'all':
+        return true
+      case 'significant':
+        // Always summarize initial/manual, or if diff is significant
+        return trigger === 'initial' || trigger === 'manual' || (diff?.isSignificant ?? false)
+      case 'manual':
+        return false // Only via explicit summarizeSnapshot() call
+      default:
+        return false
+    }
+  }
+
+  /**
+   * Queue a snapshot for summarization
+   */
+  private queueSummarization(
+    snapshot: BrowserSnapshot,
+    previousSnapshot?: BrowserSnapshot,
+    diff?: SnapshotDiff
+  ): void {
+    console.log(`[SnapshotManager] Queueing snapshot for summarization: ${snapshot.id}`)
+    this.state.pendingSummarization.push(snapshot.id)
+
+    // Process summarization asynchronously
+    this.processSummarization(snapshot, previousSnapshot, diff).catch((error) => {
+      console.error('[SnapshotManager] Summarization failed', error)
+    })
+  }
+
+  /**
+   * Process summarization for a snapshot
+   */
+  private async processSummarization(
+    snapshot: BrowserSnapshot,
+    previousSnapshot?: BrowserSnapshot,
+    diff?: SnapshotDiff
+  ): Promise<SnapshotSummary | null> {
+    try {
+      console.log(`[SnapshotManager] Summarizing snapshot: ${snapshot.id}`)
+
+      const summary = await this.summarizationService.summarize({
+        snapshot,
+        previousSnapshot,
+        diff
+      })
+
+      // Attach summary to snapshot
+      snapshot.summary = summary
+
+      console.log(`[SnapshotManager] Summarization completed for: ${snapshot.id}`, {
+        pageDescription: summary.pageDescription,
+        keyStructureCount: summary.keyStructure.length,
+        keyInteractionsCount: summary.keyInteractions.length
+      })
+
+      // Remove from pending
+      this.state.pendingSummarization = this.state.pendingSummarization.filter((id) => id !== snapshot.id)
+
+      // Notify callback
+      this.config.onSummary?.(snapshot, summary)
+
+      return summary
+    } catch (error) {
+      console.error(`[SnapshotManager] Summarization failed for: ${snapshot.id}`, error)
+
+      // Remove from pending
+      this.state.pendingSummarization = this.state.pendingSummarization.filter((id) => id !== snapshot.id)
+
       return null
     }
   }
@@ -326,113 +446,6 @@ export class BrowserSessionSnapshotManager {
     return diff
   }
 
-  /**
-   * Queue a snapshot for indexing/summarization (placeholder)
-   */
-  private queueIndexing(snapshot: BrowserSnapshot): void {
-    console.log(`[SnapshotManager] Queueing snapshot for indexing: ${snapshot.id}`)
-    this.state.pendingIndexing.push(snapshot.id)
-
-    // Process indexing asynchronously
-    this.processIndexing(snapshot).catch((error) => {
-      console.error('[SnapshotManager] Indexing failed', error)
-    })
-  }
-
-  /**
-   * Process indexing/summarization for a snapshot (placeholder)
-   *
-   * This is a placeholder for future AI-powered indexing/summarization.
-   * Implementation could include:
-   * - Extract key entities (forms, buttons, links, content areas)
-   * - Generate natural language summary of page state
-   * - Build searchable index for conversation context
-   * - Detect patterns and state changes
-   */
-  private async processIndexing(snapshot: BrowserSnapshot): Promise<SnapshotIndexResult> {
-    const result: SnapshotIndexResult = {
-      snapshotId: snapshot.id,
-      timestamp: Date.now(),
-      status: 'processing'
-    }
-
-    try {
-      // PLACEHOLDER: Actual indexing logic would go here
-      // For now, extract some basic "entities" from the content
-      const entities = this.extractBasicEntities(snapshot.content)
-
-      // PLACEHOLDER: Generate a simple summary
-      const summary = this.generatePlaceholderSummary(snapshot)
-
-      result.status = 'completed'
-      result.entities = entities
-      result.summary = summary
-
-      console.log(`[SnapshotManager] Indexing completed for: ${snapshot.id}`, {
-        entityCount: entities.length,
-        summary: summary.substring(0, 100)
-      })
-
-      // Remove from pending
-      this.state.pendingIndexing = this.state.pendingIndexing.filter((id) => id !== snapshot.id)
-
-      // Notify callback
-      this.config.onIndexComplete?.(result)
-
-      return result
-    } catch (error) {
-      result.status = 'failed'
-      result.error = error instanceof Error ? error.message : String(error)
-
-      // Remove from pending
-      this.state.pendingIndexing = this.state.pendingIndexing.filter((id) => id !== snapshot.id)
-
-      this.config.onIndexComplete?.(result)
-
-      return result
-    }
-  }
-
-  /**
-   * Extract basic entities from snapshot content (placeholder)
-   *
-   * This is a very basic extraction for demonstration.
-   * A real implementation would use more sophisticated NLP/pattern matching.
-   */
-  private extractBasicEntities(content: string): string[] {
-    const entities: string[] = []
-    const lines = content.split('\n')
-
-    for (const line of lines) {
-      // Extract @ref markers
-      const refMatch = line.match(/@ref:\d+/)
-      if (refMatch) {
-        entities.push(refMatch[0])
-      }
-
-      // Extract role types
-      const roleMatch = line.match(/role='(\w+)'/)
-      if (roleMatch && !entities.includes(roleMatch[1])) {
-        entities.push(roleMatch[1])
-      }
-    }
-
-    // Limit entities
-    return entities.slice(0, 50)
-  }
-
-  /**
-   * Generate a placeholder summary (placeholder for AI summarization)
-   */
-  private generatePlaceholderSummary(snapshot: BrowserSnapshot): string {
-    const lineCount = snapshot.content.split('\n').length
-    const refCount = (snapshot.content.match(/@ref:\d+/g) || []).length
-
-    return `Page at ${snapshot.url} with title "${snapshot.title}". ` +
-      `Snapshot contains ${lineCount} lines and ${refCount} interactive elements. ` +
-      `Captured via ${snapshot.trigger} trigger.`
-  }
-
   // --- Getters for state access ---
 
   /**
@@ -450,6 +463,13 @@ export class BrowserSessionSnapshotManager {
   }
 
   /**
+   * Get snapshots with summaries only
+   */
+  getSummarizedSnapshots(): BrowserSnapshot[] {
+    return this.state.snapshots.filter((s) => s.summary !== undefined)
+  }
+
+  /**
    * Get diff history
    */
   getDiffs(): SnapshotDiff[] {
@@ -461,6 +481,18 @@ export class BrowserSessionSnapshotManager {
    */
   getLatestSnapshot(): BrowserSnapshot | null {
     return this.state.snapshots[this.state.snapshots.length - 1] || null
+  }
+
+  /**
+   * Get the most recent summarized snapshot
+   */
+  getLatestSummarizedSnapshot(): BrowserSnapshot | null {
+    for (let i = this.state.snapshots.length - 1; i >= 0; i--) {
+      if (this.state.snapshots[i].summary) {
+        return this.state.snapshots[i]
+      }
+    }
+    return null
   }
 
   /**
@@ -487,6 +519,11 @@ export class BrowserSessionSnapshotManager {
     // Update config
     Object.assign(this.config, config)
 
+    // Update summarization service if provided
+    if (config.summarizationService) {
+      this.summarizationService = config.summarizationService
+    }
+
     // Restart interval if it changed while running
     if (wasRunning && config.intervalMs !== undefined && config.intervalMs !== oldInterval) {
       if (this.intervalHandle) {
@@ -510,10 +547,11 @@ export class BrowserSessionSnapshotManager {
   clearHistory(): void {
     this.state.snapshots = []
     this.state.diffs = []
-    this.state.pendingIndexing = []
+    this.state.pendingSummarization = []
     console.log('[SnapshotManager] History cleared')
   }
 }
 
-// Re-export types
+// Re-export types and services
 export * from './types'
+export { DefaultSummarizationService, createAISummarizationService, SUMMARIZATION_SYSTEM_PROMPT } from './summarizationService'

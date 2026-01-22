@@ -197,9 +197,12 @@ export interface BrowserSessionSnapshotManagerInterface {
   isRunning(): boolean
   notifyAction(actionName: string, args?: unknown): Promise<void>
   captureManual(): Promise<unknown>
+  summarizeSnapshot(snapshotId: string): Promise<unknown>
   getSnapshots(): unknown[]
+  getSummarizedSnapshots(): unknown[]
   getDiffs(): unknown[]
   getLatestSnapshot(): unknown
+  getLatestSummarizedSnapshot(): unknown
   getLatestDiff(): unknown
   getState(): unknown
   updateConfig(config: Partial<SnapshotManagerConfig>): void

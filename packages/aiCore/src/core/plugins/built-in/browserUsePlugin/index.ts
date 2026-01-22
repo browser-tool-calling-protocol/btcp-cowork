@@ -576,13 +576,23 @@ export const btcpBrowserPlugin = browserUsePlugin
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'
 export * from './types'
 
-// Export snapshot manager
-export { BrowserSessionSnapshotManager } from './snapshotManager'
+// Export snapshot manager and summarization
+export {
+  BrowserSessionSnapshotManager,
+  DefaultSummarizationService,
+  createAISummarizationService,
+  SUMMARIZATION_SYSTEM_PROMPT
+} from './snapshotManager'
 export type {
   BrowserSnapshot,
   SnapshotDiff,
-  SnapshotIndexResult,
   SnapshotManagerConfig,
   SnapshotManagerState,
-  SnapshotTrigger
+  SnapshotTrigger,
+  SnapshotSummary,
+  SnapshotSummarizationService,
+  SummarizationRequest,
+  KeyInteraction,
+  KeySection,
+  SnapshotIndexResult
 } from './snapshotManager'

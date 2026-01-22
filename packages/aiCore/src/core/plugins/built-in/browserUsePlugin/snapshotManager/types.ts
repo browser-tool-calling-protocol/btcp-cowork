@@ -5,6 +5,103 @@
  * page state at intervals or after actions, computes diffs, and runs indexing/summarization.
  */
 
+// ============================================================================
+// Snapshot Summary Types
+// ============================================================================
+
+/**
+ * Key interactive element identified in the page
+ */
+export interface KeyInteraction {
+  /** Element reference (e.g., @ref:1) */
+  ref: string
+  /** Element type (button, link, input, etc.) */
+  type: string
+  /** Human-readable label or text */
+  label: string
+  /** Brief description of what this element does */
+  purpose?: string
+  /** Priority level for this interaction (1 = highest) */
+  priority?: number
+}
+
+/**
+ * Key structural section identified in the page
+ */
+export interface KeySection {
+  /** Section name/identifier */
+  name: string
+  /** Section type (header, navigation, main, sidebar, form, list, etc.) */
+  type: string
+  /** Brief description of section content */
+  description: string
+  /** Child elements or sections count */
+  elementCount?: number
+  /** Associated element refs in this section */
+  refs?: string[]
+}
+
+/**
+ * Structured snapshot summary with key sections
+ * This is the output format from AI summarization
+ */
+export interface SnapshotSummary {
+  /** Unique ID linking to the source snapshot */
+  snapshotId: string
+  /** Timestamp when summary was generated */
+  timestamp: number
+  /** One-line page description */
+  pageDescription: string
+  /** Current page state/context (e.g., "logged in", "search results", "checkout step 2") */
+  pageState?: string
+  /** Key structural sections on the page */
+  keyStructure: KeySection[]
+  /** Key interactive elements for main workflows */
+  keyInteractions: KeyInteraction[]
+  /** Detected user workflows or tasks possible on this page */
+  possibleWorkflows?: string[]
+  /** Any notable changes from previous snapshot */
+  changesFromPrevious?: string
+  /** Raw summary text (for debugging or fallback) */
+  rawSummary?: string
+}
+
+/**
+ * Summarization request passed to the AI service
+ */
+export interface SummarizationRequest {
+  /** The snapshot to summarize */
+  snapshot: BrowserSnapshot
+  /** Previous snapshot for context (if available) */
+  previousSnapshot?: BrowserSnapshot
+  /** Diff information (if available) */
+  diff?: SnapshotDiff
+  /** Additional context or instructions */
+  context?: string
+}
+
+/**
+ * Service interface for AI-powered snapshot summarization
+ * Implement this interface to provide custom AI summarization
+ */
+export interface SnapshotSummarizationService {
+  /**
+   * Summarize a browser snapshot using AI
+   * @param request - The summarization request with snapshot and context
+   * @returns Promise resolving to structured summary
+   */
+  summarize(request: SummarizationRequest): Promise<SnapshotSummary>
+
+  /**
+   * Check if the service is available/configured
+   */
+  isAvailable(): boolean
+}
+
+// ============================================================================
+// Snapshot Core Types
+// ============================================================================
+
 /**
  * Snapshot data captured from the browser
  */
@@ -25,6 +122,8 @@ export interface BrowserSnapshot {
   trigger: SnapshotTrigger
   /** Optional action that triggered the snapshot */
   triggerAction?: string
+  /** AI-generated summary (populated after summarization) */
+  summary?: SnapshotSummary
   /** Optional metadata */
   metadata?: Record<string, unknown>
 }
@@ -65,7 +164,7 @@ export interface SnapshotDiff {
 }
 
 /**
- * Snapshot indexing/processing result (placeholder)
+ * Snapshot indexing/processing result
  */
 export interface SnapshotIndexResult {
   /** Snapshot ID that was indexed */
@@ -74,10 +173,8 @@ export interface SnapshotIndexResult {
   timestamp: number
   /** Status of the indexing operation */
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  /** Extracted entities/keywords (placeholder) */
-  entities?: string[]
-  /** Generated summary (placeholder) */
-  summary?: string
+  /** Structured summary from AI */
+  summary?: SnapshotSummary
   /** Error message if failed */
   error?: string
 }
@@ -136,10 +233,16 @@ export interface SnapshotManagerConfig {
   snapshotMode?: 'interaction' | 'content' | 'outline'
 
   /**
-   * Whether to run indexing/summarization on captured snapshots
-   * @default false (placeholder)
+   * AI summarization service for generating structured summaries
+   * When provided, snapshots will be automatically summarized
    */
-  enableIndexing?: boolean
+  summarizationService?: SnapshotSummarizationService
+
+  /**
+   * Whether to summarize all snapshots or only significant changes
+   * @default 'significant' - only summarize when diff.isSignificant is true
+   */
+  summarizeOn?: 'all' | 'significant' | 'manual'
 
   /**
    * Callback when a snapshot is captured
@@ -152,9 +255,9 @@ export interface SnapshotManagerConfig {
   onDiff?: (diff: SnapshotDiff) => void
 
   /**
-   * Callback when indexing completes
+   * Callback when summarization completes
    */
-  onIndexComplete?: (result: SnapshotIndexResult) => void
+  onSummary?: (snapshot: BrowserSnapshot, summary: SnapshotSummary) => void
 }
 
 /**
@@ -171,15 +274,15 @@ export interface SnapshotManagerState {
   lastSnapshotTime: number | null
   /** Last action timestamp (for debouncing) */
   lastActionTime: number | null
-  /** Pending index operations */
-  pendingIndexing: string[]
+  /** Pending summarization operations (snapshot IDs) */
+  pendingSummarization: string[]
 }
 
 /**
  * Default configuration values
  */
 export const DEFAULT_SNAPSHOT_CONFIG: Required<
-  Omit<SnapshotManagerConfig, 'onSnapshot' | 'onDiff' | 'onIndexComplete'>
+  Omit<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>
 > = {
   enabled: false,
   intervalMs: 30000,
@@ -189,5 +292,5 @@ export const DEFAULT_SNAPSHOT_CONFIG: Required<
   maxHistorySize: 50,
   significantChangeThreshold: 0.1,
   snapshotMode: 'interaction',
-  enableIndexing: false
+  summarizeOn: 'significant'
 }
