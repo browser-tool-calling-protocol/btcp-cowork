@@ -372,9 +372,10 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
 // Default export
 export default browserUsePlugin
 
-// Re-export types
+// Re-export types and helpers
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'
 export * from './types'
+export { createAiService } from './types'
 
 // Export snapshot manager
 export { BrowserSessionSnapshotManager, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'

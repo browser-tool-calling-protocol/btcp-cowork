@@ -125,6 +125,54 @@ export interface AiService {
 }
 
 /**
+ * Language model interface (compatible with AI SDK LanguageModel)
+ */
+export interface LanguageModelLike {
+  doGenerate?: unknown
+  doStream?: unknown
+}
+
+/**
+ * Create an AiService from an AI SDK LanguageModel
+ *
+ * @example
+ * ```typescript
+ * import { generateText } from 'ai'
+ *
+ * // From ModernAiProvider
+ * const aiProvider = new ModernAiProvider(model)
+ * const languageModel = aiProvider.getLanguageModel()
+ * const aiService = createAiService(languageModel)
+ *
+ * // Or directly with a model
+ * import { openai } from '@ai-sdk/openai'
+ * const aiService = createAiService(openai('gpt-4o-mini'))
+ *
+ * browserUsePlugin({
+ *   browserAgentService,
+ *   aiService
+ * })
+ * ```
+ */
+export function createAiService(
+  model: LanguageModelLike,
+  generateTextFn?: (params: { model: unknown; prompt: string }) => Promise<{ text: string }>
+): AiService {
+  // Default to dynamic import of 'ai' package generateText
+  const generate = generateTextFn || (async (params: { model: unknown; prompt: string }) => {
+    const { generateText } = await import('ai')
+    return generateText(params as Parameters<typeof generateText>[0])
+  })
+
+  return {
+    async generateText(prompt: string): Promise<string> {
+      const result = await generate({ model, prompt })
+      return result.text
+    }
+  }
+}
+
+/**
  * Simplified configuration for the BTCP Browser Plugin
  *
  * @example
