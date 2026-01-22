@@ -29,117 +29,77 @@ Be concise. No @ref needed.`
  * Document length thresholds for summarization strategy
  */
 const LENGTH_THRESHOLDS = {
-  SHORT: 8000,    // Direct summarize
-  MEDIUM: 30000,  // Truncate with section markers
-  LARGE: 60000    // Chunk summarization
+  SHORT: 6000,     // Direct summarize (~1.5K tokens)
+  CHUNK_SIZE: 8000 // Size per chunk for large docs
 }
 
 /**
- * Prepare content for summarization based on document length
+ * Prepare content for summarization - returns chunks for large documents
  */
 export function prepareContentForSummarization(content: string): {
-  processedContent: string
-  strategy: 'short' | 'medium' | 'large'
+  chunks: string[]
+  strategy: 'direct' | 'chunked'
   originalLength: number
 } {
   const originalLength = content.length
 
   // Short document - use as is
   if (originalLength <= LENGTH_THRESHOLDS.SHORT) {
-    return { processedContent: content, strategy: 'short', originalLength }
+    return { chunks: [content], strategy: 'direct', originalLength }
   }
 
-  // Medium document - smart truncate with structure preservation
-  if (originalLength <= LENGTH_THRESHOLDS.MEDIUM) {
-    const truncated = smartTruncate(content, LENGTH_THRESHOLDS.SHORT)
-    return { processedContent: truncated, strategy: 'medium', originalLength }
-  }
-
-  // Large document - extract key sections
-  const extracted = extractKeySections(content, LENGTH_THRESHOLDS.MEDIUM)
-  return { processedContent: extracted, strategy: 'large', originalLength }
+  // Large document - split into chunks
+  const chunks = splitIntoChunks(content, LENGTH_THRESHOLDS.CHUNK_SIZE)
+  return { chunks, strategy: 'chunked', originalLength }
 }
 
 /**
- * Smart truncate that preserves structure (keeps beginning, end, and important refs)
+ * Split content into logical chunks preserving structure
  */
-function smartTruncate(content: string, maxLength: number): string {
+function splitIntoChunks(content: string, chunkSize: number): string[] {
   const lines = content.split('\n')
-  const result: string[] = []
+  const chunks: string[] = []
+  let currentChunk: string[] = []
   let currentLength = 0
 
-  // Always include first 20% of lines (header, nav usually)
-  const headerLines = Math.ceil(lines.length * 0.2)
-  for (let i = 0; i < headerLines && currentLength < maxLength * 0.3; i++) {
-    result.push(lines[i])
-    currentLength += lines[i].length + 1
-  }
-
-  // Include lines with important refs (buttons, inputs, forms)
-  const importantPatterns = [/role='button'/, /role='textbox'/, /role='form'/, /role='link'.*@ref:/]
-  for (let i = headerLines; i < lines.length && currentLength < maxLength * 0.8; i++) {
-    if (importantPatterns.some((p) => p.test(lines[i]))) {
-      result.push(lines[i])
-      currentLength += lines[i].length + 1
+  for (const line of lines) {
+    if (currentLength + line.length > chunkSize && currentChunk.length > 0) {
+      chunks.push(currentChunk.join('\n'))
+      currentChunk = []
+      currentLength = 0
     }
+    currentChunk.push(line)
+    currentLength += line.length + 1
   }
 
-  // Add last 10% for footer/end content
-  const tailStart = Math.max(headerLines, Math.floor(lines.length * 0.9))
-  for (let i = tailStart; i < lines.length && currentLength < maxLength; i++) {
-    result.push(lines[i])
-    currentLength += lines[i].length + 1
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join('\n'))
   }
 
-  return result.join('\n')
+  return chunks
 }
 
 /**
- * Extract key sections from large documents
+ * Prompt for summarizing a single chunk
  */
-function extractKeySections(content: string, maxLength: number): string {
-  const lines = content.split('\n')
-  const sections: string[] = []
+const CHUNK_SUMMARY_PROMPT = `Extract key structure from this DOM section:
+- Contents: [area] xpath: [pattern]
+- Interactions: [element] xpath: [pattern]
+Be very concise. Only list important items.`
 
-  // Extract header (first 15%)
-  const headerEnd = Math.ceil(lines.length * 0.15)
-  sections.push('--- HEADER ---')
-  sections.push(...lines.slice(0, headerEnd))
+/**
+ * Prompt for merging chunk summaries
+ */
+const MERGE_SUMMARY_PROMPT = `Merge these page section summaries into one structural summary.
 
-  // Find and extract main content area
-  let mainStart = -1
-  let mainEnd = -1
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("role='main'") || lines[i].includes('<main')) {
-      mainStart = i
-    }
-    if (mainStart >= 0 && (lines[i].includes("role='contentinfo'") || lines[i].includes('<footer'))) {
-      mainEnd = i
-      break
-    }
-  }
+Output format:
+- **Page**: [type] - [brief description]
+- **Key contents**:
+  + [content area] xpath: [pattern]
+- **Key interactions**:
+  + [interaction] xpath: [pattern]
 
-  if (mainStart >= 0) {
-    sections.push('\n--- MAIN CONTENT ---')
-    const mainLines = lines.slice(mainStart, mainEnd > 0 ? mainEnd : mainStart + 100)
-    // Keep first 50 and last 20 lines of main
-    if (mainLines.length > 70) {
-      sections.push(...mainLines.slice(0, 50))
-      sections.push('... [content truncated] ...')
-      sections.push(...mainLines.slice(-20))
-    } else {
-      sections.push(...mainLines)
-    }
-  }
-
-  // Extract all interactive elements with refs
-  sections.push('\n--- KEY ELEMENTS ---')
-  const refLines = lines.filter((l) => l.includes('@ref:') && (l.includes("role='button'") || l.includes("role='textbox'") || l.includes("role='link'")))
-  sections.push(...refLines.slice(0, 30))
-
-  const result = sections.join('\n')
-  return result.length > maxLength ? result.substring(0, maxLength) : result
-}
+Deduplicate and keep only the most important items. Be concise.`
 
 /**
  * Default summarization service
@@ -254,21 +214,7 @@ export class DefaultSummarizationService implements SnapshotSummarizationService
 }
 
 /**
- * Create a custom summarization service with an AI provider
- *
- * @example
- * ```typescript
- * const summarizationService = createAISummarizationService(async (prompt) => {
- *   const response = await openai.chat.completions.create({
- *     model: 'gpt-4',
- *     messages: [
- *       { role: 'system', content: SUMMARIZATION_SYSTEM_PROMPT },
- *       { role: 'user', content: prompt }
- *     ]
- *   })
- *   return response.choices[0].message.content
- * })
- * ```
+ * Create a custom summarization service with chunked processing for large documents
  */
 export function createAISummarizationService(
   aiCall: (prompt: string) => Promise<string | null>
@@ -277,35 +223,41 @@ export function createAISummarizationService(
     isAvailable: () => true,
 
     async summarize(request: SummarizationRequest): Promise<SnapshotSummary> {
-      const { snapshot, previousSnapshot, diff } = request
+      const { snapshot } = request
 
-      // Prepare content based on document length
-      const { processedContent } = prepareContentForSummarization(snapshot.content)
-
-      // Build the prompt
-      let prompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\n`
-      prompt += `URL: ${snapshot.url}\nTitle: ${snapshot.title}\n\n`
-      prompt += `DOM Snapshot:\n${processedContent}`
-
-      if (diff && previousSnapshot) {
-        prompt += `\n\n---\nChanges from previous state:`
-        prompt += `\n- URL changed: ${diff.urlChanged}`
-        prompt += `\n- Content change: ${Math.round(diff.contentChangeRatio * 100)}%`
-        if (diff.urlChanged) {
-          prompt += `\n- Previous URL: ${previousSnapshot.url}`
-        }
-      }
+      // Split content into chunks
+      const { chunks, strategy } = prepareContentForSummarization(snapshot.content)
 
       try {
-        const response = await aiCall(prompt)
-
-        if (!response) {
-          throw new Error('AI returned empty response')
+        if (strategy === 'direct') {
+          // Small document - direct summarization
+          const prompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\nURL: ${snapshot.url}\nTitle: ${snapshot.title}\n\nDOM Snapshot:\n${chunks[0]}`
+          const response = await aiCall(prompt)
+          if (!response) throw new Error('AI returned empty response')
+          return response
         }
 
-        return response
+        // Large document - chunked summarization
+        console.log(`[SummarizationService] Processing ${chunks.length} chunks`)
+
+        // Step 1: Summarize each chunk
+        const chunkSummaries: string[] = []
+        for (let i = 0; i < chunks.length; i++) {
+          const chunkPrompt = `${CHUNK_SUMMARY_PROMPT}\n\nSection ${i + 1}/${chunks.length}:\n${chunks[i]}`
+          const chunkSummary = await aiCall(chunkPrompt)
+          if (chunkSummary) {
+            chunkSummaries.push(`[Section ${i + 1}]\n${chunkSummary}`)
+          }
+        }
+
+        // Step 2: Merge chunk summaries
+        const mergePrompt = `${MERGE_SUMMARY_PROMPT}\n\nURL: ${snapshot.url}\nTitle: ${snapshot.title}\n\nSection summaries:\n${chunkSummaries.join('\n\n')}`
+        const finalSummary = await aiCall(mergePrompt)
+
+        if (!finalSummary) throw new Error('AI returned empty response')
+        return finalSummary
+
       } catch (error) {
-        // Fallback to default service on error
         console.warn('[SummarizationService] AI call failed, using fallback:', error)
         const fallback = new DefaultSummarizationService()
         return fallback.summarize(request)
