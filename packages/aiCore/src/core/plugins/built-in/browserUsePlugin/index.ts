@@ -17,7 +17,7 @@ import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
-import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
+import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, SnapshotResult } from './types'
 
 /**
  * Generate a unique command ID for execute calls
@@ -416,31 +416,32 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
             const result = await c.evaluate(args.script)
             return { result }
           })
-      }),
+      })
 
       // === Visual ===
-      browser_screenshot: tool({
-        description: 'Take a screenshot of the page.',
-        inputSchema: z.object({
-          format: z.enum(['png', 'jpeg']).optional().describe('Image format (default: png)'),
-          quality: z.number().min(0).max(100).optional().describe('Image quality for JPEG format (0-100, default: 80)')
-        }),
-        execute: async (args) =>
-          executeWithCallbacks('browser_screenshot', args, async () => {
-            const c = await getClient()
-            const options = args.format || args.quality ? { format: args.format, quality: args.quality } : undefined
-            const screenshotData = await c.screenshot(options)
+      // DISABLED: browser_screenshot tool is disabled to reduce token usage
+      // browser_screenshot: tool({
+      //   description: 'Take a screenshot of the page.',
+      //   inputSchema: z.object({
+      //     format: z.enum(['png', 'jpeg']).optional().describe('Image format (default: png)'),
+      //     quality: z.number().min(0).max(100).optional().describe('Image quality for JPEG format (0-100, default: 80)')
+      //   }),
+      //   execute: async (args) =>
+      //     executeWithCallbacks('browser_screenshot', args, async () => {
+      //       const c = await getClient()
+      //       const options = args.format || args.quality ? { format: args.format, quality: args.quality } : undefined
+      //       const screenshotData = await c.screenshot(options)
 
-            // Verify screenshot data is not empty
-            if (!screenshotData || screenshotData.length === 0) {
-              throw new Error('Screenshot data is empty - page may not be loaded')
-            }
+      //       // Verify screenshot data is not empty
+      //       if (!screenshotData || screenshotData.length === 0) {
+      //         throw new Error('Screenshot data is empty - page may not be loaded')
+      //       }
 
-            console.log(`[browser_screenshot] Captured screenshot (${screenshotData.length} chars)`)
+      //       console.log(`[browser_screenshot] Captured screenshot (${screenshotData.length} chars)`)
 
-            return { image: screenshotData, format: args.format || 'png', verified: true } as ScreenshotResult
-          })
-      })
+      //       return { image: screenshotData, format: args.format || 'png', verified: true } as ScreenshotResult
+      //     })
+      // })
     }
   }
 
