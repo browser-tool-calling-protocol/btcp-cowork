@@ -553,4 +553,4 @@ export class BrowserSessionSnapshotManager {
 
 // Re-export types and services
 export * from './types'
-export { DefaultSummarizationService, createAISummarizationService, SUMMARIZATION_SYSTEM_PROMPT } from './summarizationService'
+export { DefaultSummarizationService, createAISummarizationService, prepareContentForSummarization, SUMMARIZATION_SYSTEM_PROMPT } from './summarizationService'

@@ -224,6 +224,6 @@ export const DEFAULT_SNAPSHOT_CONFIG: Required<
   actionDebounceMs: 1000,
   maxHistorySize: 50,
   significantChangeThreshold: 0.1,
-  snapshotMode: 'interaction',
+  snapshotMode: 'content', // Use 'content' for full page capture
   summarizeOn: 'significant'
 }

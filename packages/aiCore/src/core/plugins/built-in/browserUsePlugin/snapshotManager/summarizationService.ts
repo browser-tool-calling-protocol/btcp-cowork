@@ -11,26 +11,132 @@ import type { BrowserSnapshot, SnapshotSummarizationService, SnapshotSummary, Su
  * System prompt for AI-powered snapshot summarization
  * Use this when implementing a custom summarization service with an LLM
  */
-export const SUMMARIZATION_SYSTEM_PROMPT = `You are a browser page analyzer. Given a DOM snapshot in accessibility tree format, create a concise summary of the page that can be used as context in future prompts.
+export const SUMMARIZATION_SYSTEM_PROMPT = `You are a browser page analyzer. Given a DOM snapshot, create a concise summary for use as context in future prompts.
 
-Your summary should include:
+Include:
+1. **Page Identity**: Type of page (e.g., "GitHub repo", "E-commerce listing", "Login form")
+2. **Current State**: Relevant state (logged in, search results, form errors)
+3. **Key Sections**: Main areas and their purpose
+4. **Important Elements**: Key interactive elements with @ref references (forms, buttons, inputs)
+5. **Possible Actions**: 2-3 main tasks available
 
-1. **Page Identity**: What type of page this is (e.g., "GitHub repository page", "E-commerce product listing", "Login form")
+Keep summary under 400 words. Be concise.`
 
-2. **Current State**: Any relevant state information (e.g., "user is logged in", "showing search results for 'react'", "cart has 3 items")
+/**
+ * Document length thresholds for summarization strategy
+ */
+const LENGTH_THRESHOLDS = {
+  SHORT: 8000,    // Direct summarize
+  MEDIUM: 30000,  // Truncate with section markers
+  LARGE: 60000    // Chunk summarization
+}
 
-3. **Key Sections**: Main areas of the page and their purpose (e.g., "Header with navigation and search", "Main content showing product grid", "Sidebar with filters")
+/**
+ * Prepare content for summarization based on document length
+ */
+export function prepareContentForSummarization(content: string): {
+  processedContent: string
+  strategy: 'short' | 'medium' | 'large'
+  originalLength: number
+} {
+  const originalLength = content.length
 
-4. **Important Elements**: Key interactive elements with their @ref references that are relevant for automation:
-   - Forms and input fields
-   - Primary action buttons (submit, save, add to cart, etc.)
-   - Navigation links
-   - Any error messages or notifications
+  // Short document - use as is
+  if (originalLength <= LENGTH_THRESHOLDS.SHORT) {
+    return { processedContent: content, strategy: 'short', originalLength }
+  }
 
-5. **Possible Actions**: 2-3 main tasks a user could perform on this page
+  // Medium document - smart truncate with structure preservation
+  if (originalLength <= LENGTH_THRESHOLDS.MEDIUM) {
+    const truncated = smartTruncate(content, LENGTH_THRESHOLDS.SHORT)
+    return { processedContent: truncated, strategy: 'medium', originalLength }
+  }
 
-Format as a readable paragraph or short bullet points. Keep it under 500 words.
-The summary should be self-contained and useful as context without needing the full snapshot.`
+  // Large document - extract key sections
+  const extracted = extractKeySections(content, LENGTH_THRESHOLDS.MEDIUM)
+  return { processedContent: extracted, strategy: 'large', originalLength }
+}
+
+/**
+ * Smart truncate that preserves structure (keeps beginning, end, and important refs)
+ */
+function smartTruncate(content: string, maxLength: number): string {
+  const lines = content.split('\n')
+  const result: string[] = []
+  let currentLength = 0
+
+  // Always include first 20% of lines (header, nav usually)
+  const headerLines = Math.ceil(lines.length * 0.2)
+  for (let i = 0; i < headerLines && currentLength < maxLength * 0.3; i++) {
+    result.push(lines[i])
+    currentLength += lines[i].length + 1
+  }
+
+  // Include lines with important refs (buttons, inputs, forms)
+  const importantPatterns = [/role='button'/, /role='textbox'/, /role='form'/, /role='link'.*@ref:/]
+  for (let i = headerLines; i < lines.length && currentLength < maxLength * 0.8; i++) {
+    if (importantPatterns.some((p) => p.test(lines[i]))) {
+      result.push(lines[i])
+      currentLength += lines[i].length + 1
+    }
+  }
+
+  // Add last 10% for footer/end content
+  const tailStart = Math.max(headerLines, Math.floor(lines.length * 0.9))
+  for (let i = tailStart; i < lines.length && currentLength < maxLength; i++) {
+    result.push(lines[i])
+    currentLength += lines[i].length + 1
+  }
+
+  return result.join('\n')
+}
+
+/**
+ * Extract key sections from large documents
+ */
+function extractKeySections(content: string, maxLength: number): string {
+  const lines = content.split('\n')
+  const sections: string[] = []
+
+  // Extract header (first 15%)
+  const headerEnd = Math.ceil(lines.length * 0.15)
+  sections.push('--- HEADER ---')
+  sections.push(...lines.slice(0, headerEnd))
+
+  // Find and extract main content area
+  let mainStart = -1
+  let mainEnd = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes("role='main'") || lines[i].includes('<main')) {
+      mainStart = i
+    }
+    if (mainStart >= 0 && (lines[i].includes("role='contentinfo'") || lines[i].includes('<footer'))) {
+      mainEnd = i
+      break
+    }
+  }
+
+  if (mainStart >= 0) {
+    sections.push('\n--- MAIN CONTENT ---')
+    const mainLines = lines.slice(mainStart, mainEnd > 0 ? mainEnd : mainStart + 100)
+    // Keep first 50 and last 20 lines of main
+    if (mainLines.length > 70) {
+      sections.push(...mainLines.slice(0, 50))
+      sections.push('... [content truncated] ...')
+      sections.push(...mainLines.slice(-20))
+    } else {
+      sections.push(...mainLines)
+    }
+  }
+
+  // Extract all interactive elements with refs
+  sections.push('\n--- KEY ELEMENTS ---')
+  const refLines = lines.filter((l) => l.includes('@ref:') && (l.includes("role='button'") || l.includes("role='textbox'") || l.includes("role='link'")))
+  sections.push(...refLines.slice(0, 30))
+
+  const result = sections.join('\n')
+  return result.length > maxLength ? result.substring(0, maxLength) : result
+}
 
 /**
  * Default summarization service
@@ -170,11 +276,17 @@ export function createAISummarizationService(
     async summarize(request: SummarizationRequest): Promise<SnapshotSummary> {
       const { snapshot, previousSnapshot, diff } = request
 
-      // Build the prompt
-      let prompt = `Summarize this browser page snapshot:\n\nURL: ${snapshot.url}\nTitle: ${snapshot.title}\n\nDOM Snapshot:\n${snapshot.content.substring(0, 50000)}`
+      // Prepare content based on document length
+      const { processedContent, strategy, originalLength } = prepareContentForSummarization(snapshot.content)
+
+      // Build the prompt with length context
+      let prompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\n`
+      prompt += `URL: ${snapshot.url}\nTitle: ${snapshot.title}\n`
+      prompt += `Document size: ${originalLength} chars (${strategy} document)\n\n`
+      prompt += `DOM Snapshot:\n${processedContent}`
 
       if (diff && previousSnapshot) {
-        prompt += `\n\n---\nThis page changed from the previous state:`
+        prompt += `\n\n---\nChanges from previous state:`
         prompt += `\n- URL changed: ${diff.urlChanged}`
         prompt += `\n- Content change: ${Math.round(diff.contentChangeRatio * 100)}%`
         if (diff.urlChanged) {

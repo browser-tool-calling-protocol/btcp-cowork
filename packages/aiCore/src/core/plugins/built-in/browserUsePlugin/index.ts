@@ -18,7 +18,7 @@ import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
-import { BrowserSessionSnapshotManager, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'
+import { BrowserSessionSnapshotManager, createAISummarizationService, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
 
 const MAX_SNAPSHOT_SIZE = 50000
@@ -41,21 +41,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
   // Initialize snapshot manager if aiCall is provided
   let snapshotManager: BrowserSessionSnapshotManager | null = null
   if (aiCall) {
-    // Create summarization service from aiCall function
-    const summarizationService = {
-      isAvailable: () => true,
-      summarize: async (request: { snapshot: { url: string; title: string; content: string }; diff?: { urlChanged: boolean; contentChangeRatio: number } }) => {
-        const { snapshot, diff } = request
-        let prompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\nURL: ${snapshot.url}\nTitle: ${snapshot.title}\n\nDOM Snapshot:\n${snapshot.content.substring(0, 50000)}`
-        if (diff) {
-          prompt += `\n\n---\nChanges: URL changed: ${diff.urlChanged}, Content change: ${Math.round(diff.contentChangeRatio * 100)}%`
-        }
-        return aiCall(prompt)
-      }
-    }
+    // Create length-aware summarization service
+    const summarizationService = createAISummarizationService(aiCall)
 
     snapshotManager = new BrowserSessionSnapshotManager({
       enabled: true,
+      snapshotMode: 'content', // Use full content mode
       summarizationService,
       summarizeOn: 'significant',
       onSummary: (_snapshot, summary) => {
