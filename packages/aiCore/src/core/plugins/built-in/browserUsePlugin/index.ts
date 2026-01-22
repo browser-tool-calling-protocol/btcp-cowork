@@ -8,7 +8,7 @@
  * ```typescript
  * browserUsePlugin({
  *   browserAgentService,
- *   aiService  // optional - enables background snapshot summarization
+ *   aiCall: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
  * })
  * ```
  */
@@ -19,7 +19,7 @@ import * as z from 'zod'
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
 import { BrowserSessionSnapshotManager, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'
-import type { AiService, BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
+import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
 
 const MAX_SNAPSHOT_SIZE = 50000
 
@@ -28,30 +28,20 @@ const MAX_SNAPSHOT_SIZE = 50000
  *
  * @param config - Plugin configuration
  * @returns An aiCore plugin that provides browser automation tools
- *
- * @example
- * ```typescript
- * import { browserUsePlugin } from '@cherrystudio/ai-core/built-in/plugins'
- *
- * const plugin = browserUsePlugin({
- *   browserAgentService,
- *   aiService  // optional
- * })
- * ```
  */
 export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
-  const { browserAgentService, aiService, toolset = DEFAULT_CONFIG.toolset, onSnapshotSummary } = config
+  const { browserAgentService, aiCall, toolset = DEFAULT_CONFIG.toolset, onSnapshotSummary } = config
 
   console.log('[browserUsePlugin] Initializing', {
     hasBrowserService: !!browserAgentService,
-    hasAiService: !!aiService,
+    hasAiCall: !!aiCall,
     toolset
   })
 
-  // Initialize snapshot manager if aiService is provided
+  // Initialize snapshot manager if aiCall is provided
   let snapshotManager: BrowserSessionSnapshotManager | null = null
-  if (aiService) {
-    // Create summarization service from aiService
+  if (aiCall) {
+    // Create summarization service from aiCall function
     const summarizationService = {
       isAvailable: () => true,
       summarize: async (request: { snapshot: { url: string; title: string; content: string }; diff?: { urlChanged: boolean; contentChangeRatio: number } }) => {
@@ -60,7 +50,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
         if (diff) {
           prompt += `\n\n---\nChanges: URL changed: ${diff.urlChanged}, Content change: ${Math.round(diff.contentChangeRatio * 100)}%`
         }
-        return aiService.generateText(prompt)
+        return aiCall(prompt)
       }
     }
 
@@ -375,7 +365,6 @@ export default browserUsePlugin
 // Re-export types and helpers
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'
 export * from './types'
-export { createAiService } from './types'
 
 // Export snapshot manager
 export { BrowserSessionSnapshotManager, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'

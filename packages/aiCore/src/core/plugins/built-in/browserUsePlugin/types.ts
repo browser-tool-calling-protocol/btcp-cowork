@@ -112,47 +112,33 @@ export interface BrowserAgentService {
 }
 
 /**
- * AI Service interface for snapshot summarization
+ * AI call function type for snapshot summarization
  * Simple function that takes a prompt and returns a response string
- *
- * @example
- * ```typescript
- * // With fetchGenerate from ApiService
- * browserUsePlugin({
- *   browserAgentService,
- *   aiService: {
- *     generateText: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
- *   }
- * })
- * ```
  */
-export interface AiService {
-  generateText(prompt: string): Promise<string>
-}
+export type AiCallFn = (prompt: string) => Promise<string>
 
 /**
- * Simplified configuration for the BTCP Browser Plugin
+ * Configuration for the BTCP Browser Plugin
  *
  * @example
  * ```typescript
  * browserUsePlugin({
  *   browserAgentService,
- *   aiService
+ *   aiCall: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
  * })
  * ```
  */
 export interface BTCPBrowserPluginConfig {
   /**
    * Browser agent service instance (required)
-   * Provides browser automation capabilities
    */
   browserAgentService: BrowserAgentService
 
   /**
-   * AI service for snapshot summarization (optional)
+   * AI call function for snapshot summarization (optional)
    * When provided, enables background snapshot tracking with AI summaries
    */
-  aiService?: AiService
+  aiCall?: AiCallFn
 
   /**
    * Which tool categories to expose
