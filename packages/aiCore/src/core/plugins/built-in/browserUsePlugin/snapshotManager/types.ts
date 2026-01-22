@@ -2,7 +2,7 @@
  * Browser Session Snapshot Manager Types
  *
  * Type definitions for the background snapshot tracking mechanism that captures
- * page state at intervals or after actions, computes diffs, and runs indexing/summarization.
+ * page state at intervals or after actions, computes diffs, and runs summarization.
  */
 
 // ============================================================================
@@ -10,61 +10,10 @@
 // ============================================================================
 
 /**
- * Key interactive element identified in the page
+ * Snapshot summary - a plain text description of the page state
+ * Designed to be used directly as part of a prompt
  */
-export interface KeyInteraction {
-  /** Element reference (e.g., @ref:1) */
-  ref: string
-  /** Element type (button, link, input, etc.) */
-  type: string
-  /** Human-readable label or text */
-  label: string
-  /** Brief description of what this element does */
-  purpose?: string
-  /** Priority level for this interaction (1 = highest) */
-  priority?: number
-}
-
-/**
- * Key structural section identified in the page
- */
-export interface KeySection {
-  /** Section name/identifier */
-  name: string
-  /** Section type (header, navigation, main, sidebar, form, list, etc.) */
-  type: string
-  /** Brief description of section content */
-  description: string
-  /** Child elements or sections count */
-  elementCount?: number
-  /** Associated element refs in this section */
-  refs?: string[]
-}
-
-/**
- * Structured snapshot summary with key sections
- * This is the output format from AI summarization
- */
-export interface SnapshotSummary {
-  /** Unique ID linking to the source snapshot */
-  snapshotId: string
-  /** Timestamp when summary was generated */
-  timestamp: number
-  /** One-line page description */
-  pageDescription: string
-  /** Current page state/context (e.g., "logged in", "search results", "checkout step 2") */
-  pageState?: string
-  /** Key structural sections on the page */
-  keyStructure: KeySection[]
-  /** Key interactive elements for main workflows */
-  keyInteractions: KeyInteraction[]
-  /** Detected user workflows or tasks possible on this page */
-  possibleWorkflows?: string[]
-  /** Any notable changes from previous snapshot */
-  changesFromPrevious?: string
-  /** Raw summary text (for debugging or fallback) */
-  rawSummary?: string
-}
+export type SnapshotSummary = string
 
 /**
  * Summarization request passed to the AI service
@@ -88,7 +37,7 @@ export interface SnapshotSummarizationService {
   /**
    * Summarize a browser snapshot using AI
    * @param request - The summarization request with snapshot and context
-   * @returns Promise resolving to structured summary
+   * @returns Promise resolving to summary string (for use in prompts)
    */
   summarize(request: SummarizationRequest): Promise<SnapshotSummary>
 
@@ -122,7 +71,7 @@ export interface BrowserSnapshot {
   trigger: SnapshotTrigger
   /** Optional action that triggered the snapshot */
   triggerAction?: string
-  /** AI-generated summary (populated after summarization) */
+  /** AI-generated summary string (populated after summarization) */
   summary?: SnapshotSummary
   /** Optional metadata */
   metadata?: Record<string, unknown>
@@ -159,24 +108,8 @@ export interface SnapshotDiff {
   linesRemoved: number
   /** Whether the change is significant (above threshold) */
   isSignificant: boolean
-  /** Summary of changes (placeholder for AI summarization) */
+  /** Summary of changes */
   changeSummary?: string
-}
-
-/**
- * Snapshot indexing/processing result
- */
-export interface SnapshotIndexResult {
-  /** Snapshot ID that was indexed */
-  snapshotId: string
-  /** Timestamp when indexing completed */
-  timestamp: number
-  /** Status of the indexing operation */
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  /** Structured summary from AI */
-  summary?: SnapshotSummary
-  /** Error message if failed */
-  error?: string
 }
 
 /**
@@ -233,7 +166,7 @@ export interface SnapshotManagerConfig {
   snapshotMode?: 'interaction' | 'content' | 'outline'
 
   /**
-   * AI summarization service for generating structured summaries
+   * AI summarization service for generating summaries
    * When provided, snapshots will be automatically summarized
    */
   summarizationService?: SnapshotSummarizationService

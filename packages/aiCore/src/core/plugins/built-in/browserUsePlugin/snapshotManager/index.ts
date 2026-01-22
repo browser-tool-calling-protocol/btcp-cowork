@@ -391,9 +391,8 @@ export class BrowserSessionSnapshotManager {
       snapshot.summary = summary
 
       console.log(`[SnapshotManager] Summarization completed for: ${snapshot.id}`, {
-        pageDescription: summary.pageDescription,
-        keyStructureCount: summary.keyStructure.length,
-        keyInteractionsCount: summary.keyInteractions.length
+        summaryLength: summary.length,
+        preview: summary.substring(0, 100) + (summary.length > 100 ? '...' : '')
       })
 
       // Remove from pending

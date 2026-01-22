@@ -591,8 +591,5 @@ export type {
   SnapshotTrigger,
   SnapshotSummary,
   SnapshotSummarizationService,
-  SummarizationRequest,
-  KeyInteraction,
-  KeySection,
-  SnapshotIndexResult
+  SummarizationRequest
 } from './snapshotManager'
