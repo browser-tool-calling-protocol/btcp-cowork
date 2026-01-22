@@ -9,23 +9,21 @@ import type { BrowserSnapshot, SnapshotSummarizationService, SnapshotSummary, Su
 
 /**
  * System prompt for AI-powered snapshot summarization
- * Focus on page structure with paths for AI agent navigation
+ * Focus on page structure with xpath patterns for grep filtering
  */
-export const SUMMARIZATION_SYSTEM_PROMPT = `Analyze this DOM snapshot and output a structural map for AI agent navigation.
+export const SUMMARIZATION_SYSTEM_PROMPT = `Analyze this DOM snapshot and output a structural summary.
 
 Output format:
-- **Page**: [type] - [title]
-- **Areas**: List main regions with paths
-  - header > nav > [links]
-  - main > [content type]
-  - aside > [sidebar content]
-- **Elements**: Key interactive elements with @ref
-  - @ref:N [type]: [purpose] (path: area > parent > element)
-- **Flows**: Common user actions
-  - [action]: @ref:N -> @ref:M -> ...
-- **Insight**: Current state, errors, or notable info
+- **Page**: [type] - [brief description]
+- **Key contents**:
+  + [content area 1] xpath: [pattern]
+  + [content area 2] xpath: [pattern]
+- **Key interactions**:
+  + [interaction 1] xpath: [pattern]
+  + [interaction 2] xpath: [pattern]
 
-Be concise. Focus on actionable structure.`
+The xpath patterns should be usable with grep to filter snapshots.
+Be concise. No @ref needed.`
 
 /**
  * Document length thresholds for summarization strategy
