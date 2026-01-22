@@ -277,12 +277,11 @@ export function createAISummarizationService(
       const { snapshot, previousSnapshot, diff } = request
 
       // Prepare content based on document length
-      const { processedContent, strategy, originalLength } = prepareContentForSummarization(snapshot.content)
+      const { processedContent } = prepareContentForSummarization(snapshot.content)
 
-      // Build the prompt with length context
+      // Build the prompt
       let prompt = `${SUMMARIZATION_SYSTEM_PROMPT}\n\n`
-      prompt += `URL: ${snapshot.url}\nTitle: ${snapshot.title}\n`
-      prompt += `Document size: ${originalLength} chars (${strategy} document)\n\n`
+      prompt += `URL: ${snapshot.url}\nTitle: ${snapshot.title}\n\n`
       prompt += `DOM Snapshot:\n${processedContent}`
 
       if (diff && previousSnapshot) {
