@@ -30,6 +30,15 @@ export const useBrowserUsePanelController = (assistantId: string, quickPanelCont
 
     try {
       await browserAgentService.getOrInit()
+
+      // Trigger session creation by calling tabList command
+      // This ensures ensureSession() -> createGroup() -> tab creation
+      const client = browserAgentService.getClient()
+      if (client) {
+        await client.execute({ action: 'tabList' })
+        logger.info('Browser session initialized with tabs')
+      }
+
       setSessionState({ status: 'connected' })
       logger.info('Browser session connected successfully')
       // Auto-enable browser use when session connects

@@ -49,9 +49,9 @@ const BrowserUseButton: FC<Props> = ({ quickPanelController, assistantId }) => {
     <Tooltip placement="top" title={getTooltipTitle()} mouseLeaveDelay={0} arrow>
       <ActionIconButton
         onClick={onClick}
-        active={isEnabled && isConnected}
+        active={isEnabled}
         aria-label={ariaLabel}
-        aria-pressed={isEnabled && isConnected}
+        aria-pressed={isEnabled}
         disabled={isConnecting}>
         {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
       </ActionIconButton>
