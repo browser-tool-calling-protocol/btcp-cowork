@@ -38,6 +38,9 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
     toolset
   })
 
+  // Store latest summary for injection into system prompt
+  let latestSummary: string | null = null
+
   // Initialize snapshot manager if aiCall is provided
   let snapshotManager: BrowserSessionSnapshotManager | null = null
   if (aiCall) {
@@ -50,6 +53,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
       summarizationService,
       summarizeOn: 'significant',
       onSummary: (_snapshot, summary) => {
+        latestSummary = summary
         onSnapshotSummary?.(summary)
       }
     })
@@ -337,12 +341,20 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
       const existingTools = (p.tools as Record<string, unknown>) || {}
       p.tools = { ...existingTools, ...selectedTools }
 
+      // Build system prompt with browser instructions and page context
+      let systemPrompt = p.system as string || ''
+
       // Inject browser system prompt if not present
-      const currentSystem = p.system as string | undefined
-      if (!currentSystem?.includes('browser_snapshot')) {
-        p.system = currentSystem ? `${currentSystem}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
+      if (!systemPrompt.includes('browser_snapshot')) {
+        systemPrompt = systemPrompt ? `${systemPrompt}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
       }
 
+      // Inject latest page summary if available
+      if (latestSummary && !systemPrompt.includes(latestSummary)) {
+        systemPrompt = `${systemPrompt}\n\n## Current Page Context\n${latestSummary}`
+      }
+
+      p.system = systemPrompt
       return params
     },
 
