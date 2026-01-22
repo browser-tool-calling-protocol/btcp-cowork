@@ -270,7 +270,7 @@ export class BrowserSessionSnapshotManager {
       const [url, title, content] = await Promise.all([
         client.getUrl(),
         client.getTitle(),
-        client.snapshot({ mode: this.config.snapshotMode })
+        client.snapshot({ mode: this.config.snapshotMode, format: 'tree' })
       ])
 
       const snapshot: BrowserSnapshot = {

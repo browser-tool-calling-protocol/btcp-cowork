@@ -46,7 +46,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
 
     snapshotManager = new BrowserSessionSnapshotManager({
       enabled: true,
-      snapshotMode: 'content', // Use full content mode
+      snapshotMode: 'all', // Use 'all' for full page structure
       summarizationService,
       summarizeOn: 'significant',
       onSummary: (_snapshot, summary) => {

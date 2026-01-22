@@ -66,7 +66,7 @@ export interface BrowserSnapshot {
   /** DOM snapshot content (accessibility tree format) */
   content: string
   /** Snapshot mode used */
-  mode: 'interaction' | 'content' | 'outline'
+  mode: 'interaction' | 'content' | 'outline' | 'all'
   /** What triggered this snapshot */
   trigger: SnapshotTrigger
   /** Optional action that triggered the snapshot */
@@ -161,9 +161,9 @@ export interface SnapshotManagerConfig {
 
   /**
    * Snapshot mode to use for captures
-   * @default 'interaction'
+   * @default 'all'
    */
-  snapshotMode?: 'interaction' | 'content' | 'outline'
+  snapshotMode?: 'interaction' | 'content' | 'outline' | 'all'
 
   /**
    * AI summarization service for generating summaries
@@ -224,6 +224,6 @@ export const DEFAULT_SNAPSHOT_CONFIG: Required<
   actionDebounceMs: 1000,
   maxHistorySize: 50,
   significantChangeThreshold: 0.1,
-  snapshotMode: 'content', // Use 'content' for full page capture
+  snapshotMode: 'all', // Use 'all' for full page structure
   summarizeOn: 'significant'
 }

@@ -9,18 +9,23 @@ import type { BrowserSnapshot, SnapshotSummarizationService, SnapshotSummary, Su
 
 /**
  * System prompt for AI-powered snapshot summarization
- * Use this when implementing a custom summarization service with an LLM
+ * Focus on page structure with paths for AI agent navigation
  */
-export const SUMMARIZATION_SYSTEM_PROMPT = `You are a browser page analyzer. Given a DOM snapshot, create a concise summary for use as context in future prompts.
+export const SUMMARIZATION_SYSTEM_PROMPT = `Analyze this DOM snapshot and output a structural map for AI agent navigation.
 
-Include:
-1. **Page Identity**: Type of page (e.g., "GitHub repo", "E-commerce listing", "Login form")
-2. **Current State**: Relevant state (logged in, search results, form errors)
-3. **Key Sections**: Main areas and their purpose
-4. **Important Elements**: Key interactive elements with @ref references (forms, buttons, inputs)
-5. **Possible Actions**: 2-3 main tasks available
+Output format:
+- **Page**: [type] - [title]
+- **Areas**: List main regions with paths
+  - header > nav > [links]
+  - main > [content type]
+  - aside > [sidebar content]
+- **Elements**: Key interactive elements with @ref
+  - @ref:N [type]: [purpose] (path: area > parent > element)
+- **Flows**: Common user actions
+  - [action]: @ref:N -> @ref:M -> ...
+- **Insight**: Current state, errors, or notable info
 
-Keep summary under 400 words. Be concise.`
+Be concise. Focus on actionable structure.`
 
 /**
  * Document length thresholds for summarization strategy
