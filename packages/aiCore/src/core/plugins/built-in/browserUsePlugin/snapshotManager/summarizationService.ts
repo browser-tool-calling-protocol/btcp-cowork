@@ -9,21 +9,29 @@ import type { BrowserSnapshot, SnapshotSummarizationService, SnapshotSummary, Su
 
 /**
  * System prompt for AI-powered snapshot summarization
- * Focus on page structure with xpath patterns for grep filtering
+ * Provides semantic understanding with grep patterns for agent navigation
  */
-export const SUMMARIZATION_SYSTEM_PROMPT = `Analyze this DOM snapshot and output a structural summary.
+export const SUMMARIZATION_SYSTEM_PROMPT = `Analyze this DOM snapshot. Output a semantic map with grep patterns.
 
-Output format:
-- **Page**: [type] - [brief description]
-- **Key contents**:
-  + [content area 1] xpath: [pattern]
-  + [content area 2] xpath: [pattern]
-- **Key interactions**:
-  + [interaction 1] xpath: [pattern]
-  + [interaction 2] xpath: [pattern]
+Format:
+- **Page**: [type] - [one line description]
+- **Structure**:
+  + [area name] pattern: [regex for grep]
+- **Actions**:
+  + [action name] pattern: [regex for grep]
 
-The xpath patterns should be usable with grep to filter snapshots.
-Be concise. No @ref needed.`
+Example:
+- **Page**: E-commerce - Product listing page
+- **Structure**:
+  + header: ^header.*nav
+  + product grid: main.*product
+  + filters: aside.*filter
+- **Actions**:
+  + search: input.*search
+  + add to cart: button.*cart
+  + pagination: nav.*page
+
+Keep patterns simple. Agent will query details later with grep.`
 
 /**
  * Document length thresholds for summarization strategy
@@ -82,24 +90,21 @@ function splitIntoChunks(content: string, chunkSize: number): string[] {
 /**
  * Prompt for summarizing a single chunk
  */
-const CHUNK_SUMMARY_PROMPT = `Extract key structure from this DOM section:
-- Contents: [area] xpath: [pattern]
-- Interactions: [element] xpath: [pattern]
-Be very concise. Only list important items.`
+const CHUNK_SUMMARY_PROMPT = `Extract semantic areas and actions from this DOM section.
+Format: [name] pattern: [simple regex]
+Only list main areas/actions. Be very brief.`
 
 /**
  * Prompt for merging chunk summaries
  */
-const MERGE_SUMMARY_PROMPT = `Merge these page section summaries into one structural summary.
+const MERGE_SUMMARY_PROMPT = `Merge into one semantic map.
 
-Output format:
-- **Page**: [type] - [brief description]
-- **Key contents**:
-  + [content area] xpath: [pattern]
-- **Key interactions**:
-  + [interaction] xpath: [pattern]
+Format:
+- **Page**: [type] - [description]
+- **Structure**: [area] pattern: [regex]
+- **Actions**: [action] pattern: [regex]
 
-Deduplicate and keep only the most important items. Be concise.`
+Deduplicate. Keep only main items.`
 
 /**
  * Default summarization service
