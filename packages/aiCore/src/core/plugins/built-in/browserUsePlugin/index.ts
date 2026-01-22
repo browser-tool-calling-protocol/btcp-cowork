@@ -4,12 +4,13 @@
  * Integrates btcp-browser-agent as a reusable plugin for @cherrystudio/ai-core,
  * enabling AI models to control browsers through the Browser Tool Calling Protocol (BTCP).
  *
- * Uses the extension Client for browser automation:
- * - snapshot, click, type, fill for interaction
- * - getText for inspection
- * - screenshot for visual capture
- *
- * The Client self-discovers the agent - we only work with the Client directly.
+ * @example
+ * ```typescript
+ * browserUsePlugin({
+ *   browserAgentService,
+ *   aiCall: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
+ * })
+ * ```
  */
 
 import { tool } from 'ai'
@@ -17,95 +18,70 @@ import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
+import { BrowserSessionSnapshotManager, createAISummarizationService } from './snapshotManager'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, SnapshotResult } from './types'
 
-/**
- * Generate a unique command ID for execute calls
- */
-function generateUniqueId(): string {
-  return `cmd_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-}
+const MAX_SNAPSHOT_SIZE = 50000
 
 /**
  * Browser Use Plugin Factory
  *
- * @param config - Plugin configuration options
+ * @param config - Plugin configuration
  * @returns An aiCore plugin that provides browser automation tools
- *
- * @example
- * ```typescript
- * import { createExecutor, browserUsePlugin } from '@cherrystudio/ai-core'
- * import { browserAgentService } from './services/BrowserAgentService'
- *
- * const executor = createExecutor('anthropic', { apiKey: '...' }, [
- *   browserUsePlugin({ service: browserAgentService })
- * ])
- *
- * const result = await executor.streamText({
- *   model: 'claude-sonnet-4-20250514',
- *   messages: [{
- *     role: 'user',
- *     content: 'Go to https://news.ycombinator.com and find the top 3 stories'
- *   }]
- * })
- * ```
  */
-export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin => {
-  console.log('[browserUsePlugin] 🚀 Initializing plugin with config:', {
-    enabled: config.enabled ?? DEFAULT_CONFIG.enabled,
-    hasService: !!config.service,
-    toolset: config.toolset ?? DEFAULT_CONFIG.toolset,
-    injectSystemPrompt: config.injectSystemPrompt ?? DEFAULT_CONFIG.injectSystemPrompt
+export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
+  const { browserAgentService, aiCall, toolset = DEFAULT_CONFIG.toolset, onSnapshotSummary } = config
+
+  console.log('[browserUsePlugin] Initializing', {
+    hasBrowserService: !!browserAgentService,
+    hasAiCall: !!aiCall,
+    toolset
   })
 
-  const {
-    enabled = DEFAULT_CONFIG.enabled,
-    service,
-    toolset = DEFAULT_CONFIG.toolset,
-    maxSnapshotSize = DEFAULT_CONFIG.maxSnapshotSize,
-    enableTracking = DEFAULT_CONFIG.enableTracking,
-    onToolCall,
-    onToolResult,
-    onError,
-    injectSystemPrompt = DEFAULT_CONFIG.injectSystemPrompt
-  } = config
+  // Store latest summary for injection into system prompt
+  let latestSummary: string | null = null
 
-  /**
-   * Get the client from the service (throws if not configured)
-   * Casts to ExtensionClient to ensure type safety for tool implementations
-   */
-  const getClient = async (): Promise<ExtensionClient> => {
-    console.log('[browserUsePlugin] Getting client from service...')
-    if (!service) {
-      const error =
-        'Browser service not configured. Pass service via browserUsePlugin({ service: browserAgentService })'
-      console.error('[browserUsePlugin] ERROR:', error)
-      throw new Error(error)
-    }
-    try {
-      const client = await service.getOrInit()
-      console.log('[browserUsePlugin] Client obtained successfully')
-      return client as Promise<ExtensionClient>
-    } catch (error) {
-      console.error('[browserUsePlugin] Failed to get client:', error)
-      throw error
-    }
+  // Initialize snapshot manager if aiCall is provided
+  let snapshotManager: BrowserSessionSnapshotManager | null = null
+  if (aiCall) {
+    // Create length-aware summarization service
+    const summarizationService = createAISummarizationService(aiCall)
+
+    snapshotManager = new BrowserSessionSnapshotManager({
+      enabled: true,
+      snapshotMode: 'all', // Use 'all' for full page structure
+      summarizationService,
+      summarizeOn: 'significant',
+      onSummary: (_snapshot, summary) => {
+        latestSummary = summary
+        onSnapshotSummary?.(summary)
+      }
+    })
+    snapshotManager.setClientGetter(async () => (await browserAgentService.getOrInit()) as ExtensionClient)
   }
 
-  // Execution wrapper with callbacks
-  const executeWithCallbacks = async <T>(toolName: string, args: unknown, executor: () => Promise<T>): Promise<T> => {
-    console.log(`[browserUsePlugin] 🔧 Tool called: ${toolName}`, args)
-    onToolCall?.(toolName, args)
-    try {
-      const result = await executor()
-      console.log(`[browserUsePlugin] ✅ Tool succeeded: ${toolName}`, result)
-      onToolResult?.(toolName, result)
-      return result
-    } catch (error) {
-      console.error(`[browserUsePlugin] ❌ Tool failed: ${toolName}`, error)
-      onError?.(toolName, error as Error)
-      throw error
+  /**
+   * Get the browser client
+   */
+  const getClient = async (): Promise<ExtensionClient> => {
+    const client = await browserAgentService.getOrInit()
+    return client as ExtensionClient
+  }
+
+  /**
+   * Execute tool with snapshot notification
+   */
+  const execute = async <T>(toolName: string, args: unknown, fn: () => Promise<T>): Promise<T> => {
+    const result = await fn()
+
+    // Notify snapshot manager of action
+    if (snapshotManager) {
+      setTimeout(() => {
+        snapshotManager?.notifyAction(toolName, args).catch(() => {})
+      }, 0)
     }
+
+    return result
   }
 
   // Create browser tools using the Client API
@@ -117,7 +93,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Launch the browser agent to start automation. Initializes the browser client for automation.',
         inputSchema: z.object({}).describe('No parameters required'),
         execute: async () =>
-          executeWithCallbacks('browser_launch', {}, async () => {
+          execute('browser_launch', {}, async () => {
             console.log('[browser_launch] Initializing browser client...')
             // Get client from service (initializes if needed)
             await getClient()
@@ -136,7 +112,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           _: z.string().optional().describe('Unused parameter (tool requires no parameters)')
         }),
         execute: async () =>
-          executeWithCallbacks('browser_close', {}, async () => {
+          execute('browser_close', {}, async () => {
             return { success: true }
           })
       }),
@@ -148,7 +124,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           url: z.string().describe('URL to navigate to')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_navigate', args, async () => {
+          execute('browser_navigate', args, async () => {
             console.log('[browser_navigate] Starting navigation to:', args.url)
             const c = await getClient()
             console.log('[browser_navigate] Client ready, calling navigate()')
@@ -162,7 +138,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Go back in browser history',
         inputSchema: z.object({}).strict(),
         execute: async () =>
-          executeWithCallbacks('browser_back', {}, async () => {
+          execute('browser_back', {}, async () => {
             const c = await getClient()
             return c.back()
           })
@@ -172,7 +148,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Go forward in browser history',
         inputSchema: z.object({}).strict(),
         execute: async () =>
-          executeWithCallbacks('browser_forward', {}, async () => {
+          execute('browser_forward', {}, async () => {
             const c = await getClient()
             return c.forward()
           })
@@ -182,7 +158,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Reload the current page',
         inputSchema: z.object({}).strict(),
         execute: async () =>
-          executeWithCallbacks('browser_reload', {}, async () => {
+          execute('browser_reload', {}, async () => {
             const c = await getClient()
             return c.reload()
           })
@@ -201,7 +177,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           format: z.enum(['tree', 'markdown']).optional().describe('Format: "tree" (default) or "markdown"')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_snapshot', args, async () => {
+          execute('browser_snapshot', args, async () => {
             const c = await getClient()
 
             const options: Record<string, unknown> = {
@@ -221,11 +197,11 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
               `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.grep ? ` (grep: ${args.grep})` : ''}`
             )
 
-            if (snapshotStr.length > maxSnapshotSize) {
+            if (snapshotStr.length > MAX_SNAPSHOT_SIZE) {
               return {
-                snapshot: snapshotStr.substring(0, maxSnapshotSize),
+                snapshot: snapshotStr.substring(0, MAX_SNAPSHOT_SIZE),
                 _truncated: true,
-                _message: `Snapshot truncated to ${maxSnapshotSize} chars (original: ${snapshotStr.length} chars)`
+                _message: `Snapshot truncated to ${MAX_SNAPSHOT_SIZE} chars (original: ${snapshotStr.length} chars)`
               } as SnapshotResult
             }
             return { snapshot: snapshotStr } as SnapshotResult
@@ -238,7 +214,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_get_text', args, async () => {
+          execute('browser_get_text', args, async () => {
             const c = await getClient()
             const text = await c.getText(args.selector)
             return { text }
@@ -253,7 +229,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           button: z.enum(['left', 'right', 'middle']).optional().describe('Mouse button to click (default: left)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_click', args, async () => {
+          execute('browser_click', args, async () => {
             const c = await getClient()
             return c.click(args.selector, args.button ? { button: args.button } : undefined)
           })
@@ -268,7 +244,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           clear: z.boolean().optional().describe('Clear existing text before typing')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_type', args, async () => {
+          execute('browser_type', args, async () => {
             const c = await getClient()
             const options = args.delay || args.clear ? { delay: args.delay, clear: args.clear } : undefined
             return c.type(args.selector, args.text, options)
@@ -282,7 +258,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           value: z.string().describe('Value to fill')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_fill', args, async () => {
+          execute('browser_fill', args, async () => {
             const c = await getClient()
             return c.fill(args.selector, args.value)
           })
@@ -294,7 +270,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_hover', args, async () => {
+          execute('browser_hover', args, async () => {
             const c = await getClient()
             const result = await c.hover(args.selector)
             // If void return, create success response
@@ -309,7 +285,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           selector: z.string().optional().describe('Optional selector to focus before pressing key')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_press', args, async () => {
+          execute('browser_press', args, async () => {
             const c = await getClient()
             const result = await c.press(args.key, args.selector)
             return result !== undefined ? result : { success: true, key: args.key }
@@ -326,7 +302,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           y: z.number().optional().describe('Absolute y scroll position')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_scroll', args, async () => {
+          execute('browser_scroll', args, async () => {
             const c = await getClient()
             const result = await c.scroll({
               selector: args.selector,
@@ -346,7 +322,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           timeout: z.number().optional().describe('Maximum wait time in milliseconds (default: 30000)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_wait', args, async () => {
+          execute('browser_wait', args, async () => {
             const c = await getClient()
             const result = await c.wait({ selector: args.selector, timeout: args.timeout })
             return result
@@ -361,7 +337,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           attribute: z.string().describe('Attribute name to get (e.g., href, src, data-id)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_get_attribute', args, async () => {
+          execute('browser_get_attribute', args, async () => {
             const c = await getClient()
             const value = await c.getAttribute(args.selector, args.attribute)
             return { selector: args.selector, attribute: args.attribute, value }
@@ -374,7 +350,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           selector: z.string().describe('CSS selector or element reference (@ref:N)')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_is_visible', args, async () => {
+          execute('browser_is_visible', args, async () => {
             const c = await getClient()
             const visible = await c.isVisible(args.selector)
             return { selector: args.selector, visible }
@@ -385,7 +361,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Get the current page URL.',
         inputSchema: z.object({}).strict(),
         execute: async () =>
-          executeWithCallbacks('browser_get_url', {}, async () => {
+          execute('browser_get_url', {}, async () => {
             const c = await getClient()
             const url = await c.getUrl()
             return { url }
@@ -396,7 +372,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
         description: 'Get the current page title.',
         inputSchema: z.object({}).strict(),
         execute: async () =>
-          executeWithCallbacks('browser_get_title', {}, async () => {
+          execute('browser_get_title', {}, async () => {
             const c = await getClient()
             const title = await c.getTitle()
             return { title }
@@ -411,7 +387,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
           script: z.string().describe('JavaScript code to execute in the page context')
         }),
         execute: async (args) =>
-          executeWithCallbacks('browser_evaluate', args, async () => {
+          execute('browser_evaluate', args, async () => {
             const c = await getClient()
             const result = await c.evaluate(args.script)
             return { result }
@@ -445,7 +421,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     }
   }
 
-  // Filter tools based on preset or custom list
+  // Filter tools based on preset
   const filterTools = (allTools: Record<string, unknown>): Record<string, unknown> => {
     if (Array.isArray(toolset)) {
       return Object.fromEntries(Object.entries(allTools).filter(([name]) => toolset.includes(name as BTCPToolName)))
@@ -454,87 +430,64 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     return Object.fromEntries(Object.entries(allTools).filter(([name]) => preset.includes(name as BTCPToolName)))
   }
 
-  const plugin: AiPlugin = {
+  return {
     name: 'btcp-browser',
     enforce: 'pre',
 
     configureContext: (context: AiRequestContext) => {
-      // Store service in context for potential use by other plugins
-      if (service) {
-        context.btcpGetClient = () => service.getOrInit()
+      context.btcpGetClient = () => browserAgentService.getOrInit()
+      if (snapshotManager) {
+        context.btcpSnapshotManager = snapshotManager
+        if (!snapshotManager.isRunning()) {
+          snapshotManager.start().catch(() => {})
+        }
       }
     },
 
     transformParams: <T>(params: T): T => {
-      console.log('🔧 [browserUsePlugin] transformParams called', {
-        enabled,
-        hasService: !!service,
-        toolset,
-        maxSnapshotSize,
-        enableTracking,
-        injectSystemPrompt
-      })
-
-      if (!enabled) {
-        console.warn('⚠️ [browserUsePlugin] Plugin not enabled, skipping')
-        return params
-      }
-
-      if (!service) {
-        console.warn('⚠️ [browserUsePlugin] No service provided, skipping')
-        return params
-      }
-
       const browserTools = createBrowserTools()
       const selectedTools = filterTools(browserTools)
 
-      console.log('🛠️ [browserUsePlugin] Adding browser tools', {
-        toolCount: Object.keys(selectedTools).length,
-        tools: Object.keys(selectedTools),
-        toolset
-      })
-
-      // Merge browser tools with existing tools
       const p = params as Record<string, unknown>
       const existingTools = (p.tools as Record<string, unknown>) || {}
-      const mergedTools = { ...existingTools, ...selectedTools }
-      p.tools = mergedTools
+      p.tools = { ...existingTools, ...selectedTools }
 
-      console.log('📦 [browserUsePlugin] Final tools', {
-        totalCount: Object.keys(mergedTools).length,
-        allTools: Object.keys(mergedTools),
-        hasBrowserTools: Object.keys(mergedTools).some((t) => t.startsWith('browser_'))
-      })
+      // Build system prompt with browser instructions and page context
+      let systemPrompt = (p.system as string) || ''
 
-      // Add browser-aware system prompt if enabled and not already present
-      if (injectSystemPrompt) {
-        const currentSystem = p.system as string | undefined
-        if (!currentSystem?.includes('browser_snapshot')) {
-          p.system = currentSystem ? `${currentSystem}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
-          console.log('📝 [browserUsePlugin] System prompt injected')
-        }
+      // Inject browser system prompt if not present
+      if (!systemPrompt.includes('browser_snapshot')) {
+        systemPrompt = systemPrompt ? `${systemPrompt}\n\n${BROWSER_SYSTEM_PROMPT}` : BROWSER_SYSTEM_PROMPT
       }
 
+      // Inject latest page summary if available
+      if (latestSummary && !systemPrompt.includes(latestSummary)) {
+        systemPrompt = `${systemPrompt}\n\n## Current Page Context\n${latestSummary}`
+      }
+
+      p.system = systemPrompt
       return params
     },
 
-    onRequestEnd: async () => {
-      // Cleanup tracking if enabled
-      if (enableTracking) {
-        // Tracking cleanup logic here
-      }
-    }
+    onRequestEnd: async () => {}
   }
-
-  return plugin
 }
 
 // Default export
 export default browserUsePlugin
 
-// Legacy export for backwards compatibility
-export const btcpBrowserPlugin = browserUsePlugin
-
-// Re-export types
+// Re-export types and helpers
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'
 export * from './types'
+
+// Export snapshot manager
+export type {
+  BrowserSnapshot,
+  SnapshotDiff,
+  SnapshotManagerConfig,
+  SnapshotManagerState,
+  SnapshotSummary,
+  SnapshotTrigger,
+  SummarizationRequest
+} from './snapshotManager'
+export { BrowserSessionSnapshotManager, SUMMARIZATION_SYSTEM_PROMPT } from './snapshotManager'

@@ -6,6 +6,8 @@
  * The Client self-discovers the agent - we only work with the Client directly.
  */
 
+import type { SnapshotManagerConfig } from './snapshotManager/types'
+
 /**
  * Extension Client interface matching the BrowserAgent public API
  * This defines the full set of methods available for browser automation
@@ -24,11 +26,14 @@ export interface ExtensionClient {
 
   // Navigation
   navigate(url: string): Promise<unknown>
+  back(): Promise<unknown>
+  forward(): Promise<unknown>
+  reload(): Promise<unknown>
 
   // DOM snapshot - matching BrowserAgent API
   snapshot(options?: {
     grep?: string
-    mode?: 'interaction' | 'content' | 'outline'
+    mode?: 'interaction' | 'content' | 'outline' | 'all'
     format?: 'tree' | 'markdown'
   }): Promise<string>
 
@@ -39,6 +44,7 @@ export interface ExtensionClient {
   hover(selector: string): Promise<void>
   press(key: string, selector?: string): Promise<void>
   waitFor(selector: string, options?: { timeout?: number; state?: 'visible' | 'hidden' }): Promise<void>
+  wait(options?: { selector?: string; timeout?: number }): Promise<unknown>
   scroll(options: {
     selector?: string
     direction?: 'up' | 'down' | 'left' | 'right'
@@ -65,25 +71,20 @@ export interface ExtensionClient {
 
 /**
  * Tool names available in the BTCP Browser Plugin
- * Matches the BrowserAgent public API
  */
 export type BTCPToolName =
-  // Session Management
   | 'browser_launch'
   | 'browser_close'
-  // Navigation
   | 'browser_navigate'
   | 'browser_back'
   | 'browser_forward'
   | 'browser_reload'
-  // Inspection (matching BrowserAgent API)
   | 'browser_snapshot'
   | 'browser_get_text'
   | 'browser_get_attribute'
   | 'browser_is_visible'
   | 'browser_get_url'
   | 'browser_get_title'
-  // Interaction (matching BrowserAgent API)
   | 'browser_click'
   | 'browser_type'
   | 'browser_fill'
@@ -92,7 +93,6 @@ export type BTCPToolName =
   | 'browser_scroll'
   | 'browser_wait'
   | 'browser_evaluate'
-  // Visual
   | 'browser_screenshot'
 
 /**
@@ -107,27 +107,38 @@ export type BTCPToolPreset = 'minimal' | 'standard' | 'full'
 export interface BrowserAgentService {
   /**
    * Get or initialize the browser client
-   * @returns Promise resolving to the browser client (ExtensionClient compatible)
    */
   getOrInit(): Promise<ExtensionClient>
 }
 
 /**
- * Configuration options for the BTCP Browser Plugin
+ * AI call function type for snapshot summarization
+ * Simple function that takes a prompt and returns a response string
+ */
+export type AiCallFn = (prompt: string) => Promise<string>
+
+/**
+ * Configuration for the BTCP Browser Plugin
+ *
+ * @example
+ * ```typescript
+ * browserUsePlugin({
+ *   browserAgentService,
+ *   aiCall: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
+ * })
+ * ```
  */
 export interface BTCPBrowserPluginConfig {
   /**
-   * Enable/disable the plugin
-   * @default true
+   * Browser agent service instance (required)
    */
-  enabled?: boolean
+  browserAgentService: BrowserAgentService
 
   /**
-   * Browser agent service instance
-   * The plugin will call service.getOrInit() internally
-   * Example: browserAgentService
+   * AI call function for snapshot summarization (optional)
+   * When provided, enables background snapshot tracking with AI summaries
    */
-  service?: BrowserAgentService
+  aiCall?: AiCallFn
 
   /**
    * Which tool categories to expose
@@ -136,43 +147,30 @@ export interface BTCPBrowserPluginConfig {
   toolset?: BTCPToolPreset | BTCPToolName[]
 
   /**
-   * Maximum snapshot size (characters) to prevent token overflow
-   * @default 50000
+   * Callback when a snapshot summary is generated
    */
-  maxSnapshotSize?: number
+  onSnapshotSummary?: (summary: string) => void
+}
 
-  /**
-   * Enable screencast for vision models
-   * @default false
-   */
-  enableScreencast?: boolean
-
-  /**
-   * Enable request/console tracking
-   * @default false
-   */
-  enableTracking?: boolean
-
-  /**
-   * Callback for tool execution events
-   */
-  onToolCall?: (toolName: string, args: unknown) => void
-
-  /**
-   * Callback for tool results
-   */
-  onToolResult?: (toolName: string, result: unknown) => void
-
-  /**
-   * Callback for tool errors
-   */
-  onError?: (toolName: string, error: Error) => void
-
-  /**
-   * Whether to inject browser-aware system prompt hints
-   * @default true
-   */
-  injectSystemPrompt?: boolean
+/**
+ * Forward declaration for snapshot manager type
+ */
+export interface BrowserSessionSnapshotManagerInterface {
+  start(): Promise<void>
+  stop(): void
+  isRunning(): boolean
+  notifyAction(actionName: string, args?: unknown): Promise<void>
+  captureManual(): Promise<unknown>
+  summarizeSnapshot(snapshotId: string): Promise<unknown>
+  getSnapshots(): unknown[]
+  getSummarizedSnapshots(): unknown[]
+  getDiffs(): unknown[]
+  getLatestSnapshot(): unknown
+  getLatestSummarizedSnapshot(): unknown
+  getLatestDiff(): unknown
+  getState(): unknown
+  updateConfig(config: Partial<SnapshotManagerConfig>): void
+  clearHistory(): void
 }
 
 /**
@@ -180,6 +178,7 @@ export interface BTCPBrowserPluginConfig {
  */
 export interface BTCPRequestContext {
   btcpGetClient?: () => Promise<ExtensionClient>
+  btcpSnapshotManager?: BrowserSessionSnapshotManagerInterface
 }
 
 /**
