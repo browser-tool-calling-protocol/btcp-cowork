@@ -23,15 +23,15 @@ Format:
 Example:
 - **Page**: E-commerce - Product listing page
 - **Structure**:
-  + header: ^header.*nav
-  + product grid: main.*product
-  + filters: aside.*filter
+  + header: ^header.*(nav|menu)
+  + product grid: main.*(product|item)
+  + filters: aside.*(filter|facet)
 - **Actions**:
-  + search: input.*search
-  + add to cart: button.*cart
-  + pagination: nav.*page
+  + search: input.*(search|query)
+  + add to cart: button.*(cart|add|buy)
+  + pagination: (nav|div).*(page|next|prev)
 
-Keep patterns simple. Agent will query details later with grep.`
+Use | for variants. Keep patterns simple. Agent queries details later.`
 
 /**
  * Document length thresholds for summarization strategy
