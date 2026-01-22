@@ -17,6 +17,7 @@ import * as z from 'zod'
 
 import type { AiPlugin, AiRequestContext } from '../../types'
 import { BROWSER_SYSTEM_PROMPT, DEFAULT_CONFIG, TOOL_PRESETS } from './constants'
+import { BrowserSessionSnapshotManager } from './snapshotManager'
 import type { BTCPBrowserPluginConfig, BTCPToolName, ExtensionClient, ScreenshotResult, SnapshotResult } from './types'
 
 /**
@@ -67,8 +68,17 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     onToolCall,
     onToolResult,
     onError,
-    injectSystemPrompt = DEFAULT_CONFIG.injectSystemPrompt
+    injectSystemPrompt = DEFAULT_CONFIG.injectSystemPrompt,
+    snapshotManager: snapshotManagerConfig
   } = config
+
+  // Initialize snapshot manager if configured
+  let snapshotManager: BrowserSessionSnapshotManager | null = null
+  if (snapshotManagerConfig?.enabled && service) {
+    console.log('[browserUsePlugin] Initializing snapshot manager', snapshotManagerConfig)
+    snapshotManager = new BrowserSessionSnapshotManager(snapshotManagerConfig)
+    snapshotManager.setClientGetter(async () => (await service.getOrInit()) as ExtensionClient)
+  }
 
   /**
    * Get the client from the service (throws if not configured)
@@ -85,7 +95,7 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
     try {
       const client = await service.getOrInit()
       console.log('[browserUsePlugin] Client obtained successfully')
-      return client as Promise<ExtensionClient>
+      return client as ExtensionClient
     } catch (error) {
       console.error('[browserUsePlugin] Failed to get client:', error)
       throw error
@@ -100,6 +110,17 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       const result = await executor()
       console.log(`[browserUsePlugin] ✅ Tool succeeded: ${toolName}`, result)
       onToolResult?.(toolName, result)
+
+      // Notify snapshot manager of action for potential snapshot capture
+      if (snapshotManager) {
+        // Use setImmediate/setTimeout to avoid blocking the tool response
+        setTimeout(() => {
+          snapshotManager?.notifyAction(toolName, args).catch((err) => {
+            console.warn('[browserUsePlugin] Snapshot after action failed:', err)
+          })
+        }, 0)
+      }
+
       return result
     } catch (error) {
       console.error(`[browserUsePlugin] ❌ Tool failed: ${toolName}`, error)
@@ -462,6 +483,18 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       if (service) {
         context.btcpGetClient = () => service.getOrInit()
       }
+
+      // Store snapshot manager in context for external access
+      if (snapshotManager) {
+        context.btcpSnapshotManager = snapshotManager
+
+        // Start snapshot manager if not already running
+        if (!snapshotManager.isRunning()) {
+          snapshotManager.start().catch((err) => {
+            console.error('[browserUsePlugin] Failed to start snapshot manager:', err)
+          })
+        }
+      }
     },
 
     transformParams: <T>(params: T): T => {
@@ -522,6 +555,11 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig = {}): AiPlugin
       if (enableTracking) {
         // Tracking cleanup logic here
       }
+
+      // Note: We don't stop the snapshot manager here as it should persist across requests
+      // The snapshot manager runs as a background service for the entire session
+      // It will be stopped when the browser service is reset or explicitly stopped
+      // Access the snapshot manager via context.btcpSnapshotManager if needed
     }
   }
 
@@ -537,3 +575,14 @@ export const btcpBrowserPlugin = browserUsePlugin
 // Re-export types
 export { BROWSER_SYSTEM_PROMPT, TOOL_PRESETS } from './constants'
 export * from './types'
+
+// Export snapshot manager
+export { BrowserSessionSnapshotManager } from './snapshotManager'
+export type {
+  BrowserSnapshot,
+  SnapshotDiff,
+  SnapshotIndexResult,
+  SnapshotManagerConfig,
+  SnapshotManagerState,
+  SnapshotTrigger
+} from './snapshotManager'

@@ -6,6 +6,8 @@
  * The Client self-discovers the agent - we only work with the Client directly.
  */
 
+import type { SnapshotManagerConfig } from './snapshotManager/types'
+
 /**
  * Extension Client interface matching the BrowserAgent public API
  * This defines the full set of methods available for browser automation
@@ -24,6 +26,9 @@ export interface ExtensionClient {
 
   // Navigation
   navigate(url: string): Promise<unknown>
+  back(): Promise<unknown>
+  forward(): Promise<unknown>
+  reload(): Promise<unknown>
 
   // DOM snapshot - matching BrowserAgent API
   snapshot(options?: {
@@ -39,6 +44,7 @@ export interface ExtensionClient {
   hover(selector: string): Promise<void>
   press(key: string, selector?: string): Promise<void>
   waitFor(selector: string, options?: { timeout?: number; state?: 'visible' | 'hidden' }): Promise<void>
+  wait(options?: { selector?: string; timeout?: number }): Promise<unknown>
   scroll(options: {
     selector?: string
     direction?: 'up' | 'down' | 'left' | 'right'
@@ -173,6 +179,31 @@ export interface BTCPBrowserPluginConfig {
    * @default true
    */
   injectSystemPrompt?: boolean
+
+  /**
+   * Configuration for the background snapshot manager
+   * When provided with enabled: true, enables background snapshot capture
+   * for tracking page state changes over time
+   */
+  snapshotManager?: SnapshotManagerConfig
+}
+
+/**
+ * Forward declaration for snapshot manager type
+ */
+export interface BrowserSessionSnapshotManagerInterface {
+  start(): Promise<void>
+  stop(): void
+  isRunning(): boolean
+  notifyAction(actionName: string, args?: unknown): Promise<void>
+  captureManual(): Promise<unknown>
+  getSnapshots(): unknown[]
+  getDiffs(): unknown[]
+  getLatestSnapshot(): unknown
+  getLatestDiff(): unknown
+  getState(): unknown
+  updateConfig(config: Partial<SnapshotManagerConfig>): void
+  clearHistory(): void
 }
 
 /**
@@ -180,6 +211,7 @@ export interface BTCPBrowserPluginConfig {
  */
 export interface BTCPRequestContext {
   btcpGetClient?: () => Promise<ExtensionClient>
+  btcpSnapshotManager?: BrowserSessionSnapshotManagerInterface
 }
 
 /**
