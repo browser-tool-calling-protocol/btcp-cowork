@@ -719,7 +719,21 @@
         "disable": "Disable Browser Use",
         "enabled_tooltip": "Browser tools enabled",
         "label": "Browser Use",
-        "menu_description": "Enable browser automation tools"
+        "menu_description": "Enable browser automation tools",
+        "panel": {
+          "title": "Browser Session",
+          "connect": "Connect Browser",
+          "connect_desc": "Initialize browser session for automation",
+          "connect_error": "Failed to connect to browser",
+          "connecting": "Connecting...",
+          "connecting_desc": "Establishing browser connection",
+          "disconnect": "Disconnect",
+          "disconnect_desc": "End the current browser session",
+          "enable_tools": "Enable Browser Tools",
+          "enable_tools_desc": "Allow AI to use browser automation",
+          "disable_tools": "Disable Browser Tools",
+          "disable_tools_desc": "Prevent AI from using browser automation"
+        }
       },
       "clear": {
         "content": "Do you want to clear all messages of the current topic?",

@@ -716,10 +716,24 @@
       },
       "auto_resize": "自动调整高度",
       "browser_use": {
-        "disable": "[to be translated]:Disable Browser Use",
-        "enabled_tooltip": "[to be translated]:Browser tools enabled",
-        "label": "[to be translated]:Browser Use",
-        "menu_description": "[to be translated]:Enable browser automation tools"
+        "disable": "禁用浏览器控制",
+        "enabled_tooltip": "浏览器工具已启用",
+        "label": "浏览器控制",
+        "menu_description": "启用浏览器自动化工具",
+        "panel": {
+          "title": "浏览器会话",
+          "connect": "连接浏览器",
+          "connect_desc": "初始化浏览器会话以进行自动化",
+          "connect_error": "连接浏览器失败",
+          "connecting": "连接中...",
+          "connecting_desc": "正在建立浏览器连接",
+          "disconnect": "断开连接",
+          "disconnect_desc": "结束当前浏览器会话",
+          "enable_tools": "启用浏览器工具",
+          "enable_tools_desc": "允许 AI 使用浏览器自动化",
+          "disable_tools": "禁用浏览器工具",
+          "disable_tools_desc": "阻止 AI 使用浏览器自动化"
+        }
       },
       "clear": {
         "content": "确定要清除当前会话所有消息吗？",

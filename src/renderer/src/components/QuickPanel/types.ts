@@ -8,6 +8,7 @@ export enum QuickPanelReservedSymbol {
   QuickPhrases = 'quick-phrases',
   Thinking = 'thinking',
   WebSearch = '?',
+  BrowserUse = 'browser-use',
   Mcp = 'mcp',
   McpPrompt = 'mcp-prompt',
   McpResource = 'mcp-resource',
