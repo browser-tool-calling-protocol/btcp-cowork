@@ -108,6 +108,22 @@ export class AiSdkToChunkAdapter {
               })
             }
           }
+
+          // Log complete stream summary including tool calls
+          const toolCallsSummary = this.toolCallHandler.getToolCallsSummary()
+          logger.info('📊 Stream Complete - Full Summary', {
+            finalText: final.text,
+            reasoningContent: final.reasoningContent,
+            webSearchResults: final.webSearchResults,
+            toolCalls: toolCallsSummary,
+            hasTextContent: this.hasTextContent,
+            streamDuration: this.responseStartTimestamp ? Date.now() - this.responseStartTimestamp : null,
+            timeToFirstToken:
+              this.firstTokenTimestamp && this.responseStartTimestamp
+                ? this.firstTokenTimestamp - this.responseStartTimestamp
+                : null
+          })
+
           break
         }
 

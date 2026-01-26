@@ -2,8 +2,6 @@ import type { AiPlugin } from '@cherrystudio/ai-core'
 import { browserUsePlugin, createPromptToolUsePlugin, webSearchPlugin } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { getEnableDeveloperMode } from '@renderer/hooks/useSettings'
-import { fetchGenerate } from '@renderer/services/ApiService'
-import { getDefaultModel, getQuickModel } from '@renderer/services/AssistantService'
 import { browserAgentService } from '@renderer/services/BrowserAgentService'
 import type { Assistant } from '@renderer/types'
 
@@ -13,26 +11,6 @@ import { createTelemetryPlugin } from './telemetryPlugin'
 
 const logger = loggerService.withContext('PluginBuilder')
 
-/**
- * Create an AI call function for browser snapshot summarization
- * Uses the current assistant's model for consistent API access
- */
-function createBrowserAiCall(assistant: Assistant): (prompt: string) => Promise<string> {
-  return async (prompt: string) => {
-    // Use the current assistant's model (same as chat) to ensure valid API credentials
-    const model = assistant.model || getQuickModel() || getDefaultModel()
-    logger.debug('Browser AI call for snapshot summarization', {
-      modelId: model?.id,
-      modelName: model?.name,
-      assistantId: assistant.id
-    })
-    return fetchGenerate({
-      prompt: 'You are a helpful assistant that summarizes browser page content concisely.',
-      content: prompt,
-      model
-    })
-  }
-}
 /**
  * 根据条件构建插件数组
  */
@@ -62,15 +40,7 @@ export function buildPlugins(
     plugins.push(
       browserUsePlugin({
         browserAgentService: browserAgentService,
-        toolset: 'standard',
-        // Always provide aiCall for hooks to generate summaries (snapshot → summary → inject)
-        // Use the current assistant's model for consistent API access
-        aiCall: createBrowserAiCall(middlewareConfig.assistant),
-        onSnapshotSummary: middlewareConfig.browserUseConfig.enableTracking
-          ? (summary: string) => {
-              logger.info('🖼️ Browser snapshot summary generated', { summaryLength: summary.length })
-            }
-          : undefined
+        toolset: 'standard'
       })
     )
   }

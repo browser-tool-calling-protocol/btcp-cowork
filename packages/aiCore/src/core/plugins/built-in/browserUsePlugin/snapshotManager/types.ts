@@ -2,50 +2,8 @@
  * Browser Session Snapshot Manager Types
  *
  * Type definitions for the background snapshot tracking mechanism that captures
- * page state at intervals or after actions, computes diffs, and runs summarization.
+ * page state at intervals or after actions and computes diffs.
  */
-
-// ============================================================================
-// Snapshot Summary Types
-// ============================================================================
-
-/**
- * Snapshot summary - a plain text description of the page state
- * Designed to be used directly as part of a prompt
- */
-export type SnapshotSummary = string
-
-/**
- * Summarization request passed to the AI service
- */
-export interface SummarizationRequest {
-  /** The snapshot to summarize */
-  snapshot: BrowserSnapshot
-  /** Previous snapshot for context (if available) */
-  previousSnapshot?: BrowserSnapshot
-  /** Diff information (if available) */
-  diff?: SnapshotDiff
-  /** Additional context or instructions */
-  context?: string
-}
-
-/**
- * Service interface for AI-powered snapshot summarization
- * Implement this interface to provide custom AI summarization
- */
-export interface SnapshotSummarizationService {
-  /**
-   * Summarize a browser snapshot using AI
-   * @param request - The summarization request with snapshot and context
-   * @returns Promise resolving to summary string (for use in prompts)
-   */
-  summarize(request: SummarizationRequest): Promise<SnapshotSummary>
-
-  /**
-   * Check if the service is available/configured
-   */
-  isAvailable(): boolean
-}
 
 // ============================================================================
 // Snapshot Core Types
@@ -71,8 +29,6 @@ export interface BrowserSnapshot {
   trigger: SnapshotTrigger
   /** Optional action that triggered the snapshot */
   triggerAction?: string
-  /** AI-generated summary string (populated after summarization) */
-  summary?: SnapshotSummary
   /** Optional metadata */
   metadata?: Record<string, unknown>
 }
@@ -123,13 +79,6 @@ export interface SnapshotManagerConfig {
   enabled?: boolean
 
   /**
-   * Interval between automatic snapshots in milliseconds
-   * Set to 0 to disable interval snapshots
-   * @default 30000 (30 seconds)
-   */
-  intervalMs?: number
-
-  /**
    * Whether to capture snapshots after browser actions
    * @default true
    */
@@ -166,18 +115,6 @@ export interface SnapshotManagerConfig {
   snapshotMode?: 'interaction' | 'content' | 'outline' | 'all'
 
   /**
-   * AI summarization service for generating summaries
-   * When provided, snapshots will be automatically summarized
-   */
-  summarizationService?: SnapshotSummarizationService
-
-  /**
-   * Whether to summarize all snapshots or only significant changes
-   * @default 'significant' - only summarize when diff.isSignificant is true
-   */
-  summarizeOn?: 'all' | 'significant' | 'manual'
-
-  /**
    * Callback when a snapshot is captured
    */
   onSnapshot?: (snapshot: BrowserSnapshot) => void
@@ -186,11 +123,6 @@ export interface SnapshotManagerConfig {
    * Callback when a diff is computed
    */
   onDiff?: (diff: SnapshotDiff) => void
-
-  /**
-   * Callback when summarization completes
-   */
-  onSummary?: (snapshot: BrowserSnapshot, summary: SnapshotSummary) => void
 }
 
 /**
@@ -207,23 +139,17 @@ export interface SnapshotManagerState {
   lastSnapshotTime: number | null
   /** Last action timestamp (for debouncing) */
   lastActionTime: number | null
-  /** Pending summarization operations (snapshot IDs) */
-  pendingSummarization: string[]
 }
 
 /**
  * Default configuration values
  */
-export const DEFAULT_SNAPSHOT_CONFIG: Required<
-  Omit<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>
-> = {
+export const DEFAULT_SNAPSHOT_CONFIG: Required<Omit<SnapshotManagerConfig, 'onSnapshot' | 'onDiff'>> = {
   enabled: false,
-  intervalMs: 30000,
   captureAfterActions: true,
   actionTriggers: ['browser_navigate', 'browser_click', 'browser_fill', 'browser_type', 'browser_press'],
   actionDebounceMs: 1000,
   maxHistorySize: 50,
   significantChangeThreshold: 0.1,
-  snapshotMode: 'all', // Use 'all' for full page structure
-  summarizeOn: 'significant'
+  snapshotMode: 'all' // Use 'all' for full page structure
 }

@@ -71,29 +71,9 @@ export interface ExtensionClient {
 
 /**
  * Tool names available in the BTCP Browser Plugin
+ * Simplified to essential tools only
  */
-export type BTCPToolName =
-  | 'browser_launch'
-  | 'browser_close'
-  | 'browser_navigate'
-  | 'browser_back'
-  | 'browser_forward'
-  | 'browser_reload'
-  | 'browser_snapshot'
-  | 'browser_get_text'
-  | 'browser_get_attribute'
-  | 'browser_is_visible'
-  | 'browser_get_url'
-  | 'browser_get_title'
-  | 'browser_click'
-  | 'browser_type'
-  | 'browser_fill'
-  | 'browser_hover'
-  | 'browser_press'
-  | 'browser_scroll'
-  | 'browser_wait'
-  | 'browser_evaluate'
-  | 'browser_screenshot'
+export type BTCPToolName = 'browser_navigate' | 'browser_snapshot' | 'browser_click' | 'browser_fill' | 'browser_wait'
 
 /**
  * Tool preset levels for the BTCP Browser Plugin
@@ -112,19 +92,12 @@ export interface BrowserAgentService {
 }
 
 /**
- * AI call function type for snapshot summarization
- * Simple function that takes a prompt and returns a response string
- */
-export type AiCallFn = (prompt: string) => Promise<string>
-
-/**
  * Configuration for the BTCP Browser Plugin
  *
  * @example
  * ```typescript
  * browserUsePlugin({
- *   browserAgentService,
- *   aiCall: (prompt) => fetchGenerate({ prompt: '', content: prompt, model })
+ *   browserAgentService
  * })
  * ```
  */
@@ -135,21 +108,10 @@ export interface BTCPBrowserPluginConfig {
   browserAgentService: BrowserAgentService
 
   /**
-   * AI call function for snapshot summarization (optional)
-   * When provided, enables background snapshot tracking with AI summaries
-   */
-  aiCall?: AiCallFn
-
-  /**
    * Which tool categories to expose
    * @default 'standard'
    */
   toolset?: BTCPToolPreset | BTCPToolName[]
-
-  /**
-   * Callback when a snapshot summary is generated
-   */
-  onSnapshotSummary?: (summary: string) => void
 }
 
 /**
@@ -161,12 +123,9 @@ export interface BrowserSessionSnapshotManagerInterface {
   isRunning(): boolean
   notifyAction(actionName: string, args?: unknown): Promise<void>
   captureManual(): Promise<unknown>
-  summarizeSnapshot(snapshotId: string): Promise<unknown>
   getSnapshots(): unknown[]
-  getSummarizedSnapshots(): unknown[]
   getDiffs(): unknown[]
   getLatestSnapshot(): unknown
-  getLatestSummarizedSnapshot(): unknown
   getLatestDiff(): unknown
   getState(): unknown
   updateConfig(config: Partial<SnapshotManagerConfig>): void
@@ -197,6 +156,7 @@ export interface SnapshotResult {
   snapshot: string
   refs?: Record<string, { role: string; name?: string }>
   _truncated?: boolean
+  _filtered?: boolean
   _message?: string
 }
 

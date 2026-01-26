@@ -11,71 +11,25 @@ import type { BTCPToolName, BTCPToolPreset } from './types'
 
 /**
  * Tool presets organized by capability level
- * Matches the BrowserAgent public API
+ * Simplified to essential tools only
  */
 export const TOOL_PRESETS: Record<BTCPToolPreset, BTCPToolName[]> = {
   /**
    * Minimal: Safe read-only operations
    * Best for information extraction and page analysis
    */
-  minimal: ['browser_snapshot', 'browser_get_text', 'browser_get_url', 'browser_get_title', 'browser_is_visible'],
+  minimal: ['browser_navigate', 'browser_snapshot'],
 
   /**
    * Standard: Common automation tasks
    * Suitable for most browser automation use cases
-   * Note: browser_launch/browser_close excluded - browser auto-launches on first use
    */
-  standard: [
-    // Navigation
-    'browser_navigate',
-    // Inspection (matching BrowserAgent API)
-    'browser_snapshot',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_get_url',
-    'browser_get_title',
-    // Interaction (matching BrowserAgent API)
-    'browser_click',
-    'browser_type',
-    'browser_fill',
-    'browser_hover',
-    'browser_press',
-    'browser_scroll',
-    'browser_wait'
-    // Visual tools disabled
-    // 'browser_screenshot'
-  ],
+  standard: ['browser_navigate', 'browser_snapshot', 'browser_click', 'browser_fill', 'browser_wait'],
 
   /**
-   * Full: All capabilities including JavaScript evaluation
-   * Note: browser_launch/browser_close excluded - browser auto-launches on first use
+   * Full: All essential browser automation tools
    */
-  full: [
-    // Navigation
-    'browser_navigate',
-    'browser_back',
-    'browser_forward',
-    'browser_reload',
-    // Inspection (matching BrowserAgent API)
-    'browser_snapshot',
-    'browser_get_text',
-    'browser_get_attribute',
-    'browser_is_visible',
-    'browser_get_url',
-    'browser_get_title',
-    // Interaction (matching BrowserAgent API)
-    'browser_click',
-    'browser_type',
-    'browser_fill',
-    'browser_hover',
-    'browser_press',
-    'browser_scroll',
-    'browser_wait',
-    'browser_evaluate'
-    // Visual tools disabled
-    // 'browser_screenshot'
-  ]
+  full: ['browser_navigate', 'browser_snapshot', 'browser_click', 'browser_fill', 'browser_wait']
 }
 
 /**

@@ -74,6 +74,7 @@ class BrowserAgentService {
   private async _doInitialize(): Promise<Client> {
     try {
       console.log('[BrowserAgentService] _doInitialize() starting, calling createClient()...')
+      console.trace('[BrowserAgentService] Stack trace for createClient() call:')
       logger.info('Initializing browser client')
       // createClient() handles session reconnection internally via popupInitialize
       this.client = createClient()

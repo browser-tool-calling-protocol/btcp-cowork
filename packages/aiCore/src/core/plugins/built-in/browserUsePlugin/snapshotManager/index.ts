@@ -1,28 +1,22 @@
 /**
  * Browser Session Snapshot Manager
  *
- * Background mechanism for capturing page snapshots at intervals or after actions,
- * computing diffs to track changes, and running AI-powered summarization.
+ * Hook-based mechanism for capturing page snapshots after browser actions
+ * and computing diffs to track changes.
  *
  * Features:
- * - Interval-based snapshot capture
  * - Action-triggered snapshot capture (with debouncing)
  * - Simple diff computation to track content changes
- * - AI-powered summarization via pluggable service
  *
  * Usage:
  * ```typescript
- * import { BrowserSessionSnapshotManager, DefaultSummarizationService } from './snapshotManager'
+ * import { BrowserSessionSnapshotManager } from './snapshotManager'
  *
  * const manager = new BrowserSessionSnapshotManager({
  *   enabled: true,
- *   intervalMs: 30000,
  *   captureAfterActions: true,
- *   summarizationService: new DefaultSummarizationService(),
- *   summarizeOn: 'significant',
  *   onSnapshot: (snapshot) => console.log('Snapshot captured:', snapshot.id),
- *   onDiff: (diff) => console.log('Change detected:', diff.contentChangeRatio),
- *   onSummary: (snapshot, summary) => console.log('Summary:', summary.pageDescription)
+ *   onDiff: (diff) => console.log('Change detected:', diff.contentChangeRatio)
  * })
  *
  * // Provide the client getter
@@ -40,16 +34,14 @@
  */
 
 import type { ExtensionClient } from '../types'
-import { DefaultSummarizationService } from './summarizationService'
 import {
   type BrowserSnapshot,
   DEFAULT_SNAPSHOT_CONFIG,
   type SnapshotDiff,
   type SnapshotManagerConfig,
   type SnapshotManagerState,
-  type SnapshotSummarizationService,
-  type SnapshotSummary,
-  type SnapshotTrigger} from './types'
+  type SnapshotTrigger
+} from './types'
 
 /**
  * Generate a unique snapshot ID
@@ -113,14 +105,10 @@ function computeContentDiff(
  * Manages background snapshot capture for browser sessions
  */
 export class BrowserSessionSnapshotManager {
-  private config: Required<
-    Omit<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>
-  > &
-    Pick<SnapshotManagerConfig, 'summarizationService' | 'onSnapshot' | 'onDiff' | 'onSummary'>
+  private config: Required<Omit<SnapshotManagerConfig, 'onSnapshot' | 'onDiff'>> &
+    Pick<SnapshotManagerConfig, 'onSnapshot' | 'onDiff'>
   private state: SnapshotManagerState
-  private intervalHandle: ReturnType<typeof setInterval> | null = null
   private getClient: (() => Promise<ExtensionClient>) | null = null
-  private summarizationService: SnapshotSummarizationService
 
   constructor(config: SnapshotManagerConfig = {}) {
     this.config = {
@@ -133,12 +121,8 @@ export class BrowserSessionSnapshotManager {
       snapshots: [],
       diffs: [],
       lastSnapshotTime: null,
-      lastActionTime: null,
-      pendingSummarization: []
+      lastActionTime: null
     }
-
-    // Use provided service or default
-    this.summarizationService = config.summarizationService || new DefaultSummarizationService()
   }
 
   /**
@@ -150,15 +134,8 @@ export class BrowserSessionSnapshotManager {
   }
 
   /**
-   * Set or update the summarization service
-   */
-  setSummarizationService(service: SnapshotSummarizationService): void {
-    this.summarizationService = service
-  }
-
-  /**
    * Start the snapshot manager
-   * Begins interval-based capture if configured
+   * Captures an initial snapshot and begins listening for action-triggered snapshots
    */
   async start(): Promise<void> {
     if (this.state.isRunning) {
@@ -177,24 +154,43 @@ export class BrowserSessionSnapshotManager {
     }
 
     console.log('[SnapshotManager] Starting snapshot manager', {
-      intervalMs: this.config.intervalMs,
-      captureAfterActions: this.config.captureAfterActions,
-      summarizeOn: this.config.summarizeOn,
-      hasSummarizationService: this.summarizationService.isAvailable()
+      captureAfterActions: this.config.captureAfterActions
     })
 
     this.state.isRunning = true
 
-    // Capture initial snapshot
-    await this.captureSnapshot('initial')
+    // Capture initial snapshot with retry - wait for content script to be ready
+    await this.captureInitialSnapshotWithRetry()
+  }
 
-    // Start interval if configured
-    if (this.config.intervalMs > 0) {
-      this.intervalHandle = setInterval(async () => {
-        if (this.state.isRunning) {
-          await this.captureSnapshot('interval')
+  /**
+   * Capture initial snapshot with retry logic
+   * Waits for content script to be ready with exponential backoff
+   */
+  private async captureInitialSnapshotWithRetry(): Promise<void> {
+    const maxAttempts = 10
+    const initialDelay = 100 // Start with 100ms
+    const maxDelay = 5000 // Max 5 seconds between attempts
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[SnapshotManager] Attempting initial snapshot (attempt ${attempt}/${maxAttempts})`)
+        const snapshot = await this.captureSnapshot('initial')
+
+        if (snapshot) {
+          console.log('[SnapshotManager] Initial snapshot captured successfully')
+          return
         }
-      }, this.config.intervalMs)
+      } catch (error) {
+        const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), maxDelay)
+        console.log(`[SnapshotManager] Initial snapshot attempt ${attempt} failed, retrying in ${delay}ms...`, error)
+
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, delay))
+        } else {
+          console.error('[SnapshotManager] Failed to capture initial snapshot after all retry attempts')
+        }
+      }
     }
   }
 
@@ -203,13 +199,7 @@ export class BrowserSessionSnapshotManager {
    */
   stop(): void {
     console.log('[SnapshotManager] Stopping snapshot manager')
-
     this.state.isRunning = false
-
-    if (this.intervalHandle) {
-      clearInterval(this.intervalHandle)
-      this.intervalHandle = null
-    }
   }
 
   /**
@@ -246,23 +236,6 @@ export class BrowserSessionSnapshotManager {
    */
   async captureManual(): Promise<BrowserSnapshot | null> {
     return this.captureSnapshot('manual')
-  }
-
-  /**
-   * Manually trigger summarization for a specific snapshot
-   */
-  async summarizeSnapshot(snapshotId: string): Promise<SnapshotSummary | null> {
-    const snapshot = this.state.snapshots.find((s) => s.id === snapshotId)
-    if (!snapshot) {
-      console.warn(`[SnapshotManager] Snapshot not found: ${snapshotId}`)
-      return null
-    }
-
-    const index = this.state.snapshots.indexOf(snapshot)
-    const previousSnapshot = index > 0 ? this.state.snapshots[index - 1] : undefined
-    const diff = this.state.diffs.find((d) => d.currentSnapshotId === snapshotId)
-
-    return this.processSummarization(snapshot, previousSnapshot, diff)
   }
 
   /**
@@ -331,91 +304,10 @@ export class BrowserSessionSnapshotManager {
       // Notify snapshot callback
       this.config.onSnapshot?.(snapshot)
 
-      // Trigger summarization based on config
-      if (this.shouldSummarize(trigger, diff)) {
-        this.queueSummarization(snapshot, prevSnapshot, diff)
-      }
-
       return snapshot
     } catch (error) {
-      console.error('[SnapshotManager] Failed to capture snapshot', error)
-      return null
-    }
-  }
-
-  /**
-   * Determine if we should summarize this snapshot
-   */
-  private shouldSummarize(trigger: SnapshotTrigger, diff?: SnapshotDiff): boolean {
-    if (!this.summarizationService.isAvailable()) {
-      return false
-    }
-
-    switch (this.config.summarizeOn) {
-      case 'all':
-        return true
-      case 'significant':
-        // Always summarize initial/manual, or if diff is significant
-        return trigger === 'initial' || trigger === 'manual' || (diff?.isSignificant ?? false)
-      case 'manual':
-        return false // Only via explicit summarizeSnapshot() call
-      default:
-        return false
-    }
-  }
-
-  /**
-   * Queue a snapshot for summarization
-   */
-  private queueSummarization(snapshot: BrowserSnapshot, previousSnapshot?: BrowserSnapshot, diff?: SnapshotDiff): void {
-    console.log(`[SnapshotManager] Queueing snapshot for summarization: ${snapshot.id}`)
-    this.state.pendingSummarization.push(snapshot.id)
-
-    // Process summarization asynchronously
-    this.processSummarization(snapshot, previousSnapshot, diff).catch((error) => {
-      console.error('[SnapshotManager] Summarization failed', error)
-    })
-  }
-
-  /**
-   * Process summarization for a snapshot
-   */
-  private async processSummarization(
-    snapshot: BrowserSnapshot,
-    previousSnapshot?: BrowserSnapshot,
-    diff?: SnapshotDiff
-  ): Promise<SnapshotSummary | null> {
-    try {
-      console.log(`[SnapshotManager] Summarizing snapshot: ${snapshot.id}`)
-
-      const summary = await this.summarizationService.summarize({
-        snapshot,
-        previousSnapshot,
-        diff
-      })
-
-      // Attach summary to snapshot
-      snapshot.summary = summary
-
-      console.log(`[SnapshotManager] Summarization completed for: ${snapshot.id}`, {
-        summaryLength: summary.length,
-        preview: summary.substring(0, 100) + (summary.length > 100 ? '...' : '')
-      })
-
-      // Remove from pending
-      this.state.pendingSummarization = this.state.pendingSummarization.filter((id) => id !== snapshot.id)
-
-      // Notify callback
-      this.config.onSummary?.(snapshot, summary)
-
-      return summary
-    } catch (error) {
-      console.error(`[SnapshotManager] Summarization failed for: ${snapshot.id}`, error)
-
-      // Remove from pending
-      this.state.pendingSummarization = this.state.pendingSummarization.filter((id) => id !== snapshot.id)
-
-      return null
+      console.error(`[SnapshotManager] Failed to capture snapshot (trigger: ${trigger})`, error)
+      throw error
     }
   }
 
@@ -469,13 +361,6 @@ export class BrowserSessionSnapshotManager {
   }
 
   /**
-   * Get snapshots with summaries only
-   */
-  getSummarizedSnapshots(): BrowserSnapshot[] {
-    return this.state.snapshots.filter((s) => s.summary !== undefined)
-  }
-
-  /**
    * Get diff history
    */
   getDiffs(): SnapshotDiff[] {
@@ -487,18 +372,6 @@ export class BrowserSessionSnapshotManager {
    */
   getLatestSnapshot(): BrowserSnapshot | null {
     return this.state.snapshots[this.state.snapshots.length - 1] || null
-  }
-
-  /**
-   * Get the most recent summarized snapshot
-   */
-  getLatestSummarizedSnapshot(): BrowserSnapshot | null {
-    for (let i = this.state.snapshots.length - 1; i >= 0; i--) {
-      if (this.state.snapshots[i].summary) {
-        return this.state.snapshots[i]
-      }
-    }
-    return null
   }
 
   /**
@@ -519,32 +392,8 @@ export class BrowserSessionSnapshotManager {
    * Update configuration
    */
   updateConfig(config: Partial<SnapshotManagerConfig>): void {
-    const wasRunning = this.state.isRunning
-    const oldInterval = this.config.intervalMs
-
     // Update config
     Object.assign(this.config, config)
-
-    // Update summarization service if provided
-    if (config.summarizationService) {
-      this.summarizationService = config.summarizationService
-    }
-
-    // Restart interval if it changed while running
-    if (wasRunning && config.intervalMs !== undefined && config.intervalMs !== oldInterval) {
-      if (this.intervalHandle) {
-        clearInterval(this.intervalHandle)
-        this.intervalHandle = null
-      }
-
-      if (this.config.intervalMs > 0) {
-        this.intervalHandle = setInterval(async () => {
-          if (this.state.isRunning) {
-            await this.captureSnapshot('interval')
-          }
-        }, this.config.intervalMs)
-      }
-    }
   }
 
   /**
@@ -553,16 +402,9 @@ export class BrowserSessionSnapshotManager {
   clearHistory(): void {
     this.state.snapshots = []
     this.state.diffs = []
-    this.state.pendingSummarization = []
     console.log('[SnapshotManager] History cleared')
   }
 }
 
-// Re-export types and services
-export {
-  createAISummarizationService,
-  DefaultSummarizationService,
-  prepareContentForSummarization,
-  SUMMARIZATION_SYSTEM_PROMPT
-} from './summarizationService'
+// Re-export types
 export * from './types'

@@ -23,6 +23,13 @@ const isAgentTool = (toolName: AgentToolsType) => {
 const ChooseTool = (toolResponse: NormalToolResponse): React.ReactNode | null => {
   let toolName = toolResponse.tool.name
   const toolType = toolResponse.tool.type
+
+  // Handle browser tools directly
+  if (toolName.startsWith('browser_')) {
+    return <div style={{ fontSize: '14px', color: '#666' }}>{toolName}</div>
+  }
+
+  // Handle builtin tools
   if (toolName.startsWith(builtinToolsPrefix)) {
     toolName = toolName.slice(builtinToolsPrefix.length)
     switch (toolName) {

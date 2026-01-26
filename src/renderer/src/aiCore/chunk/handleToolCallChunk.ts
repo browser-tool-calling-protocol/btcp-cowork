@@ -31,6 +31,7 @@ export type ToolcallsMap = {
  */
 export class ToolCallChunkHandler {
   private static globalActiveToolCalls = new Map<string, ToolcallsMap>()
+  private completedToolCalls: Array<{ toolCallId: string; toolName: string; args: any }> = []
 
   private activeToolCalls = ToolCallChunkHandler.globalActiveToolCalls
   constructor(
@@ -202,8 +203,8 @@ export class ToolCallChunkHandler {
         description: toolName,
         type: 'provider'
       } as BaseTool
-    } else if (toolName.startsWith('builtin_')) {
-      // 如果是内置工具，沿用现有逻辑
+    } else if (toolName.startsWith('builtin_') || toolName.startsWith('browser_')) {
+      // 如果是内置工具或浏览器工具，沿用现有逻辑
       logger.info(`[ToolCallChunkHandler] Handling builtin tool: ${toolName}`)
       tool = {
         id: toolCallId,
@@ -289,6 +290,13 @@ export class ToolCallChunkHandler {
 
     // 工具特定的后处理 - future tool-specific handlers can be added here
 
+    // Save to completed tool calls before removing from active
+    this.completedToolCalls.push({
+      toolCallId: toolCallInfo.toolCallId,
+      toolName: toolCallInfo.toolName,
+      args: toolCallInfo.args
+    })
+
     // 从活跃调用中移除（交互结束后整个实例会被丢弃）
     this.activeToolCalls.delete(toolCallId)
 
@@ -342,6 +350,28 @@ export class ToolCallChunkHandler {
         responses: [toolResponse]
       })
     }
+  }
+
+  /**
+   * Get a summary of all tool calls made during the stream
+   * @returns Array of tool call summaries with names and arguments
+   */
+  public getToolCallsSummary() {
+    const summary: Array<{ toolCallId: string; toolName: string; args: any }> = []
+
+    // Add completed tool calls
+    summary.push(...this.completedToolCalls)
+
+    // Add any still-active tool calls
+    for (const [toolCallId, toolCall] of this.activeToolCalls.entries()) {
+      summary.push({
+        toolCallId,
+        toolName: toolCall.toolName,
+        args: toolCall.args
+      })
+    }
+
+    return summary
   }
 }
 
