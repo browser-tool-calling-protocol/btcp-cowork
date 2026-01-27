@@ -33,8 +33,17 @@ export interface ExtensionClient {
   // DOM snapshot - matching BrowserAgent API
   snapshot(options?: {
     grep?: string
-    mode?: 'interaction' | 'content' | 'outline' | 'all'
-    format?: 'tree' | 'markdown'
+    selector?: string
+    mode?: 'head' | 'interactive' | 'structure' | 'outline' | 'all'
+  }): Promise<string>
+
+  // Content extraction - matching BrowserAgent API
+  extract(options?: {
+    selector?: string
+    format?: 'html' | 'markdown'
+    maxLength?: number
+    includeLinks?: boolean
+    includeImages?: boolean
   }): Promise<string>
 
   // Interaction - matching BrowserAgent API
@@ -154,7 +163,14 @@ export interface BTCPToolResult<T = unknown> {
  */
 export interface SnapshotResult {
   snapshot: string
-  refs?: Record<string, { role: string; name?: string }>
+  refs?: Record<
+    string,
+    {
+      role: string
+      name?: string
+      importance?: 'primary' | 'secondary' | 'utility'
+    }
+  >
   _truncated?: boolean
   _filtered?: boolean
   _message?: string

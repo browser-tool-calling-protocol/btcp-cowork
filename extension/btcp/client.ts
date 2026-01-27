@@ -88,9 +88,25 @@ export function createClient() {
 
     // DOM operations - matching BrowserAgent API
     async snapshot(
-      options: { grep?: string; mode?: 'interaction' | 'content' | 'outline'; format?: 'tree' | 'markdown' } = {}
+      options: {
+        grep?: string
+        selector?: string
+        mode?: 'head' | 'interactive' | 'structure' | 'outline' | 'all'
+      } = {}
     ) {
       return execute({ action: 'snapshot', ...options })
+    },
+
+    async extract(
+      options: {
+        selector?: string
+        format?: 'html' | 'markdown'
+        maxLength?: number
+        includeLinks?: boolean
+        includeImages?: boolean
+      } = {}
+    ) {
+      return execute({ action: 'extract', ...options })
     },
 
     async click(selector: string, options?: { button?: 'left' | 'right' | 'middle' }) {

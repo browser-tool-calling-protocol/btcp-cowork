@@ -43,6 +43,39 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
   })
   snapshotManager.setClientGetter(async () => (await browserAgentService.getOrInit()) as ExtensionClient)
 
+  // Store last snapshot for @ref lookups
+  let lastSnapshotData: { snapshot: string; refs: Map<string, string> } | null = null
+
+  /**
+   * Parse @ref markers from snapshot string
+   * Returns a map of @ref:N -> element description
+   */
+  const parseSnapshotRefs = (snapshotStr: string): Map<string, string> => {
+    const refMap = new Map<string, string>()
+    // Match patterns like: @ref:1 button role='button' name='Search'
+    // or: @ref:2 <button role="button">Search</button>
+    const refLines = snapshotStr.split('\n')
+    for (const line of refLines) {
+      const refMatch = line.match(/@ref:(\d+)\s+(.+)/)
+      if (refMatch) {
+        const refId = `@ref:${refMatch[1]}`
+        const description = refMatch[2].trim()
+        refMap.set(refId, description)
+      }
+    }
+    return refMap
+  }
+
+  /**
+   * Lookup @ref description from last snapshot
+   */
+  const lookupRef = (selector: string): string | null => {
+    if (!selector.startsWith('@ref:') || !lastSnapshotData) {
+      return null
+    }
+    return lastSnapshotData.refs.get(selector) || null
+  }
+
   /**
    * Get the browser client
    */
@@ -62,28 +95,24 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
    * Execute tool with snapshot manager notification
    */
   const execute = async <T>(toolName: string, args: unknown, fn: () => Promise<T>): Promise<T> => {
-    try {
-      // Execute the tool first
-      const result = await fn()
+    // Execute the tool first
+    const result = await fn()
 
-      // Start snapshot manager after first successful tool execution
-      // This ensures the session is fully initialized before snapshot retries begin
-      if (!snapshotManager.isRunning()) {
-        console.log('[browserUsePlugin] Starting snapshot manager after first successful tool execution')
-        snapshotManager.start().catch(() => {})
-      }
-
-      // Notify snapshot manager after successful action (fire and forget)
-      if (snapshotManager.isRunning()) {
-        snapshotManager.notifyAction(toolName, args).catch((err) => {
-          console.error('[browserUsePlugin] Failed to notify snapshot manager:', err)
-        })
-      }
-
-      return result
-    } catch (error) {
-      throw error
+    // Start snapshot manager after first successful tool execution
+    // This ensures the session is fully initialized before snapshot retries begin
+    if (!snapshotManager.isRunning()) {
+      console.log('[browserUsePlugin] Starting snapshot manager after first successful tool execution')
+      snapshotManager.start().catch(() => {})
     }
+
+    // Notify snapshot manager after successful action (fire and forget)
+    if (snapshotManager.isRunning()) {
+      snapshotManager.notifyAction(toolName, args).catch((err) => {
+        console.error('[browserUsePlugin] Failed to notify snapshot manager:', err)
+      })
+    }
+
+    return result
   }
 
   // Create browser tools using the Client API
@@ -110,14 +139,26 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
       // === Core Inspection (matching BrowserAgent API) ===
       browser_snapshot: tool({
         description:
-          'Get page snapshot with element refs (@ref:N). Always use grep to filter results. Use @ref:N to interact with elements.',
+          'Get page snapshot with element refs (@ref:N). Use selector for structural filtering, grep for text matching. Use @ref:N to interact with elements.',
         inputSchema: z.object({
-          grep: z.string().optional().describe('Regex pattern to filter (e.g., "button|input", "login", ".*" for all)'),
-          mode: z
-            .enum(['interaction', 'content', 'outline'])
+          grep: z
+            .string()
             .optional()
-            .describe('Mode: "interaction" (default), "content", or "outline"'),
-          format: z.enum(['tree', 'markdown']).optional().describe('Format: "tree" (default) or "markdown"')
+            .describe(
+              'Text/content pattern (case-insensitive): matches text, attributes, classes. Supports regex and wildcards (e.g., "submit*", "login|signin")'
+            ),
+          selector: z
+            .string()
+            .optional()
+            .describe(
+              'XPath pattern or role selector for structural filtering (e.g., "button", "//main//button", "//button | //link")'
+            ),
+          mode: z
+            .enum(['head', 'interactive', 'structure', 'outline', 'all'])
+            .optional()
+            .describe(
+              'Mode: "head" (page overview), "interactive" (default - clickable elements), "structure" (high-level layout), "outline" (hierarchical structure), or "all" (all elements)'
+            )
         }),
         execute: async (args) =>
           execute('browser_snapshot', args, async () => {
@@ -129,9 +170,10 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
 
               const options: Record<string, unknown> = {
                 mode: args.mode || 'interaction',
-                format: args.format || 'tree'
+                format: 'tree'
               }
               if (args.grep) options.grep = args.grep
+              if (args.selector) options.selector = args.selector
 
               console.log('[browser_snapshot] Calling c.snapshot() with options:', options)
               const snapshotStr = await c.snapshot(options as any)
@@ -158,6 +200,23 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
                 `[browser_snapshot] Captured ${snapshotStr.length} chars (mode: ${options.mode}, format: ${options.format})${args.grep ? ` (grep: ${args.grep})` : ''}`
               )
 
+              // Parse and store @ref markers for debugging
+              const refs = parseSnapshotRefs(snapshotStr)
+              lastSnapshotData = { snapshot: snapshotStr, refs }
+
+              // Log available refs for debugging
+              if (refs.size > 0) {
+                const refList = Array.from(refs.entries())
+                  .slice(0, 5)
+                  .map(([id, desc]) => `${id}=${desc.substring(0, 80)}${desc.length > 80 ? '...' : ''}`)
+                console.log(
+                  `[browser_snapshot] Found ${refs.size} refs:`,
+                  refList.join('; ') + (refs.size > 5 ? '...' : '')
+                )
+              } else {
+                console.log('[browser_snapshot] No @ref markers found in snapshot')
+              }
+
               if (snapshotStr.length > MAX_SNAPSHOT_SIZE) {
                 console.log('[browser_snapshot] Truncating snapshot')
                 const result: SnapshotResult = {
@@ -178,6 +237,25 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
           })
       }),
 
+      browser_extract: tool({
+        description: 'Extract and transform content from a specific element or the whole page to HTML or Markdown.',
+        inputSchema: z.object({
+          selector: z.string().optional().describe('CSS selector or @ref:N to extract from (default: whole page)'),
+          format: z.enum(['html', 'markdown']).optional().describe('Output format: "markdown" (default) or "html"'),
+          maxLength: z.number().optional().describe('Maximum content length'),
+          includeLinks: z.boolean().optional().describe('Include [text](url) links in markdown (default: true)'),
+          includeImages: z.boolean().optional().describe('Include ![alt](src) images (default: false)')
+        }),
+        execute: async (args) =>
+          execute('browser_extract', args, async () => {
+            console.log('[browser_extract] Starting content extraction', args)
+            const c = await getClient()
+            const result = await c.extract(args)
+            console.log('[browser_extract] Content extracted, length:', result?.length)
+            return result
+          })
+      }),
+
       // === Core Interaction (matching BrowserAgent API) ===
       browser_click: tool({
         description: 'Click an element.',
@@ -187,6 +265,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
         }),
         execute: async (args) =>
           execute('browser_click', args, async () => {
+            // Log @ref lookup for debugging
+            const refDesc = lookupRef(args.selector)
+            if (refDesc) {
+              console.log(`[browser_click] Using ${args.selector} → ${refDesc}`)
+            }
+
             const c = await getClient()
             return c.click(args.selector, args.button ? { button: args.button } : undefined)
           })
@@ -200,6 +284,12 @@ export const browserUsePlugin = (config: BTCPBrowserPluginConfig): AiPlugin => {
         }),
         execute: async (args) =>
           execute('browser_fill', args, async () => {
+            // Log @ref lookup for debugging
+            const refDesc = lookupRef(args.selector)
+            if (refDesc) {
+              console.log(`[browser_fill] Using ${args.selector} → ${refDesc}`)
+            }
+
             const c = await getClient()
             return c.fill(args.selector, args.value)
           })
