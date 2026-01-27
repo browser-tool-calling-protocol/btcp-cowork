@@ -243,6 +243,9 @@ export async function buildStreamTextParams(
 
   if (tools) {
     params.tools = tools
+    // Enable multi-step execution when tools are present
+    // This allows the model to continue generating text after tool calls complete
+    params.maxSteps = 10
   }
 
   let systemPrompt = assistant.prompt ? await replacePromptVariables(assistant.prompt, model.name) : ''

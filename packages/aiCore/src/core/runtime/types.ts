@@ -23,4 +23,7 @@ export type generateImageParams = Omit<Parameters<typeof experimental_generateIm
 export type generateObjectParams = Parameters<typeof generateObject>[0]
 export type generateTextParams = Parameters<typeof generateText>[0]
 export type streamObjectParams = Parameters<typeof streamObject>[0]
-export type streamTextParams = Parameters<typeof streamText>[0]
+export type streamTextParams = Parameters<typeof streamText>[0] & {
+  /** Maximum number of LLM calls to allow for multi-step tool execution */
+  maxSteps?: number
+}

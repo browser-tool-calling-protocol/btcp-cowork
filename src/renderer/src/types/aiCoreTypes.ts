@@ -14,7 +14,10 @@ export type StreamTextParams = Omit<Parameters<typeof streamText>[0], 'model' | 
         messages: Array<ModelMessage>
         prompt?: never
       }
-  )
+  ) & {
+    /** Maximum number of LLM calls to allow for multi-step tool execution */
+    maxSteps?: number
+  }
 export type GenerateTextParams = Omit<Parameters<typeof generateText>[0], 'model' | 'messages'> &
   (
     | {

@@ -32,6 +32,7 @@ export class AiSdkToChunkAdapter {
   private firstTokenTimestamp: number | null = null
   private hasTextContent = false
   private getSessionWasCleared?: () => boolean
+  private accumulatedText = '' // For logging accumulated text
 
   constructor(
     private onChunk: (chunk: Chunk) => void,
@@ -109,19 +110,13 @@ export class AiSdkToChunkAdapter {
             }
           }
 
-          // Log complete stream summary including tool calls
+          // Log complete stream summary including tool calls and accumulated text
           const toolCallsSummary = this.toolCallHandler.getToolCallsSummary()
-          logger.info('📊 Stream Complete - Full Summary', {
-            finalText: final.text,
-            reasoningContent: final.reasoningContent,
-            webSearchResults: final.webSearchResults,
+          logger.info('📊 Stream Complete', {
+            text: this.accumulatedText.trim().substring(0, 500) || '(empty)',
             toolCalls: toolCallsSummary,
-            hasTextContent: this.hasTextContent,
-            streamDuration: this.responseStartTimestamp ? Date.now() - this.responseStartTimestamp : null,
-            timeToFirstToken:
-              this.firstTokenTimestamp && this.responseStartTimestamp
-                ? this.firstTokenTimestamp - this.responseStartTimestamp
-                : null
+            reasoning: final.reasoningContent ? final.reasoningContent.substring(0, 200) : undefined,
+            duration: this.responseStartTimestamp ? `${Date.now() - this.responseStartTimestamp}ms` : null
           })
 
           break
@@ -179,6 +174,7 @@ export class AiSdkToChunkAdapter {
         // 如果有未完成的思考内容，先生成 THINKING_COMPLETE
         // 这处理了某些提供商不发送 reasoning-end 事件的情况
         this.emitThinkingCompleteIfNeeded(final)
+        this.accumulatedText = '' // Reset accumulated text for new text block
         this.onChunk({
           type: ChunkType.TEXT_START
         })
@@ -186,6 +182,10 @@ export class AiSdkToChunkAdapter {
       case 'text-delta': {
         this.hasTextContent = true
         const processedText = chunk.text || ''
+
+        // Accumulate text for logging at text-end
+        this.accumulatedText += processedText
+
         let finalText: string
 
         // Only apply link conversion if web search is enabled
@@ -264,6 +264,7 @@ export class AiSdkToChunkAdapter {
       //   this.toolCallHandler.handleToolCallCreated(chunk)
       //   break
       case 'tool-call':
+        logger.info('🔧 Tool Call', { tool: chunk.toolName, args: chunk.input })
         this.toolCallHandler.handleToolCall(chunk)
         break
 
@@ -271,9 +272,14 @@ export class AiSdkToChunkAdapter {
         this.toolCallHandler.handleToolError(chunk)
         break
 
-      case 'tool-result':
+      case 'tool-result': {
+        const output = chunk.output
+        const outputPreview =
+          typeof output === 'string' ? output.substring(0, 300) : JSON.stringify(output).substring(0, 300)
+        logger.info('🔧 Tool Result', { toolCallId: chunk.toolCallId, output: outputPreview })
         this.toolCallHandler.handleToolResult(chunk)
         break
+      }
 
       // === 步骤相关事件 ===
       // case 'start':

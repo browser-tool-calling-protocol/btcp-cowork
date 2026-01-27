@@ -250,10 +250,12 @@ export class LocalAgentExecutor implements IAgentExecutor {
           })
 
           // Stream the response
+          const hasTools = Object.keys(tools).length > 0
           const streamResult = await executor.streamText({
             model: languageModel,
             messages,
-            tools: Object.keys(tools).length > 0 ? tools : undefined,
+            tools: hasTools ? tools : undefined,
+            maxSteps: hasTools ? 10 : undefined,
             abortSignal: signal
           })
 

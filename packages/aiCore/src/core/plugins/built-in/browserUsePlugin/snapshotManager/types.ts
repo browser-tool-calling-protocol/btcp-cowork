@@ -12,6 +12,11 @@
 /**
  * Snapshot data captured from the browser
  */
+/**
+ * Valid snapshot modes matching the browser API
+ */
+export type SnapshotMode = 'head' | 'interactive' | 'structure' | 'outline' | 'all'
+
 export interface BrowserSnapshot {
   /** Unique identifier for this snapshot */
   id: string
@@ -24,7 +29,7 @@ export interface BrowserSnapshot {
   /** DOM snapshot content (accessibility tree format) */
   content: string
   /** Snapshot mode used */
-  mode: 'interaction' | 'content' | 'outline' | 'all'
+  mode: SnapshotMode
   /** What triggered this snapshot */
   trigger: SnapshotTrigger
   /** Optional action that triggered the snapshot */
@@ -110,9 +115,9 @@ export interface SnapshotManagerConfig {
 
   /**
    * Snapshot mode to use for captures
-   * @default 'all'
+   * @default 'interactive'
    */
-  snapshotMode?: 'interaction' | 'content' | 'outline' | 'all'
+  snapshotMode?: SnapshotMode
 
   /**
    * Callback when a snapshot is captured
@@ -151,5 +156,5 @@ export const DEFAULT_SNAPSHOT_CONFIG: Required<Omit<SnapshotManagerConfig, 'onSn
   actionDebounceMs: 1000,
   maxHistorySize: 50,
   significantChangeThreshold: 0.1,
-  snapshotMode: 'all' // Use 'all' for full page structure
+  snapshotMode: 'interactive' // Use 'interactive' for actionable elements (efficient default)
 }
