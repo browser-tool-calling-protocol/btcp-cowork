@@ -10,6 +10,7 @@ import {
 } from '@renderer/config/models'
 import db from '@renderer/databases'
 import { useAssistant } from '@renderer/hooks/useAssistant'
+import { useAutoSkills } from '@renderer/hooks/useAutoSkills'
 import { useInputText } from '@renderer/hooks/useInputText'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
@@ -100,6 +101,9 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
       files: [] as FileType[],
       mentionedModels: initialMentionedModels,
       selectedSkills: [] as Skill[],
+      autoActivatedSkills: [] as Skill[],
+      disabledAutoSkillIds: new Set<string>(),
+      currentAutoSkillUrl: null as string | null,
       isExpanded: false,
       couldAddImageFile: false,
       extensions: [] as string[]
@@ -132,9 +136,20 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const scope = topic.type ?? TopicType.Chat
   const config = getInputbarConfig(scope)
 
-  const { files, mentionedModels, selectedSkills } = useInputbarToolsState()
-  const { setFiles, setMentionedModels, setSelectedSkills } = useInputbarToolsDispatch()
-  const { setCouldAddImageFile } = useInputbarToolsInternalDispatch()
+  const { files, mentionedModels, selectedSkills, autoActivatedSkills, disabledAutoSkillIds, currentAutoSkillUrl } =
+    useInputbarToolsState()
+  const {
+    setFiles,
+    setMentionedModels,
+    setSelectedSkills,
+    setAutoActivatedSkills,
+    setCurrentAutoSkillUrl,
+    dismissAutoSkill
+  } = useInputbarToolsDispatch()
+  const { setCouldAddImageFile, setDisabledAutoSkillIds } = useInputbarToolsInternalDispatch()
+
+  // Get auto-activated skills based on current URL
+  const { autoActivatedSkills: matchingAutoSkills, currentUrl } = useAutoSkills()
 
   const { text, setText } = useInputText({
     initialValue: CacheService.get<string>(INPUTBAR_DRAFT_CACHE_KEY) ?? '',
@@ -209,6 +224,20 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   useEffect(() => {
     setCouldAddImageFile(canAddImageFile)
   }, [canAddImageFile, setCouldAddImageFile])
+
+  // Reset disabled auto-skills when URL changes
+  useEffect(() => {
+    if (currentUrl !== currentAutoSkillUrl) {
+      setCurrentAutoSkillUrl(currentUrl)
+      setDisabledAutoSkillIds(new Set())
+    }
+  }, [currentUrl, currentAutoSkillUrl, setCurrentAutoSkillUrl, setDisabledAutoSkillIds])
+
+  // Sync auto-activated skills (filtered by disabled IDs)
+  useEffect(() => {
+    const filteredSkills = matchingAutoSkills.filter((skill) => !disabledAutoSkillIds.has(skill.id))
+    setAutoActivatedSkills(filteredSkills)
+  }, [matchingAutoSkills, disabledAutoSkillIds, setAutoActivatedSkills])
 
   const onUnmount = useEffectEvent((id: string) => {
     CacheService.set(getMentionedModelsCacheKey(id), mentionedModels, DRAFT_CACHE_TTL)
@@ -334,6 +363,13 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     [assistant, setSelectedSkills, updateAssistant]
   )
 
+  const handleDismissAutoSkill = useCallback(
+    (skill: Skill) => {
+      dismissAutoSkill(skill.id)
+    },
+    [dismissAutoSkill]
+  )
+
   const handleToggleExpanded = useCallback(
     (nextState?: boolean) => {
       const target = typeof nextState === 'boolean' ? nextState : !textareaIsExpanded
@@ -448,9 +484,17 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   }
 
   // topContent: 所有顶部预览内容
+  const hasSkills = selectedSkills.length > 0 || autoActivatedSkills.length > 0
   const topContent = (
     <>
-      {selectedSkills.length > 0 && <SkillInput selectedSkills={selectedSkills} onRemoveSkill={handleRemoveSkill} />}
+      {hasSkills && (
+        <SkillInput
+          selectedSkills={selectedSkills}
+          autoActivatedSkills={autoActivatedSkills}
+          onRemoveSkill={handleRemoveSkill}
+          onDismissAutoSkill={handleDismissAutoSkill}
+        />
+      )}
 
       {mentionedModels.length > 0 && (
         <MentionModelsInput selectedModels={mentionedModels} onRemoveModel={handleRemoveModel} />

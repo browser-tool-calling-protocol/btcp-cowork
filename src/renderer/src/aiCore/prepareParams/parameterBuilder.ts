@@ -35,7 +35,7 @@ import type { Model } from '@renderer/types'
 import { type Assistant, getEffectiveMcpMode, type MCPTool, type Provider, SystemProviderIds } from '@renderer/types'
 import type { StreamTextParams } from '@renderer/types/aiCoreTypes'
 import { mapRegexToPatterns } from '@renderer/utils/blacklistMatchPattern'
-import { replacePromptVariables } from '@renderer/utils/prompt'
+import { buildSkillsPrompt, replacePromptVariables } from '@renderer/utils/prompt'
 import { isAIGatewayProvider, isAwsBedrockProvider, isSupportUrlContextProvider } from '@renderer/utils/provider'
 import type { ModelMessage, Tool } from 'ai'
 import { stepCountIs } from 'ai'
@@ -82,6 +82,8 @@ export async function buildStreamTextParams(
     mcpTools?: MCPTool[]
     webSearchProviderId?: string
     webSearchConfig?: CherryWebSearchConfig
+    /** Auto-activated skill IDs from domain pattern matching */
+    autoSkillIds?: string[]
     requestOptions?: {
       signal?: AbortSignal
       timeout?: number
@@ -255,6 +257,15 @@ export async function buildStreamTextParams(
     const autoModePrompt = getHubModeSystemPrompt(allActiveTools)
     if (autoModePrompt) {
       systemPrompt = systemPrompt ? `${systemPrompt}\n\n${autoModePrompt}` : autoModePrompt
+    }
+  }
+
+  // Inject skills prompt (from assistant + auto-activated skills)
+  const allSkillIds = [...(assistant.skills || []), ...(options.autoSkillIds || [])]
+  if (allSkillIds.length > 0) {
+    const skillsPrompt = buildSkillsPrompt(allSkillIds)
+    if (skillsPrompt) {
+      systemPrompt = systemPrompt ? `${systemPrompt}\n\n${skillsPrompt}` : skillsPrompt
     }
   }
 

@@ -15,8 +15,14 @@ export interface InputbarToolsState {
   files: FileType[]
   /** Models mentioned in the input */
   mentionedModels: Model[]
-  /** Selected knowledge base items */
+  /** Selected knowledge base items (manually selected by user) */
   selectedSkills: Skill[]
+  /** Skills auto-activated by domain pattern match */
+  autoActivatedSkills: Skill[]
+  /** Skill IDs dismissed by user (cleared when URL changes) */
+  disabledAutoSkillIds: Set<string>
+  /** Current active tab URL for auto-skill matching */
+  currentAutoSkillUrl: string | null
   /** Whether the inputbar is expanded */
   isExpanded: boolean
 
@@ -79,6 +85,10 @@ export interface InputbarToolsDispatch {
   setFiles: React.Dispatch<React.SetStateAction<FileType[]>>
   setMentionedModels: React.Dispatch<React.SetStateAction<Model[]>>
   setSelectedSkills: React.Dispatch<React.SetStateAction<Skill[]>>
+  setAutoActivatedSkills: React.Dispatch<React.SetStateAction<Skill[]>>
+  setCurrentAutoSkillUrl: React.Dispatch<React.SetStateAction<string | null>>
+  /** Dismiss an auto-activated skill (adds to disabled set) */
+  dismissAutoSkill: (skillId: string) => void
   setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>
 
   /** Parent component actions */
@@ -147,6 +157,9 @@ interface InputbarToolsProviderProps {
     files: FileType[]
     mentionedModels: Model[]
     selectedSkills: Skill[]
+    autoActivatedSkills: Skill[]
+    disabledAutoSkillIds: Set<string>
+    currentAutoSkillUrl: string | null
     isExpanded: boolean
     couldAddImageFile: boolean
     extensions: string[]
@@ -166,6 +179,13 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
   const [files, setFiles] = useState<FileType[]>(initialState?.files || [])
   const [mentionedModels, setMentionedModels] = useState<Model[]>(initialState?.mentionedModels || [])
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>(initialState?.selectedSkills || [])
+  const [autoActivatedSkills, setAutoActivatedSkills] = useState<Skill[]>(initialState?.autoActivatedSkills || [])
+  const [disabledAutoSkillIds, setDisabledAutoSkillIds] = useState<Set<string>>(
+    initialState?.disabledAutoSkillIds || new Set()
+  )
+  const [currentAutoSkillUrl, setCurrentAutoSkillUrl] = useState<string | null>(
+    initialState?.currentAutoSkillUrl ?? null
+  )
   const [isExpanded, setIsExpanded] = useState(initialState?.isExpanded || false)
 
   // Derived state (internal management)
@@ -241,18 +261,37 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
     []
   )
 
+  // Dismiss an auto-activated skill (stable reference)
+  const dismissAutoSkill = useCallback((skillId: string) => {
+    setDisabledAutoSkillIds((prev) => new Set([...prev, skillId]))
+  }, [])
+
   // State Context Value (updates when state changes)
   const stateValue = useMemo<InputbarToolsState>(
     () => ({
       files,
       mentionedModels,
       selectedSkills,
+      autoActivatedSkills,
+      disabledAutoSkillIds,
+      currentAutoSkillUrl,
       isExpanded,
       couldAddImageFile,
       couldMentionNotVisionModel,
       extensions
     }),
-    [files, mentionedModels, selectedSkills, isExpanded, couldAddImageFile, couldMentionNotVisionModel, extensions]
+    [
+      files,
+      mentionedModels,
+      selectedSkills,
+      autoActivatedSkills,
+      disabledAutoSkillIds,
+      currentAutoSkillUrl,
+      isExpanded,
+      couldAddImageFile,
+      couldMentionNotVisionModel,
+      extensions
+    ]
   )
 
   // Tools Registry API (stable references for tool buttons)
@@ -280,6 +319,9 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
       setFiles,
       setMentionedModels,
       setSelectedSkills,
+      setAutoActivatedSkills,
+      setCurrentAutoSkillUrl,
+      dismissAutoSkill,
       setIsExpanded,
 
       // Stable actions
@@ -289,16 +331,17 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
       toolsRegistry: toolsRegistryAPI,
       triggers: triggersAPI
     }),
-    [stableActions, toolsRegistryAPI, triggersAPI]
+    [stableActions, toolsRegistryAPI, triggersAPI, dismissAutoSkill]
   )
 
-  // Internal Dispatch (contains setCouldAddImageFile and setExtensions)
+  // Internal Dispatch (contains setCouldAddImageFile, setExtensions, setDisabledAutoSkillIds)
   // These setters are exposed to Inputbar but not to tool buttons
   // Using a separate internal context to avoid polluting the main dispatch context
   const internalDispatchValue = useMemo(
     () => ({
       setCouldAddImageFile,
-      setExtensions
+      setExtensions,
+      setDisabledAutoSkillIds
     }),
     []
   )
@@ -316,11 +359,12 @@ export const InputbarToolsProvider: React.FC<InputbarToolsProviderProps> = ({ ch
 
 /**
  * Internal dispatch interface for Inputbar component only.
- * Used to set derived state (couldAddImageFile, extensions).
+ * Used to set derived state (couldAddImageFile, extensions, disabledAutoSkillIds).
  */
 interface InputbarToolsInternalDispatch {
   setCouldAddImageFile: React.Dispatch<React.SetStateAction<boolean>>
   setExtensions: React.Dispatch<React.SetStateAction<string[]>>
+  setDisabledAutoSkillIds: React.Dispatch<React.SetStateAction<Set<string>>>
 }
 
 const InputbarToolsInternalDispatchContext = createContext<InputbarToolsInternalDispatch | undefined>(undefined)

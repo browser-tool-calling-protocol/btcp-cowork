@@ -2,6 +2,7 @@ import { DEFAULT_SYSTEM_PROMPT } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import store from '@renderer/store'
 import type { MCPTool } from '@renderer/types'
+import type { Skill } from '@renderer/types/skill'
 
 const logger = loggerService.withContext('Utils:Prompt')
 
@@ -215,4 +216,28 @@ export const buildSystemPromptWithTools = (userSystemPrompt: string, tools?: MCP
 
 export const buildSystemPromptWithThinkTool = (userSystemPrompt: string): string => {
   return THINK_TOOL_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', userSystemPrompt || '')
+}
+
+/**
+ * Build a skills prompt section from skill IDs
+ * @param skillIds - Array of skill IDs to include
+ * @returns Formatted skills prompt string, or empty string if no valid skills
+ */
+export const buildSkillsPrompt = (skillIds: string[]): string => {
+  if (!skillIds || skillIds.length === 0) {
+    return ''
+  }
+
+  const allSkills = store.getState().skill.skills
+  const skills = skillIds
+    .map((id) => allSkills.find((s) => s.id === id))
+    .filter((skill): skill is Skill => skill !== undefined && skill.enabled && !!skill.prompt)
+
+  if (skills.length === 0) {
+    return ''
+  }
+
+  const skillPrompts = skills.map((skill) => `## Skill: ${skill.name}\n${skill.prompt}`).join('\n\n')
+
+  return `<skills>\n${skillPrompts}\n</skills>`
 }
