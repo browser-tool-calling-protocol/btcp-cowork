@@ -119,8 +119,10 @@ export const QuickPanelView: React.FC<Props> = ({ setInputText }) => {
     const normalItems = baseList.filter((item) => !item.alwaysVisible)
 
     // Filter normal items using injected filter function
+    // Ensure pinyinCache is always a valid WeakMap (defensive fallback)
+    const pinyinCache = pinyinCacheRef.current ?? new WeakMap<QuickPanelListItem, string>()
     const filteredNormalItems = normalItems.filter((item) => {
-      return filterFn(item, _searchText, fuzzyRegex, pinyinCacheRef.current)
+      return filterFn(item, _searchText, fuzzyRegex, pinyinCache)
     })
 
     // Sort filtered items using injected sort function

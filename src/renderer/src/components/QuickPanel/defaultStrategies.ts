@@ -28,10 +28,11 @@ export const defaultFilterFn: QuickPanelFilterFn = (item, searchText, fuzzyRegex
   // Pinyin fuzzy match for Chinese characters
   if (tinyPinyin.isSupported() && /[\u4e00-\u9fa5]/.test(filterText)) {
     try {
-      let pinyinText = pinyinCache.get(item)
+      // Defensive check: pinyinCache may be undefined in edge cases (e.g., during initialization)
+      let pinyinText = pinyinCache?.get(item)
       if (!pinyinText) {
         pinyinText = tinyPinyin.convertToPinyin(filterText, '', true).toLowerCase()
-        pinyinCache.set(item, pinyinText)
+        pinyinCache?.set(item, pinyinText)
       }
       return fuzzyRegex.test(pinyinText)
     } catch (error) {
